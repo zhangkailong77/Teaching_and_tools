@@ -1,0 +1,24 @@
+/* src/style.css */
+
+/* 1. 移除浏览器默认边距 */
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* 2. 让 Vue 的挂载点占满全屏 */
+#app {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  max-width: none; /* 关键：取消默认的最大宽度限制 */
+  text-align: left; /* 关键：取消默认的居中对齐 */
+}
+
+/* 3. 统一盒模型，防止 padding 撑破布局 */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
