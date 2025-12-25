@@ -3,7 +3,7 @@ import axios from 'axios';
 // 创建 axios 实例
 const service = axios.create({
   baseURL: import.meta.env.VITE_API_URL, // 读取 .env 里的地址
-  timeout: 5000
+  timeout: 120000
 });
 
 // 请求拦截器：每次请求自动带上 Token

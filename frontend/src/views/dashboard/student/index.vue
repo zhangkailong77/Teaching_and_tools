@@ -4,8 +4,7 @@
     <!-- 1. 左侧侧边栏 (Sidebar) -->
     <aside class="sidebar">
       <div class="logo-area">
-        <div class="logo-icon">C</div>
-        <span class="logo-text">COURSUE</span>
+        <img src="@/assets/logo.png" alt="Logo" class="logo-img" />
       </div>
 
       <div class="menu-group">
@@ -188,15 +187,24 @@
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/modules/user';
+import request from '@/utils/request';
 
 const router = useRouter();
 const userStore = useUserStore();
+// 定义状态
+const isLoading = ref(false);
+const comfyUrl = ref(''); // 用来存后端返回的 URL
 
 // 模拟课程数据
 const courses = ref([
-  { id: 1, name: 'ComfyUI 基础入门', teacher: 'Prashant Singh', progress: 35, color: '#333' },
-  { id: 2, name: 'Stable Diffusion 进阶', teacher: 'Ravi Kumar', progress: 78, color: '#f1c40f' },
-  { id: 3, name: 'Python 自动化脚本', teacher: 'Alice Dev', progress: 12, color: '#3498db' }
+  { id: 1, name: 'ComfyUI 基础入门', teacher: 'Prashant Singh', progress: 35, color: '#2d3436' },
+  { id: 2, name: '跨境电商业务场景实战', teacher: 'Ravi Kumar', progress: 78, color: '#f1c40f' },
+  { id: 3, name: '局部重绘', teacher: 'Alice Dev', progress: 12, color: '#3498db' },
+  { id: 4, name: '模特换装（绘制遮罩）', teacher: 'Lin Chang', progress: 5, color: '#e74c3c' }, // 红色
+  { id: 5, name: '模特换装（Qwen全自动）', teacher: 'Sarah Wu', progress: 0, color: '#9b59b6' }, // 紫色
+  { id: 6, name: '线稿生成器', teacher: 'Mike Chen', progress: 100, color: '#2ecc71' }, // 绿色
+  { id: 7, name: '商品变体 (depth篇)', teacher: 'Emily Zhang', progress: 45, color: '#e67e22' }, // 橙色
+  { id: 8, name: '商品变体 (canny篇)', teacher: 'David Liu', progress: 20, color: '#1abc9c' }  // 青色
 ]);
 
 onMounted(() => {
@@ -205,15 +213,66 @@ onMounted(() => {
 });
 
 // 退出登录
-const handleLogout = () => {
+const handleLogout = async () => {
+  // 为了用户体验，不管后端关闭成不成功，前端都要能退出去
+  // 所以我们用 try-catch 包裹，但不阻断跳转
+  try {
+    // 只有当是学生时才尝试关闭环境
+    // (虽然老师调这个接口也没事，后端会判断，但前端省一次请求也好)
+    await request.post('/practice/stop-practice');
+    console.log('实训环境关闭请求已发送');
+  } catch (error) {
+    console.error('环境关闭失败，可能是网络问题', error);
+  }
+
+  // 原有的退出逻辑
   userStore.logout();
   router.push('/login');
 };
 
-// 打开系统 B (实训台)
-const openSystemB = () => {
-  // 这里可以写 window.open('http://system-b-url.com')
-  alert('正在跳转至 ComfyUI 云端实训环境...');
+const openSystemB = async () => {
+  // 1. 【关键】点击瞬间，先打开一个新标签页
+  // 这样浏览器就不会拦截了，因为它认为是你自己点的
+  const newWindow = window.open('', '_blank');
+
+  // 2. 给这个新窗口写一点提示文字，告诉用户别关
+  if (newWindow) {
+    newWindow.document.write(`
+      <div style="text-align:center; padding-top:20%; font-family:sans-serif;">
+        <h1>🚀 正在连接云端实训台...</h1>
+        <p>系统正在唤醒 GPU 资源，这可能需要 30-60 秒，请勿关闭本窗口。</p>
+        <div style="margin-top:20px; font-size: 24px;">⏳</div>
+      </div>
+    `);
+  }
+
+  // 加个按钮 loading 状态 (可选)
+  const btnText = document.querySelector('.action-btn');
+  if(btnText) btnText.innerHTML = '正在启动云显卡... ⏳';
+
+  try {
+    // 3. 后台慢慢请求接口 (这时候新窗口在转圈等待)
+    const res = await request.post<any, any>('/practice/start-practice', {}, { 
+      timeout: 120000 
+    });
+    
+    // 4. 【关键】拿到 URL 后，把刚才那个窗口的地址替换掉
+    if (res.url && newWindow) {
+        newWindow.location.href = res.url;
+    } else if (newWindow) {
+        // 如果没返回 url，就关掉窗口
+        newWindow.close();
+        alert('启动异常，未获取到地址');
+    }
+
+  } catch (error) {
+    // 5. 如果报错了，把那个新窗口关掉，并提示错误
+    if (newWindow) newWindow.close();
+    alert('启动失败，请联系管理员');
+    console.error(error);
+  } finally {
+    if(btnText) btnText.innerHTML = '启动 ComfyUI 环境 <span class="arrow">▶</span>';
+  }
 };
 </script>
 
@@ -247,13 +306,16 @@ $text-gray: #a4b0be;
   .logo-area {
     display: flex;
     align-items: center;
-    gap: 10px;
+    justify-content: flex-start; 
     margin-bottom: 40px;
-    .logo-icon {
-      width: 32px; height: 32px; background: $primary-color; color: white;
-      border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold;
+
+    .logo-img {
+      height: 40px; 
+      width: auto; 
+      max-width: 100%; 
+      object-fit: contain;
     }
-    .logo-text { font-size: 18px; font-weight: 800; color: $primary-color; letter-spacing: 1px; }
+    
   }
 
   .menu-group {
@@ -299,6 +361,11 @@ $text-gray: #a4b0be;
     background: linear-gradient(135deg, #00c9a7 0%, #00b894 100%);
     border-radius: 20px; padding: 40px; position: relative; overflow: hidden; color: white;
     box-shadow: 0 10px 20px rgba(0, 201, 167, 0.2);
+
+    min-height: 220px; 
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 
     .banner-text {
       position: relative; z-index: 2;
@@ -347,7 +414,7 @@ $text-gray: #a4b0be;
   }
 
   .course-grid {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; padding-bottom: 20px;
     
     .course-card {
       background: white; border-radius: 15px; overflow: hidden; transition: transform 0.3s;

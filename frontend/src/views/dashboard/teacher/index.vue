@@ -185,7 +185,7 @@ const handleCreateClass = () => {
 /* 教师端主题色：紫色系 */
 $sidebar-width: 240px;
 $right-panel-width: 300px;
-$primary-purple: #6c5ce7; 
+$primary-purple: #00c9a7; 
 $bg-color: #f5f6fa;
 $text-dark: #2d3436;
 $text-gray: #a4b0be;

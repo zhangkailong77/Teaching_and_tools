@@ -13,3 +13,4 @@ class User(Base):
     is_active = Column(Boolean, default=True)                              # 是否激活
     created_at = Column(DateTime, default=func.now())                      # 注册时自动写入当前数据库时间
     last_login = Column(DateTime, nullable=True)                           # 初始为空，登录时更新
+    comfyui_port = Column(Integer, nullable=True, unique=True)             # ComfyUI 端口
