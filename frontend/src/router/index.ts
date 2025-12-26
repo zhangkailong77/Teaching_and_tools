@@ -22,6 +22,12 @@ const routes: RouteRecordRaw[] = [
         name: 'TeacherDashboard',
         component: () => import('@/views/dashboard/teacher/index.vue'),
         meta: { requiresAuth: true, role: 'teacher' }
+      },
+      {
+        path: 'teacher/students', 
+        name: 'TeacherStudentList',
+        component: () => import('@/views/dashboard/teacher/students.vue'),
+        meta: { requiresAuth: true, role: 'teacher' }
       }
     ]
   }

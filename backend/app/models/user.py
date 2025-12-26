@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, Boolean, DateTime
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func 
 from app.db.base_class import Base
 
@@ -14,3 +15,7 @@ class User(Base):
     created_at = Column(DateTime, default=func.now())                      # 注册时自动写入当前数据库时间
     last_login = Column(DateTime, nullable=True)                           # 初始为空，登录时更新
     comfyui_port = Column(Integer, nullable=True, unique=True)             # ComfyUI 端口
+    full_name = Column(String(50), nullable=True)      # 真实姓名
+    student_number = Column(String(30), nullable=True) # 学号
+    teaching_classes = relationship("Class", back_populates="teacher")
+    enrollments = relationship("Enrollment", back_populates="student")

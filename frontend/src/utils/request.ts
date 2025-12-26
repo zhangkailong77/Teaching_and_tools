@@ -23,11 +23,30 @@ service.interceptors.request.use(
 // 响应拦截器：简化返回数据，处理报错
 service.interceptors.response.use(
   (response) => {
-    return response.data; // 直接返回 data，不用每次都 .data
+    return response.data;
   },
   (error) => {
+    // 获取错误状态码
+    const status = error.response?.status;
     const msg = error.response?.data?.detail || '请求失败';
-    alert(msg); // 简单弹窗提示错误
+
+    // 1. 如果是 401 (未授权/Token失效)
+    if (status === 401) {
+      // 这里的 msg 就是后端返回的 "Could not validate credentials"
+      // 我们选择不弹窗，或者提示“登录已过期”
+      console.warn('登录过期，正在跳转...');
+      
+      // 清除失效的 token
+      localStorage.removeItem('token');
+      
+      // 强制跳转回登录页
+      window.location.href = '/login'; 
+      
+      return Promise.reject(error);
+    }
+
+    // 2. 其他错误 (404, 500 等) 才弹窗
+    alert(msg); 
     return Promise.reject(error);
   }
 );

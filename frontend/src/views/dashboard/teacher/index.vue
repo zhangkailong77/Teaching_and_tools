@@ -4,8 +4,7 @@
     <!-- 1. 左侧 Sidebar (教师版) -->
     <aside class="sidebar">
       <div class="logo-area">
-        <div class="logo-icon">T</div> <!-- T 代表 Teacher -->
-        <span class="logo-text">TEACHER</span>
+        <img src="@/assets/logo.png" alt="Logo" class="logo-img" />
       </div>
 
       <div class="menu-group">
@@ -13,7 +12,7 @@
         <a href="#" class="menu-item active">
           <span class="icon">📚</span> 课程管理
         </a>
-        <a href="#" class="menu-item">
+        <a href="#" class="menu-item" @click.prevent="router.push('/dashboard/teacher/students')">
           <span class="icon">👥</span> 学生名单
         </a>
         <a href="#" class="menu-item">
@@ -207,8 +206,13 @@ $text-gray: #a4b0be;
 
   .logo-area {
     display: flex; align-items: center; gap: 10px; margin-bottom: 40px;
-    .logo-icon { width: 32px; height: 32px; background: $primary-purple; color: white; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: bold; }
-    .logo-text { font-size: 18px; font-weight: 800; color: $primary-purple; letter-spacing: 1px; }
+    
+    .logo-img {
+      height: 40px; 
+      width: auto; 
+      max-width: 100%; 
+      object-fit: contain;
+    }
   }
 
   .menu-group {
@@ -278,7 +282,18 @@ $text-gray: #a4b0be;
         display: flex; gap: 10px;
         button { padding: 8px 16px; border-radius: 8px; font-size: 13px; cursor: pointer; font-weight: 500; }
         .btn-outline { background: transparent; border: 1px solid #eee; color: $text-dark; &:hover { border-color: $primary-purple; color: $primary-purple; } }
-        .btn-primary { background: $primary-purple; color: white; border: none; &:hover { background: darken($primary-purple, 10%); } }
+        /* 修改后的代码 (无警告) */
+        .btn-primary { 
+          background: $primary-purple; 
+          color: white; 
+          border: none; 
+          transition: filter 0.2s; /* 加个过渡动画更丝滑 */
+          
+          &:hover { 
+            /* 不改变背景色值，而是直接调低亮度，效果是一样的 */
+            filter: brightness(0.9); 
+          } 
+        }
       }
     }
   }
