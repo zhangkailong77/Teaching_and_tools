@@ -22,12 +22,45 @@ def read_my_classes(
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user),
 ):
-    # 如果是老师，只查自己创建的班级
-    classes = db.query(Class).filter(Class.teacher_id == current_user.id).all()
+    # 1. 查询该老师的所有班级
+    classes = db.query(Class).filter(Class.teacher_id == current_user.id).order_by(Class.start_date.desc()).all()
     
-    # (可选优化) 简单统计每个班有多少人
-    # 这里为了演示简单，暂时不写复杂的 count 逻辑，直接返回
-    return classes
+    # 2. 遍历班级，手动填充统计数据
+    results = []
+    for cls in classes:
+        # --- A. 统计人数 ---
+        # 查询 Enrollment 表，计算该 class_id 下有多少记录
+        s_count = db.query(Enrollment).filter(Enrollment.class_id == cls.id).count()
+        
+        # --- B. 查询绑定课程名 ---
+        # 1. 先查中间表 bindings
+        bindings = db.query(ClassCourseBinding).filter(ClassCourseBinding.class_id == cls.id).all()
+        # 2. 再查具体的课程名
+        c_names = []
+        for binding in bindings:
+            course_obj = db.query(Course).filter(Course.id == binding.course_id).first()
+            if course_obj:
+                c_names.append(course_obj.name)
+        
+        # --- C. 拼装返回数据 ---
+        # 我们不能直接返回 cls 对象了，因为 cls 对象里没有 student_count 属性
+        # 我们需要构造一个字典，包含所有字段
+        results.append({
+            "id": cls.id,
+            "name": cls.name,
+            "description": cls.description,
+            "teacher_id": cls.teacher_id,
+            "cover_image": cls.cover_image,
+            "start_date": cls.start_date,
+            "end_date": cls.end_date,
+            "created_at": cls.created_at,
+            
+            # ✅ 这里填入我们刚算出来的数据
+            "student_count": s_count, 
+            "bound_course_names": c_names
+        })
+        
+    return results
 
 # ------------------------------------------------------------------
 # 2. 创建新班级

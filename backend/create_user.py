@@ -4,9 +4,13 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 from app.db.session import SessionLocal
 from app.models.user import User
+from app.models.profile import TeacherProfile
+# 导入所有模型，确保 SQLAlchemy 可以解析关联关系
+from app.models.course import Class, Enrollment
+from app.models.content import Course, ClassCourseBinding
 from app.core import security
 
-def create_user(username, password, role="student", nickname=None):
+def create_user(username, password, role="student", full_name=None, student_number=None):
     db: Session = SessionLocal()
     try:
         # 1. 检查是否存在
@@ -21,7 +25,9 @@ def create_user(username, password, role="student", nickname=None):
             hashed_password=security.get_password_hash(password),
             role=role,
             created_at=datetime.now(),
-            is_active=True
+            is_active=True,
+            full_name=full_name,
+            student_number=student_number
         )
         # 如果你之前加了 nickname 字段，记得在这里加上
         # nickname=nickname 
@@ -37,12 +43,31 @@ def create_user(username, password, role="student", nickname=None):
 
 if __name__ == "__main__":
     print("--- 教学管理平台账号生成器 ---")
-    u_name = input("请输入用户名: ")
-    u_pass = input("请输入密码: ")
-    u_role = input("请输入角色 (student/teacher): ")
-    
+    # 1. 基础信息
+    u_name = input("请输入登录账号(手机号): ").strip()
+    if not u_name:
+        print("账号不能为空")
+        sys.exit(1)
+        
+    u_pass = input("请输入密码: ").strip()
+    if not u_pass:
+        print("密码不能为空")
+        sys.exit(1)
+        
+    u_role = input("请输入角色 (student/teacher) [默认student]: ").strip()
     if u_role not in ["student", "teacher"]:
         u_role = "student"
-        print("提示: 角色输入错误，默认为 student")
-        
-    create_user(u_name, u_pass, u_role)
+    
+    # 2. 补充信息 (新增)
+    u_fullname = input("请输入真实姓名 (可选): ").strip()
+    
+    u_number = None
+    if u_role == "student":
+        u_number = input("请输入学号 (可选): ").strip()
+    
+    # 处理空字符串为 None
+    if not u_fullname: u_fullname = None
+    if not u_number: u_number = None
+
+    # 3. 执行创建
+    create_user(u_name, u_pass, u_role, u_fullname, u_number)

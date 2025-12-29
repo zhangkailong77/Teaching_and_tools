@@ -75,7 +75,7 @@
               <span>👥 {{ cls.student_count }} 人</span>
               <span class="divider">|</span>
               <!-- 这里简单截取日期部分 -->
-              <span>📅 {{ cls.start_date ? cls.start_date.split('T')[0] : '待定' }}</span>
+              <span>📅 {{ formatDuration(cls.start_date, cls.end_date) }}</span>
             </div>
           </div>
           
@@ -513,6 +513,23 @@ const formatDate = (val: any) => {
   if (!val) return undefined;
   if (val instanceof Date) return val.toISOString();
   return val;
+};
+
+// ✅ 新增：格式化课程周期显示
+const formatDuration = (start?: string, end?: string) => {
+  if (!start) return '时间待定';
+  
+  // 截取日期部分 (YYYY-MM-DD)
+  const s = start.split('T')[0];
+  
+  // 如果有结束时间
+  if (end) {
+    const e = end.split('T')[0];
+    return `${s} 至 ${e}`;
+  }
+  
+  // 如果只有开始时间
+  return `${s} 开课`;
 };
 
 const getRandomColor = () => {
