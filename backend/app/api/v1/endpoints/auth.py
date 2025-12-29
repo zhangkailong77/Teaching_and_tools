@@ -32,8 +32,10 @@ def login_access_token(
     # 如果数据库里的角色 (user.role) 和 前端选的角色 (role) 不一致
     if user.role != role:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, # 或者 403 Forbidden
-            detail=f"Login failed: This account is not a {role} account." # 提示：该账号不是xxx账号
+            # ❌ 修改前：status_code=status.HTTP_401_UNAUTHORIZED
+            # ✅ 修改后：改为 400，避免被前端拦截器误伤
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            detail=f"登录失败: 该账号不是【{role}】账号，请切换角色。"
         )
 
     user.last_login = datetime.now() 

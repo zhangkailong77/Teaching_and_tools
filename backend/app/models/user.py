@@ -17,5 +17,9 @@ class User(Base):
     comfyui_port = Column(Integer, nullable=True, unique=True)             # ComfyUI 端口
     full_name = Column(String(50), nullable=True)      # 真实姓名
     student_number = Column(String(30), nullable=True) # 学号
+
+    # 关联关系
+    teacher_profile = relationship("TeacherProfile", back_populates="user", uselist=False)
     teaching_classes = relationship("Class", back_populates="teacher")
     enrollments = relationship("Enrollment", back_populates="student")
+    owned_courses = relationship("Course", back_populates="owner")

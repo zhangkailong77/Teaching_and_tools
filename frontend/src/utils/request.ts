@@ -26,27 +26,39 @@ service.interceptors.response.use(
     return response.data;
   },
   (error) => {
-    // 获取错误状态码
     const status = error.response?.status;
-    const msg = error.response?.data?.detail || '请求失败';
+    // 获取后端返回的原始错误信息
+    const detail = error.response?.data?.detail;
 
-    // 1. 如果是 401 (未授权/Token失效)
-    if (status === 401) {
-      // 这里的 msg 就是后端返回的 "Could not validate credentials"
-      // 我们选择不弹窗，或者提示“登录已过期”
-      console.warn('登录过期，正在跳转...');
-      
-      // 清除失效的 token
-      localStorage.removeItem('token');
-      
-      // 强制跳转回登录页
-      window.location.href = '/login'; 
-      
+    // --- ✅ 1. 专门处理 422 参数校验错误 ---
+    if (status === 422) {
+      // FastAPI 的 422 错误通常是一个数组: [{loc:.., msg:..}, ...]
+      if (Array.isArray(detail)) {
+        // 取出第一个错误的字段和原因
+        const firstError = detail[0];
+        const field = firstError.loc[firstError.loc.length - 1]; // 出错的字段名
+        const msg = firstError.msg; // 错误原因
+        alert(`参数校验失败: 字段【${field}】${msg}`);
+      } else {
+        // 如果是字符串，直接显示
+        alert(`参数错误: ${typeof detail === 'object' ? JSON.stringify(detail) : detail}`);
+      }
       return Promise.reject(error);
     }
 
-    // 2. 其他错误 (404, 500 等) 才弹窗
-    alert(msg); 
+    // --- ✅ 2. 处理 401 登录过期 (保持之前写的) ---
+    if (status === 401) {
+      console.warn('登录过期，正在跳转...');
+      localStorage.removeItem('token');
+      window.location.href = '/login';
+      return Promise.reject(error);
+    }
+
+    // --- 3. 其他错误 ---
+    // 防止 [object Object] 再次出现
+    const errorMsg = typeof detail === 'string' ? detail : '请求失败，请检查网络或联系管理员';
+    alert(errorMsg);
+    
     return Promise.reject(error);
   }
 );

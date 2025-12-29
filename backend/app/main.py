@@ -1,10 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+import os
+import logging
 from app.core.config import settings
 from app.api.v1.api import api_router
 from app.db.base_class import Base
 from app.db.session import engine
-from app.models import user, course
+from app.models import user, course, profile, content
 
 # 1. 自动创建数据库表
 # 当你运行项目时，SQLAlchemy 会检查 models 定义，并在 MySQL 中创建缺失的表 (如 users 表)
@@ -34,9 +37,32 @@ app.add_middleware(
     allow_headers=["*"],         # 允许所有 Header
 )
 
+upload_dirs = [
+    "static/uploads/avatars", # 存头像
+    "static/uploads/courses", # 存课程封面
+    "static/uploads/common"   # 存通用图片
+]
+
+for dir_path in upload_dirs:
+    if not os.path.exists(dir_path):
+        os.makedirs(dir_path)
+        print(f"Created directory: {dir_path}")
+
+# 挂载静态目录
+# 这样前端访问 http://127.0.0.1:8000/static/xxx.jpg 就能看到图片了
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
 # 4. 注册路由
 # 将 app/api/v1/api.py 中汇总的所有接口挂载到 /api/v1 路径下
 app.include_router(api_router, prefix=settings.api_v1_str)
+
+
+# 配置日志
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 # 5. (可选) 本地调试入口
 if __name__ == "__main__":

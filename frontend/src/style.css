@@ -22,3 +22,37 @@ html, body {
 *, *::before, *::after {
   box-sizing: border-box;
 }
+
+/* 1. 定义我们自己的主色变量 */
+:root {
+  --brand-color: #00c9a7;
+}
+
+/* 2. 强行覆盖 VCalendar 的 'teal' 主题色 */
+/* 只要组件上写了 color="teal"，就会用这些颜色 */
+.vc-teal {
+  --vc-accent-50:  #e0f2f1;
+  --vc-accent-100: #b2dfdb;
+  --vc-accent-200: #80cbc4;
+  --vc-accent-300: #4db6ac;
+  --vc-accent-400: #26a69a;
+  --vc-accent-500: #00c9a7; /* 核心主色 */
+  --vc-accent-600: #00b894;
+  --vc-accent-700: #00897b;
+  --vc-accent-800: #00796b;
+  --vc-accent-900: #004d40;
+}
+
+/* 3. 让日历看起来更圆润高级 */
+.vc-container {
+  border-radius: 12px !important;
+  border: 1px solid #eee !important;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.1) !important;
+  font-family: inherit !important;
+}
+
+/* 4. 调整头部月份文字的颜色 */
+.vc-header .vc-title {
+  color: #2d3436 !important;
+  font-weight: 700 !important;
+}

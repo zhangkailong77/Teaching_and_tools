@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import auth, users, practice, course
+from app.api.v1.endpoints import auth, users, practice, course, profile, upload, content 
 
 api_router = APIRouter()
 
@@ -14,3 +14,12 @@ api_router.include_router(practice.router, prefix="/practice", tags=["practice"]
 
 # --- 2. 挂载课程/班级路由 ---
 api_router.include_router(course.router, prefix="/classes", tags=["classes"])
+
+# ✅ 挂载档案路由
+api_router.include_router(profile.router, prefix="/profiles", tags=["profiles"])
+
+# ✅ 挂载上传路由
+api_router.include_router(upload.router, prefix="/upload", tags=["upload"])
+
+# ✅ 挂载内容资源路由
+api_router.include_router(content.router, prefix="/content", tags=["content"])

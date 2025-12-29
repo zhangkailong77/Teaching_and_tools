@@ -28,6 +28,12 @@ const routes: RouteRecordRaw[] = [
         name: 'TeacherStudentList',
         component: () => import('@/views/dashboard/teacher/students.vue'),
         meta: { requiresAuth: true, role: 'teacher' }
+      },
+      {
+        path: 'teacher/courses', 
+        name: 'TeacherCourseLibrary',
+        component: () => import('@/views/dashboard/teacher/courses.vue'), // 稍后创建这个文件
+        meta: { requiresAuth: true, role: 'teacher' }
       }
     ]
   }

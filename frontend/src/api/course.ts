@@ -6,6 +6,23 @@ export interface ClassItem {
   name: string;
   description?: string;
   student_count?: number;
+  cover_image?: string;
+  start_date?: string;
+  end_date?: string;
+  bound_course_names: string[]; 
+  styleColor?: string;
+}
+
+// 统计数据结构 (对应后端 DashboardStats)
+export interface DashboardStats {
+  total_students: number;
+  total_classes: number;
+  pending_homeworks: number;
+}
+
+// 获取统计数据 (顶部卡片)
+export function getDashboardStats() {
+  return request.get<any, DashboardStats>('/classes/stats');
 }
 
 // 定义后端返回的学生结构
@@ -29,7 +46,14 @@ export function getMyClasses() {
 }
 
 // 2. 创建新班级 (为了让你能先建个班，否则没法加学生)
-export function createClass(data: { name: string; description?: string }) {
+export function createClass(data: {
+  name: string; 
+  description?: string ;
+  cover_image?: string;
+  start_date?: string;
+  end_date?: string;
+  course_ids?: number[];
+}) {
   return request.post<any, ClassItem>('/classes/', data);
 }
 
