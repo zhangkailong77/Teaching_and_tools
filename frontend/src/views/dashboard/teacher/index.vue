@@ -13,7 +13,7 @@
         </div>
         <!-- 教师特有的核心操作 -->
         <button class="create-btn" @click="openCreateClassModal">
-          + 创建新课程
+          + 创建班级
         </button>
       </header>
 
@@ -53,37 +53,40 @@
 
       <div class="course-list">
         <!-- ✅ 遍历 classList -->
-        <div class="course-item" v-for="cls in classList" :key="cls.id">
+        <div class="course-item" v-for="(item, index) in classList" :key="`${item.id}-${index}`">
           
           <!-- 封面图 (如果没有图，显示首字母) -->
-          <div class="course-img" :style="{ backgroundImage: `url(${cls.cover_image || ''})`, backgroundColor: cls.styleColor }">
-            <span v-if="!cls.cover_image">{{ cls.name.charAt(0) }}</span>
+          <div class="course-img" :style="{ backgroundImage: `url(${item.cover_image || ''})`, backgroundColor: item.styleColor }">
+            <span v-if="!item.cover_image">{{ item.displayTitle.charAt(0) }}</span>
           </div>
           
           <div class="course-info">
-            <h4>{{ cls.name }}</h4>
-            <div class="meta">
-              <!-- ✅ 显示绑定的课程包名称 -->
-              <span class="course-tag" v-if="cls.bound_course_names && cls.bound_course_names.length > 0">
-                📖 教材：{{ cls.bound_course_names[0] }}
-              </span>
-              <span class="course-tag warning" v-else>⚠️ 未绑课件</span>
-            </div>
-            
-            <!-- 显示人数和时间 -->
+            <h4>{{ item.displayTitle }}</h4>
             <div class="details-row">
-              <span>👥 {{ cls.student_count }} 人</span>
+              <!-- 只有拆分后的卡片才显示“课程包”字样，未绑定的显示警告 -->
+              <span v-if="!item.isSplit" class="course-tag warning" style="font-size: 12px;">
+                ⚠️ 暂未安排教学内容
+              </span>
+
+              <span>👥 {{ item.student_count }} 人</span>
               <span class="divider">|</span>
-              <!-- 这里简单截取日期部分 -->
-              <span>📅 {{ formatDuration(cls.start_date, cls.end_date) }}</span>
+              <!-- 时间 -->
+              <span>📅 {{ formatDuration(item.start_date, item.end_date) }}</span>
             </div>
           </div>
-          
+
+          <div class="class-display">
+            <span class="name">{{ item.displaySubtitle }}</span>
+          </div>
+
+
           <div class="course-actions">
-            <!-- 按钮部分暂时不用动，或者你可以加上跳转逻辑 -->
+            <!-- 这些按钮现在对应的是具体的“一门课” -->
             <button class="btn-outline">课件</button>
             <button class="btn-outline">作业</button>
-            <button class="btn-primary" @click="router.push(`/dashboard/teacher/students?class_id=${cls.id}`)">进入班级</button>
+            <button class="btn-primary" @click="router.push(`/dashboard/teacher/students?class_id=${item.id}`)">
+              进入班级
+            </button>
           </div>
         </div>
 
@@ -222,7 +225,8 @@
 
     <!-- ⬇️ 插入这段代码：新建班级弹窗 -->
     <div class="modal-overlay" v-if="showClassModal" @click.self="showClassModal = false">
-      <div class="modal-content">
+      <div class="modal-content" style="width: 550px;"> <!-- 稍微宽一点放双列 -->
+        
         <div class="modal-header">
           <div class="header-left">
             <span class="icon-bg" style="background: #e3f2fd; color: #0984e3;">📂</span>
@@ -232,7 +236,8 @@
         </div>
 
         <div class="modal-body">
-          <!-- 班级名称 -->
+          
+          <!-- 1. 班级名称 -->
           <div class="form-group">
             <label>班级名称 <span class="required">*</span></label>
             <input 
@@ -241,8 +246,93 @@
               placeholder="例如：2025 AI实训一班" 
             />
           </div>
-          
-          <!-- 绑定课程资源 -->
+
+          <!-- 2. 日期选择 (双列布局) -->
+          <div class="form-row">
+            <div class="form-group">
+              <label>开课时间</label>
+              <!-- ✅ 修改点：新增 :popover 配置 -->
+              <!-- visibility: 'click' 表示点击输入框显示 -->
+              <!-- hideOnContentClick: false 表示点击日历内部(选日期)时不关闭 -->
+              <v-date-picker 
+                v-model="classForm.startDate" 
+                mode="dateTime" 
+                is24hr
+                :model-config="dateConfig" 
+                color="teal"
+                :popover="{ visibility: 'click', placement: 'bottom', keepVisibleOnInput: true }"
+              >
+                <template #default="{ inputValue, inputEvents }">
+                  <div class="input-with-icon">
+                    <input 
+                      :value="inputValue" 
+                      v-on="inputEvents" 
+                      placeholder="选择日期和时间" 
+                      readonly 
+                      style="cursor: pointer;"
+                    />
+                    <span class="icon">⏰</span>
+                  </div>
+                </template>
+                <template #footer>
+                  <div class="picker-footer">
+                    <button class="btn-today" @click="classForm.startDate = getTodayString()">此刻</button>
+                  </div>
+                </template>
+              </v-date-picker>
+            </div>
+
+            <!-- 结课日期 -->
+            <div class="form-group">
+              <label>结课时间</label>
+              <!-- ✅ 修改点：同样加上 :popover 配置 -->
+              <v-date-picker 
+                v-model="classForm.endDate" 
+                mode="dateTime" 
+                is24hr
+                :model-config="dateConfig" 
+                color="teal"
+                :popover="{ visibility: 'click', placement: 'bottom', keepVisibleOnInput: true }"
+              >
+                <template #default="{ inputValue, inputEvents }">
+                  <div class="input-with-icon">
+                    <input 
+                      :value="inputValue" 
+                      v-on="inputEvents" 
+                      placeholder="选择日期和时间" 
+                      readonly 
+                      style="cursor: pointer;"
+                    />
+                    <span class="icon">🏁</span>
+                  </div>
+                </template>
+                <template #footer>
+                  <div class="picker-footer">
+                    <button class="btn-today" @click="classForm.endDate = getTodayString()">此刻</button>
+                  </div>
+                </template>
+              </v-date-picker>
+            </div>
+          </div>
+
+          <!-- 3. 班级封面 -->
+          <div class="form-group">
+            <label>班级封面</label>
+            <div class="cover-selector">
+              <div 
+                v-for="(img, index) in coverOptions" 
+                :key="index"
+                class="cover-item"
+                :class="{ active: classForm.coverImage === img }"
+                @click="classForm.coverImage = img"
+              >
+                <img :src="img" />
+                <div class="check-mark" v-if="classForm.coverImage === img">✓</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4. 绑定课程资源 -->
           <div class="form-group">
             <label>绑定课程教材</label>
             <el-select 
@@ -259,65 +349,18 @@
               />
             </el-select>
             <p class="hint" v-if="courseLibrary.length === 0" style="font-size:12px;color:#999;margin-top:5px">
-              暂无课程包，请先去资源库创建
+              暂无课程包，请先去 <a href="#" @click.prevent="router.push('/dashboard/teacher/courses')">资源库</a> 创建
             </p>
           </div>
 
-          <!-- 日期选择 -->
-          <div class="form-row">
-            <!-- 开课日期 -->
-            <div class="form-group">
-              <label>开课时间</label>
-              <v-date-picker 
-                v-model="classForm.startDate" 
-                mode="dateTime" 
-                is24hr
-                :model-config="dateConfig" 
-                color="teal"
-              >
-                <template #default="{ inputValue, inputEvents }">
-                  <div class="input-with-icon">
-                    <input 
-                      :value="inputValue" 
-                      v-on="inputEvents" 
-                      placeholder="选择日期和时间" 
-                      readonly 
-                      style="cursor: pointer;"
-                    />
-                    <span class="icon">⏰</span>
-                  </div>
-                </template>
-              </v-date-picker>
-            </div>
-
-            <!-- 结课日期 -->
-            <div class="form-group">
-              <label>结课时间</label>
-              <v-date-picker 
-                v-model="classForm.endDate" 
-                mode="dateTime" 
-                is24hr
-                :model-config="dateConfig" 
-                color="teal"
-              >
-                <template #default="{ inputValue, inputEvents }">
-                  <div class="input-with-icon">
-                    <input 
-                      :value="inputValue" 
-                      v-on="inputEvents" 
-                      placeholder="选择日期和时间" 
-                      readonly 
-                      style="cursor: pointer;"
-                    />
-                    <span class="icon">🏁</span>
-                  </div>
-                </template>
-              </v-date-picker>
-            </div>
+          <!-- 5. 描述 -->
+          <div class="form-group">
+            <label>描述</label>
+            <input type="text" v-model="classForm.description" placeholder="简单描述一下..." />
           </div>
+
         </div>
 
-        <!-- 底部按钮 -->
         <div class="modal-footer">
           <button class="btn-text" @click="showClassModal = false">取消</button>
           <button class="btn-submit" @click="submitCreateClass">立即创建</button>
@@ -352,6 +395,12 @@ const profileForm = reactive<Partial<TeacherProfile>>({
   intro: ''
 });
 const defaultAvatar = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png';
+// 1. 封面图选项 (新增)
+const coverOptions = [
+  'https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=300&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=300&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=300&auto=format&fit=crop'
+];
 // 模拟教师管理的课程数据
 // const courses = ref([
 //   { id: 1, name: 'ComfyUI 基础入门 (2025春)', category: 'AI绘图', students: 45, date: 'Created Dec 01', color: '#6c5ce7' },
@@ -366,11 +415,23 @@ const showClassModal = ref(false); // 控制新建班级弹窗
 // ✅ 【新增】新建班级的表单数据
 const classForm = reactive({ 
   name: '', 
-  courseId: '',    // 绑定课程ID
+  description: '', 
+  courseId: '', 
   startDate: '', 
-  endDate: '' 
+  endDate: '',
+  coverImage: coverOptions[0] // 默认选中第一张
 });
 const dateConfig = { type: 'string', mask: 'YYYY-MM-DD HH:mm' };
+
+const getTodayString = () => {
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hour = String(date.getHours()).padStart(2, '0');
+  const min = String(date.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day} ${hour}:${min}`;
+};
 
 onMounted(async () => {
   userStore.fetchUserInfo();
@@ -387,19 +448,61 @@ const loadProfile = async () => {
   }
 };
 
+// 定义一个扩展的接口，方便 TS 检查
+interface TeachingCard extends ClassItem {
+  displayTitle: string;
+  displaySubtitle: string;
+  bindingCourseId?: number;
+  isSplit: boolean;
+}
+
+// 修改 loadDashboardData
 const loadDashboardData = async () => {
   try {
-    // 1. 获取顶部统计
+    // 1. 获取统计
     const statsRes = await getDashboardStats();
     stats.value = statsRes;
     
     // 2. 获取班级列表
     const classesRes = await getMyClasses();
-    // 处理数据，添加随机颜色背景
-    classList.value = classesRes.map(c => ({
-      ...c,
-      styleColor: getRandomColor()
-    }));
+    
+    // 🌟【核心修改】：数据扁平化拆分逻辑 🌟
+    // 将一个班级绑定的多门课，拆分成多个卡片显示
+    const tempDisplayList: any[] = []; // 用 any 简单处理，或者用 TeachingCard
+
+    classesRes.forEach(cls => {
+      // A. 如果班级绑定了课程，就拆分成多个卡片
+      if (cls.bound_course_names && cls.bound_course_names.length > 0) {
+        cls.bound_course_names.forEach((cName, index) => {
+          // 获取对应的 courseId (假设后端返回的 names 和 ids 顺序是一致的)
+          // 注意：需要在后端接口 ClassOut 里返回 bound_course_ids，之前加过
+          const cId = cls.bound_course_ids ? cls.bound_course_ids[index] : undefined;
+
+          tempDisplayList.push({
+            ...cls,
+            styleColor: getRandomColor(),
+            // 标题逻辑：主标题是【课程名】，副标题是【班级名】
+            displayTitle: cName,
+            displaySubtitle: cls.name,
+            bindingCourseId: cId,
+            isSplit: true
+          });
+        });
+      } 
+      // B. 如果没绑定课程，就显示原始班级卡片
+      else {
+        tempDisplayList.push({
+          ...cls,
+          styleColor: getRandomColor(),
+          displayTitle: cls.name,       // 主标题直接显示班级名
+          displaySubtitle: '未绑定课程', 
+          isSplit: false
+        });
+      }
+    });
+
+    classList.value = tempDisplayList;
+
   } catch (error) {
     console.error("加载数据失败", error);
   }
@@ -485,23 +588,22 @@ const submitCreateClass = async () => {
   try {
     await createClass({
       name: classForm.name,
-      // 格式化日期
+      description: classForm.description,
+      // ✅ 提交封面
+      cover_image: classForm.coverImage, 
       start_date: formatDate(classForm.startDate),
       end_date: formatDate(classForm.endDate),
-      // 转换课程ID为数组
       course_ids: classForm.courseId ? [Number(classForm.courseId)] : []
     });
-    
     alert('创建成功');
     showClassModal.value = false;
-    
-    // 清空表单
+    // 重置表单
     classForm.name = '';
+    classForm.description = '';
     classForm.courseId = '';
     classForm.startDate = '';
     classForm.endDate = '';
-
-    // 刷新列表
+    
     loadDashboardData();
   } catch (error) {
     console.error(error);
@@ -634,12 +736,44 @@ $text-gray: #a4b0be;
       &:hover { transform: translateX(5px); box-shadow: 0 5px 20px rgba(0,0,0,0.03); }
       
       .course-img { width: 60px; height: 60px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 10px; text-transform: uppercase; }
+
+      .class-display {
+        display: flex;
+        flex-direction: column; /* 上下排列：上面是“所属班级”小字，下面是班级大字 */
+        align-items: flex-end;  /* 靠右对齐，靠近按钮 */
+        margin-right: 30px;     /* 和按钮保持距离 */
+        min-width: 120px;       /* 防止太窄 */
+
+        .label {
+          font-size: 12px;
+          color: #a4b0be;
+          margin-bottom: 2px;
+        }
+
+        .name {
+          font-size: 12px;
+          font-weight: bold;
+          color: $primary-color; /* 使用你的青绿色 */
+          background: rgba(0, 201, 167, 0.1); /* 淡绿色背景 */
+          padding: 4px 12px;
+          border-radius: 6px;
+        }
+      }
       
       .course-info {
-        flex: 1;
-        h4 { font-size: 16px; color: $text-dark; margin-bottom: 8px; }
-        .meta { display: flex; gap: 15px; font-size: 12px; color: $text-gray; }
-      }
+      flex: 1;
+      /* 稍微调整下间距 */
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 8px;
+      h4 { font-size: 15px; margin: 0; } /* 标题稍微大一点 */
+      .details-row { margin: 0; color: #666; font-size: 13px; }
+    }
+
+    .course-item {
+      align-items: center; /* 关键：让封面、文字、班级、按钮垂直居中对齐 */
+    }
 
       .course-actions {
         display: flex; gap: 10px;
@@ -843,4 +977,38 @@ $text-gray: #a4b0be;
 
 /* 空状态 */
 .empty-state { text-align: center; padding: 40px; color: #999; border: 2px dashed #eee; border-radius: 15px; width: 100%; }
+
+/* 封面选择器 */
+.cover-selector {
+  display: flex; gap: 10px; margin-top: 5px;
+  .cover-item {
+    width: 60px; height: 40px; border-radius: 6px; overflow: hidden; cursor: pointer; position: relative; border: 2px solid transparent; transition: all 0.2s;
+    img { width: 100%; height: 100%; object-fit: cover; }
+    &:hover { transform: scale(1.05); }
+    &.active { border-color: $primary-color; .check-mark { position: absolute; inset: 0; background: rgba(0, 201, 167, 0.4); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; } }
+  }
+}
+
+/* 日历底部按钮 */
+.picker-footer {
+  padding: 10px; border-top: 1px solid #eee; display: flex; justify-content: center;
+  .btn-today { background: transparent; border: none; color: $primary-color; font-size: 13px; font-weight: 600; cursor: pointer; padding: 4px 12px; border-radius: 6px; transition: background 0.2s; &:hover { background: rgba(0, 201, 167, 0.1); } }
+}
+
+.class-badge {
+  display: inline-block;
+  background-color: #f0f2f5;
+  color: #606266;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid #e0e0e0;
+}
+
+.time-row {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #a4b0be;
+}
 </style>

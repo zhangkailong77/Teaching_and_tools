@@ -15,7 +15,6 @@
             <span class="icon">🔍</span>
             <input type="text" v-model="searchText" placeholder="搜索姓名或学号..." />
           </div>
-          <button class="btn-outline" @click="openCreateClassModal">📂 新建班级</button>
           <button class="btn-primary" @click="openAddStudentModal">+ 添加学生</button>
         </div>
       </header>
@@ -149,148 +148,6 @@
 
       </div>
     </div>
-
-    <!-- 弹窗 2: 新建班级 (UI 升级版 - 含日期和封面) -->
-    <div class="modal-overlay" v-if="showClassModal" @click.self="showClassModal = false">
-      <div class="modal-content" style="width: 500px;"> <!-- 稍微宽一点 -->
-        
-        <div class="modal-header">
-          <div class="header-left">
-            <span class="icon-bg" style="background: #e3f2fd; color: #0984e3;">📂</span>
-            <h3>新建教学班级</h3>
-          </div>
-          <span class="close-btn" @click="showClassModal = false">×</span>
-        </div>
-
-        <div class="modal-body">
-          <!-- 班级名称 -->
-          <div class="form-group">
-            <label>班级名称 <span class="required">*</span></label>
-            <input type="text" v-model="classForm.name" placeholder="例如：2025 ComfyUI 实训一班" />
-          </div>
-
-          <!-- 日期选择 (双列布局) -->
-          <div class="form-row">
-            
-            <!-- 开课日期 -->
-            <div class="form-group">
-              <label>开课日期</label>
-              <!-- ✅ 加了 color="teal" -->
-              <v-date-picker 
-                v-model="classForm.startDate" 
-                mode="dateTime" 
-                is24hr
-                :model-config="dateConfig" 
-                color="teal"
-              >
-                <!-- 自定义输入框 -->
-                <template #default="{ inputValue, inputEvents }">
-                  <div class="input-with-icon">
-                    <input 
-                      :value="inputValue" 
-                      v-on="inputEvents" 
-                      placeholder="选择日期时间" 
-                      readonly 
-                      style="cursor: pointer;"
-                    />
-                    <span class="icon">📅</span>
-                  </div>
-                </template>
-
-                <!-- ✅ 新增：底部 Footer 插槽 -->
-                <template #footer>
-                  <div class="picker-footer">
-                    <button class="btn-today" @click="classForm.startDate = getTodayString()">
-                      此刻
-                    </button>
-                  </div>
-                </template>
-              </v-date-picker>
-            </div>
-
-            <!-- 结课日期 -->
-            <div class="form-group">
-              <label>结课日期</label>
-              <v-date-picker 
-                v-model="classForm.endDate" 
-                mode="dateTime" 
-                is24hr
-                :model-config="dateConfig" 
-                color="teal"
-              >
-                <template #default="{ inputValue, inputEvents }">
-                  <div class="input-with-icon">
-                    <input 
-                      :value="inputValue" 
-                      v-on="inputEvents" 
-                      placeholder="选择日期" 
-                      readonly 
-                      style="cursor: pointer;"
-                    />
-                    <span class="icon">📅</span>
-                  </div>
-                </template>
-
-                <!-- ✅ 新增：底部 Footer 插槽 -->
-                <template #footer>
-                  <div class="picker-footer">
-                    <button class="btn-today" @click="classForm.endDate = getTodayString()">
-                      此刻
-                    </button>
-                  </div>
-                </template>
-              </v-date-picker>
-            </div>
-
-          </div>
-
-          <!-- 封面选择 -->
-          <div class="form-group">
-            <label>班级封面</label>
-            <div class="cover-selector">
-              <div 
-                v-for="(img, index) in coverOptions" 
-                :key="index"
-                class="cover-item"
-                :class="{ active: classForm.coverImage === img }"
-                @click="classForm.coverImage = img"
-              >
-                <img :src="img" />
-                <div class="check-mark" v-if="classForm.coverImage === img">✓</div>
-              </div>
-            </div>
-          </div>
-          <!-- 选择课程资源 -->
-          <div class="form-group">
-            <label>绑定课程内容 (可选)</label>
-            <div class="select-wrapper">
-              <select v-model="classForm.courseId">
-                <option value="">不绑定 (仅作为空班级)</option>
-                <option v-for="course in courseLibrary" :key="course.id" :value="course.id">
-                  📦 {{ course.name }}
-                </option>
-              </select>
-              <span class="arrow">▼</span>
-            </div>
-            <p class="hint" v-if="courseLibrary.length === 0">
-              还没有课程包？请先去 <a href="#" @click.prevent="router.push('/dashboard/teacher/courses')">课程资源</a> 创建
-            </p>
-          </div>
-          
-          <!-- 描述 -->
-          <div class="form-group">
-            <label>描述</label>
-            <input type="text" v-model="classForm.description" placeholder="简单描述一下这个班级..." />
-          </div>
-        </div>
-
-        <div class="modal-footer">
-          <button class="btn-text" @click="showClassModal = false">取消</button>
-          <button class="btn-submit" @click="submitCreateClass">立即创建</button>
-        </div>
-
-      </div>
-    </div>
   </div>
 </template>
 
@@ -334,32 +191,6 @@ const formatDate = (val: any) => {
   }
   return val;
 };
-
-const getTodayString = () => {
-  const date = new Date();
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const hour = String(date.getHours()).padStart(2, '0');
-  const min = String(date.getMinutes()).padStart(2, '0');
-  return `${year}-${month}-${day} ${hour}:${min}`;
-};
-
-const classForm = reactive({
-  name: '',
-  description: '',
-  startDate: '', // yyyy-mm-dd
-  endDate: '',
-  coverImage: 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=1000&auto=format&fit=crop',
-  courseId: ''
-});
-
-// 预设一些好看的封面图供选择
-const coverOptions = [
-  'https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=300&auto=format&fit=crop', // 抽象紫
-  'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=300&auto=format&fit=crop',     // 科技蓝
-  'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=300&auto=format&fit=crop'  // 极简风
-];
 
 const students = ref<StudentItem[]>([]);
 
@@ -438,57 +269,6 @@ const submitAddStudent = async () => {
   } finally {
     isLoading.value = false;
   }
-};
-
-const openCreateClassModal = async () => {
-  try {
-    const res = await getMyCourses();
-    courseLibrary.value = res;
-    showClassModal.value = true;
-  } catch (error) {
-    console.error(error);
-  }
-};
-
-// 3. 提交创建班级 (修改版)
-const submitCreateClass = async () => {
-  if (!classForm.name) return;
-  
-  try {
-    await createClass({
-      name: classForm.name,
-      description: classForm.description,
-      cover_image: classForm.coverImage,
-      // 使用之前写好的 formatDate 确保格式正确
-      start_date: formatDate(classForm.startDate),
-      end_date: formatDate(classForm.endDate),
-      
-      // ✅ 新增：将选中的 courseId 转换为数组传给后端
-      // 如果选了就传 [id]，没选就传空数组 []
-      course_ids: classForm.courseId ? [Number(classForm.courseId)] : []
-    });
-    
-    alert('班级创建成功');
-    showClassModal.value = false;
-    
-    // 重置表单
-    classForm.name = '';
-    classForm.description = '';
-    classForm.startDate = '';
-    classForm.endDate = '';
-    classForm.courseId = ''; // ✅ 记得重置这个
-    
-    // 刷新班级列表
-    const res = await getMyClasses();
-    classList.value = res;
-  } catch (error) {
-    console.error(error);
-  }
-};
-
-const handleLogout = () => {
-  userStore.logout();
-  router.push('/login');
 };
 </script>
 
@@ -727,67 +507,5 @@ $text-gray: #a4b0be;
 @keyframes popUp { 
   0% { opacity: 0; transform: scale(0.9) translateY(20px); }
   100% { opacity: 1; transform: scale(1) translateY(0); }
-}
-
-/* 封面选择器样式 */
-.cover-selector {
-  display: flex;
-  gap: 10px;
-  margin-top: 5px;
-  
-  .cover-item {
-    width: 60px;
-    height: 40px;
-    border-radius: 6px;
-    overflow: hidden;
-    cursor: pointer;
-    position: relative;
-    border: 2px solid transparent;
-    transition: all 0.2s;
-
-    img { width: 100%; height: 100%; object-fit: cover; }
-
-    &:hover { transform: scale(1.05); }
-
-    &.active {
-      border-color: $primary-color;
-      .check-mark {
-        position: absolute; inset: 0;
-        background: rgba(0, 201, 167, 0.4);
-        color: white; display: flex; align-items: center; justify-content: center;
-        font-weight: bold; font-size: 14px;
-      }
-    }
-  }
-}
-
-/* 复用之前的 form-row */
-.form-row {
-  display: flex; gap: 20px;
-  .form-group { flex: 1; }
-}
-
-/* 日历底部的快捷按钮样式 */
-.picker-footer {
-  padding: 10px;
-  border-top: 1px solid #eee;
-  display: flex;
-  justify-content: center;
-  
-  .btn-today {
-    background: transparent;
-    border: none;
-    color: $primary-color; /* 使用你的青绿色 */
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    padding: 4px 12px;
-    border-radius: 6px;
-    transition: background 0.2s;
-
-    &:hover {
-      background: rgba(0, 201, 167, 0.1);
-    }
-  }
 }
 </style>

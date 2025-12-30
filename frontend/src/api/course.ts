@@ -10,6 +10,7 @@ export interface ClassItem {
   start_date?: string;
   end_date?: string;
   bound_course_names: string[]; 
+  bound_course_ids: number[];
   styleColor?: string;
 }
 
@@ -57,6 +58,11 @@ export function createClass(data: {
   return request.post<any, ClassItem>('/classes/', data);
 }
 
+// ✅ 新增：更新班级
+export function updateClass(id: number, data: any) {
+  return request.put<any, ClassItem>(`/classes/${id}`, data);
+}
+
 // 3. 向指定班级添加学生 (核心功能)
 export function addStudentToClass(classId: number, data: { username: string, full_name: string, student_number: string }) {
   return request.post(`/classes/${classId}/students`, data);
@@ -65,4 +71,9 @@ export function addStudentToClass(classId: number, data: { username: string, ful
 // 4. ✅ 新增：获取我的所有学生
 export function getMyStudents() {
   return request.get<any, StudentItem[]>('/classes/my-students');
+}
+
+// ✅ 新增：将学生移出班级
+export function removeStudentFromClass(classId: number, studentId: number) {
+  return request.delete(`/classes/${classId}/students/${studentId}`);
 }

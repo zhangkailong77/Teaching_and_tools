@@ -13,6 +13,10 @@
         <span class="icon">📚</span> 工作台
       </router-link>
 
+      <router-link to="/dashboard/teacher/classes" class="menu-item" active-class="active">
+        <span class="icon">🏫</span> 班级管理
+      </router-link>
+
       <router-link to="/dashboard/teacher/students" class="menu-item" active-class="active">
         <span class="icon">👥</span> 学生名单
       </router-link>
@@ -26,7 +30,7 @@
         <span class="badge">12</span>
       </a>
       <a href="#" class="menu-item">
-        <span class="icon">📊</span> 成绩统计
+        <span class="icon">📊</span> 考试中心
       </a>
     </div>
 
