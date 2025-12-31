@@ -345,3 +345,92 @@ def remove_student_from_class(
     db.delete(enrollment)
     db.commit()
     return {"message": "移出成功"}
+
+
+
+
+
+# ------------------------------------------------------------------
+# 学生端] 获取我加入的班级及课程信息
+# 接口地址: GET /api/v1/classes/my-enrolled-classes
+# ------------------------------------------------------------------
+@router.get("/my-enrolled-classes", response_model=List[class_schemas.ClassOut])
+def read_student_classes(
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    # 1. 身份校验：虽然老师也能调，但业务上主要是给学生的
+    # if current_user.role != "student":
+    #     return [] 
+    
+    # 2. 查询 Enrollment 表，找到该用户 ID 对应的所有选课记录
+    enrollments = db.query(Enrollment).filter(Enrollment.student_id == current_user.id).all()
+    
+    results = []
+    
+    for enrollment in enrollments:
+        # 3. 通过外键关系直接获取班级对象
+        cls = enrollment.classroom
+        
+        if not cls:
+            continue
+
+        t_name = "未知教师"
+        t_title = "讲师"
+        t_avatar = None
+
+        if cls.teacher:
+            # 优先从 profile 取
+            if cls.teacher.teacher_profile:
+                profile = cls.teacher.teacher_profile
+                if profile.real_name:
+                    t_name = profile.real_name
+                if profile.title:
+                    t_title = profile.title
+                # ✅ 获取头像路径
+                t_avatar = profile.avatar
+            else:
+                t_name = cls.teacher.username
+
+        # 4. 查询该班级绑定的课程包 (为了获取课程名和封面)
+        bindings = db.query(ClassCourseBinding).filter(ClassCourseBinding.class_id == cls.id).all()
+        
+        c_names = []
+        c_ids = []
+        c_covers = []
+        
+        # 逻辑：优先显示课程的封面，如果没绑课，才显示班级封面
+        display_cover = cls.cover_image 
+        
+        for binding in bindings:
+            course_obj = db.query(Course).filter(Course.id == binding.course_id).first()
+            if course_obj:
+                c_names.append(course_obj.name)
+                c_ids.append(course_obj.id)
+                c_covers.append(course_obj.cover) 
+                # 简单的封面逻辑：取第一个绑定的课程封面作为展示
+                if not display_cover and course_obj.cover:
+                    display_cover = course_obj.cover
+
+        # 5. 构造返回数据
+        # 注意：这里复用了 ClassOut，所以必须填满 ClassOut 定义的所有字段
+        results.append({
+            "id": cls.id,
+            "name": cls.name,
+            "description": cls.description,
+            "teacher_id": cls.teacher_id,
+            "cover_image": display_cover, # ✅ 使用智能判断后的封面
+            "start_date": cls.start_date,
+            "end_date": cls.end_date,
+            "created_at": cls.created_at,
+            
+            "student_count": 0, # 学生端不需要知道班里多少人，填0即可
+            "bound_course_names": c_names,
+            "bound_course_ids": c_ids,
+            "bound_course_covers": c_covers,
+            "teacher_name": t_name,
+            "teacher_title": t_title,
+            "teacher_avatar": t_avatar
+        })
+        
+    return results

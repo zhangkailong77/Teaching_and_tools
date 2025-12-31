@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.api import deps
 from app.models.user import User
-from app.models.content import Course
+from app.models.content import Course, TeacherCourseAccess
 from app.schemas import content as schemas
 
 router = APIRouter()
@@ -17,12 +17,24 @@ def read_my_courses(
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user),
 ):
-    # 只有老师能看自己的资源库
-    if current_user.role != "teacher":
-        raise HTTPException(status_code=403, detail="权限不足")
+
+    all_courses = db.query(Course).all()
+
+    access_records = db.query(TeacherCourseAccess).filter(
+        TeacherCourseAccess.teacher_id == current_user.id
+    ).all()
+
+    unlocked_course_ids = {record.course_id for record in access_records}
+    
+    results = []
+    for course in all_courses:
+        is_locked = course.id not in unlocked_course_ids
+        course_data = course.__dict__.copy()
+        course_data['is_locked'] = is_locked
         
-    courses = db.query(Course).filter(Course.owner_id == current_user.id).all()
-    return courses
+        results.append(course_data)
+        
+    return results
 
 # ------------------------------------------------------------------
 # 2. 创建新的课程资源包

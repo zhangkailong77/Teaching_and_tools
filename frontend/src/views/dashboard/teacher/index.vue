@@ -107,7 +107,7 @@
       <div class="profile-summary">
         <div class="avatar-large">
           <!-- 如果没有头像，使用 DiceBear 生成一个 -->
-          <img :src="profile.avatar || defaultAvatar" alt="avatar" />
+          <img :src="getImgUrl(profile.avatar) || defaultAvatar" alt="avatar" />
         </div>
         
         <!-- 显示真实姓名，没有则显示账号 -->
@@ -150,7 +150,7 @@
             <!-- 点击触发 triggerFileInput -->
             <div class="avatar-edit" @click="triggerFileInput">
               <!-- 显示当前表单里的头像，如果没有就显示默认图 -->
-              <img :src="profileForm.avatar || defaultAvatar" alt="Avatar" />
+              <img :src="getImgUrl(profileForm.avatar) || defaultAvatar" alt="Avatar" />
               <div class="overlay">
                 <span>📷 更换</span>
               </div>
@@ -379,6 +379,7 @@ import { uploadImage } from '@/api/common';
 import TeacherSidebar from '@/components/TeacherSidebar.vue';
 import { getMyClasses, createClass, getDashboardStats, type ClassItem, type DashboardStats } from '@/api/course';
 import { getMyCourses, type CourseItem } from '@/api/content';
+import { getImgUrl } from '@/utils/index'; 
 
 const router = useRouter();
 const userStore = useUserStore();

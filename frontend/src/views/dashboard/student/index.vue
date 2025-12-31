@@ -1,42 +1,7 @@
 <template>
   <div class="dashboard-container">
     
-    <!-- 1. 左侧侧边栏 (Sidebar) -->
-    <aside class="sidebar">
-      <div class="logo-area">
-        <img src="@/assets/logo.png" alt="Logo" class="logo-img" />
-      </div>
-
-      <div class="menu-group">
-        <div class="menu-title">工作台</div>
-        <a href="#" class="menu-item active">
-          <span class="icon">🏠</span> 课程中心
-        </a>
-        <a href="#" class="menu-item">
-          <span class="icon">🔔</span> 消息通知
-        </a>
-        <a href="#" class="menu-item">
-          <span class="icon">💻</span> 我的实训
-        </a>
-        <a href="#" class="menu-item">
-          <span class="icon">📝</span> 作业任务
-        </a>
-        <!-- 新增：我的班级 -->
-        <a href="#" class="menu-item">
-          <span class="icon">👥</span> 我的班级
-        </a>
-      </div>
-
-      <div class="menu-group bottom">
-        <div class="menu-title">系统设置</div>
-        <a href="#" class="menu-item">
-          <span class="icon">⚙️</span> 设置
-        </a>
-        <a href="#" class="menu-item logout" @click.prevent="handleLogout">
-          <span class="icon">🚪</span> 退出登录
-        </a>
-      </div>
-    </aside>
+    <StudentSidebar />
 
     <!-- 2. 中间主内容区 (Main Content) -->
     <main class="main-content">
@@ -102,14 +67,24 @@
 
       <div class="course-grid">
         <!-- 课程卡片 v-for -->
-        <div class="course-card" v-for="course in courses" :key="course.id">
-          <div class="card-cover" :style="{ backgroundColor: course.color }">
+        <div class="course-card" v-for="(course, index) in courseList" :key="index">
+          
+          <!-- 封面区域 -->
+          <div class="card-cover" :style="{ backgroundColor: course.color, backgroundImage: `url(${getImgUrl(course.cover)})`, backgroundSize: 'cover' }">
             <span class="fav-icon">❤</span>
-            <div class="course-tag">FRONTEND</div>
+            <!-- 如果没有封面图，显示课程类型的标签 -->
+            <div class="course-tag" v-if="!course.cover">FRONTEND</div>
           </div>
+          
           <div class="card-body">
-            <h4>{{ course.name }}</h4>
+            <!-- 课程名称 -->
+            <h4 :title="course.name">{{ course.name }}</h4>
             
+            <!-- 显示所属班级 (新增) -->
+            <p style="font-size: 12px; color: #a4b0be; margin-bottom: 10px;">
+              班级: {{ course.className }}
+            </p>
+
             <!-- 进度条 -->
             <div class="progress-wrapper">
               <div class="progress-bg">
@@ -119,13 +94,28 @@
             </div>
 
             <div class="teacher-info">
-              <div class="avatar">{{ course.teacher[0] }}</div>
+              <img 
+                v-if="course.teacherAvatar" 
+                :src="getImgUrl(course.teacherAvatar)" 
+                class="avatar-img" 
+                alt="T"
+              />
+
+              <div v-else class="avatar">
+                {{ course.teacherName?.charAt(0) }}
+              </div>
+              
               <div class="details">
-                <div class="name">{{ course.teacher }}</div>
-                <div class="role">Lecturer</div>
+                <div class="name">{{ course.teacherName }}</div>
+                <div class="role">{{ course.teacherTitle || '讲师' }}</div>
               </div>
             </div>
           </div>
+        </div>
+
+        <!-- 空状态 -->
+        <div v-if="courseList.length === 0" style="grid-column: 1/-1; text-align: center; padding: 40px; color: #999;">
+          📭 你还没有加入任何班级或班级暂无课程
         </div>
       </div>
 
@@ -188,6 +178,9 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/modules/user';
 import request from '@/utils/request';
+import StudentSidebar from '@/components/StudentSidebar.vue';
+import { getImgUrl } from '@/utils/index';
+import { getMyEnrolledClasses, type ClassItem } from '@/api/course';
 
 const router = useRouter();
 const userStore = useUserStore();
@@ -195,22 +188,78 @@ const userStore = useUserStore();
 const isLoading = ref(false);
 const comfyUrl = ref(''); // 用来存后端返回的 URL
 
-// 模拟课程数据
-const courses = ref([
-  { id: 1, name: 'ComfyUI 基础入门', teacher: 'Prashant Singh', progress: 35, color: '#2d3436' },
-  { id: 2, name: '跨境电商业务场景实战', teacher: 'Ravi Kumar', progress: 78, color: '#f1c40f' },
-  { id: 3, name: '局部重绘', teacher: 'Alice Dev', progress: 12, color: '#3498db' },
-  { id: 4, name: '模特换装（绘制遮罩）', teacher: 'Lin Chang', progress: 5, color: '#e74c3c' }, // 红色
-  { id: 5, name: '模特换装（Qwen全自动）', teacher: 'Sarah Wu', progress: 0, color: '#9b59b6' }, // 紫色
-  { id: 6, name: '线稿生成器', teacher: 'Mike Chen', progress: 100, color: '#2ecc71' }, // 绿色
-  { id: 7, name: '商品变体 (depth篇)', teacher: 'Emily Zhang', progress: 45, color: '#e67e22' }, // 橙色
-  { id: 8, name: '商品变体 (canny篇)', teacher: 'David Liu', progress: 20, color: '#1abc9c' }  // 青色
-]);
+interface StudentCourseCard {
+  id: number;
+  name: string;
+  className: string;
+  cover: string;
+  progress: number;
+  color: string;
+  teacherName?: string;
+  teacherTitle?: string;
+  teacherAvatar?: string;
+}
+
+// ✅ 【新增】真实数据列表
+const courseList = ref<StudentCourseCard[]>([]);
+
+// ✅ 【新增】随机颜色工具函数
+const getRandomColor = () => {
+  const colors = ['#2d3436', '#f1c40f', '#3498db', '#e74c3c', '#9b59b6', '#2ecc71'];
+  return colors[Math.floor(Math.random() * colors.length)];
+};
 
 onMounted(() => {
-  // 页面加载时获取用户信息
   userStore.fetchUserInfo();
+  fetchMyCourses();
 });
+
+const fetchMyCourses = async () => {
+  try {
+    const res = await getMyEnrolledClasses();
+    const tempList: StudentCourseCard[] = [];
+
+    res.forEach(cls => {
+      // 如果班级绑定了课程，把每一门课都拆出来变成一个卡片
+      if (cls.bound_course_names && cls.bound_course_names.length > 0) {
+        cls.bound_course_names.forEach((cName, index) => {
+          const specificCover = cls.bound_course_covers && cls.bound_course_covers[index] 
+                                ? cls.bound_course_covers[index] 
+                                : cls.cover_image;
+
+          tempList.push({
+            id: cls.bound_course_ids ? cls.bound_course_ids[index] : index,
+            name: cName,
+            className: cls.name,
+            
+            cover: specificCover || '', // ✅ 使用精准封面
+            
+            progress: 0,
+            color: getRandomColor(),
+            teacherName: cls.teacher_name, 
+            teacherTitle: cls.teacher_title,
+            teacherAvatar: cls.teacher_avatar
+          });
+        });
+      } else {
+        // 如果没绑课，显示一个占位卡片
+        tempList.push({
+          id: cls.id,
+          name: '暂未安排课程',
+          className: cls.name,
+          cover: cls.cover_image || '',
+          progress: 0,
+          color: getRandomColor(),
+          teacherName: '班主任'
+        });
+      }
+    });
+
+    courseList.value = tempList;
+  } catch (error) {
+    console.error("加载课程失败", error);
+  }
+};
 
 // 退出登录
 const handleLogout = async () => {
@@ -417,29 +466,74 @@ $text-gray: #a4b0be;
     display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; padding-bottom: 20px;
     
     .course-card {
-      background: white; border-radius: 15px; overflow: hidden; transition: transform 0.3s;
-      &:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
+      background: white;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.02);
+      transition: all 0.3s;
+      border: 1px solid transparent;
+      
+      /* ✅ 关键 1: 开启 Flex 纵向布局，为了让底部对齐 */
+      display: flex;
+      flex-direction: column; 
+      height: 100%; /* 撑满 Grid 这一行的高度 */
 
-      .card-cover {
-        height: 120px; padding: 15px; position: relative; color: white; display: flex; flex-direction: column; justify-content: space-between;
-        .fav-icon { align-self: flex-end; cursor: pointer; }
-        .course-tag { font-size: 10px; background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 4px; align-self: flex-start; }
+      &:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        border-color: $primary-color;
       }
 
+      /* ✅ 关键 2: 封面高度固定为 160px (与教师端保持一致) */
+      .card-cover {
+        height: 160px; /* 固定高度 */
+        width: 100%;
+        position: relative;
+        background-position: center;
+        background-size: cover;
+        flex-shrink: 0; /* 防止被挤压 */
+        
+        .fav-icon { position: absolute; top: 10px; right: 10px; color: white; cursor: pointer; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+        .course-tag { position: absolute; bottom: 10px; left: 10px; font-size: 10px; background: rgba(0,0,0,0.6); color: white; padding: 2px 8px; border-radius: 4px; backdrop-filter: blur(4px); }
+      }
+
+      /* ✅ 关键 3: 内容区域自适应填充 */
       .card-body {
         padding: 20px;
-        h4 { margin: 0 0 15px 0; font-size: 16px; color: $text-dark; }
+        flex: 1; /* 占据剩余所有空间 */
+        display: flex;     /* 内部也用 Flex */
+        flex-direction: column; /* 纵向排列 */
+
+        h4 { 
+          font-size: 16px; color: $text-dark; margin: 0 0 5px 0; 
+          line-height: 1.4;
+          /* 限制标题最多 2 行，防止太高 */
+          display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+        }
         
+        /* 班级名称样式微调 */
+        p { font-size: 12px; color: #a4b0be; margin-bottom: 15px; }
+
         .progress-wrapper {
-          margin-bottom: 20px; display: flex; align-items: center; gap: 10px;
+          margin-bottom: 20px; 
+          display: flex; align-items: center; gap: 10px;
           .progress-bg { flex: 1; height: 6px; background: #eee; border-radius: 3px; overflow: hidden; }
           .progress-fill { height: 100%; background: $primary-color; border-radius: 3px; }
           .progress-text { font-size: 12px; color: $text-gray; }
         }
 
+        /* ✅ 关键 4: 讲师信息强制沉底 */
         .teacher-info {
+          margin-top: auto; /* 这是实现底部对齐的神奇代码 */
+          padding-top: 15px;
+          border-top: 1px solid #f5f5f5; /* 加一条分割线更清晰 */
           display: flex; align-items: center; gap: 10px;
-          .avatar { width: 30px; height: 30px; border-radius: 50%; background: #eee; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #666; }
+          
+          .avatar { 
+            width: 30px; height: 30px; border-radius: 50%; background: #eee; 
+            display: flex; align-items: center; justify-content: center; 
+            font-size: 12px; color: #666; font-weight: bold;
+          }
           .details {
             .name { font-size: 12px; font-weight: 600; color: $text-dark; }
             .role { font-size: 10px; color: $text-gray; }
@@ -496,5 +590,14 @@ $text-gray: #a4b0be;
       }
     }
   }
+}
+
+/* 老师头像图片样式 */
+.avatar-img {
+  width: 30px; 
+  height: 30px; 
+  border-radius: 50%; 
+  object-fit: cover; /* 防止图片变形 */
+  border: 1px solid #eee;
 }
 </style>

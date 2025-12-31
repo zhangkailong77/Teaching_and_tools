@@ -24,5 +24,7 @@ class CourseOut(CourseBase):
     owner_id: int
     created_at: datetime
 
+    is_locked: bool = False 
+
     class Config:
         from_attributes = True

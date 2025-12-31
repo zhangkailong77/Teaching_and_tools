@@ -11,7 +11,7 @@
  Target Server Version : 80042 (8.0.42)
  File Encoding         : 65001
 
- Date: 29/12/2025 20:52:48
+ Date: 31/12/2025 17:12:29
 */
 
 SET NAMES utf8mb4;
@@ -31,12 +31,23 @@ CREATE TABLE `class_course_bindings`  (
   INDEX `fk_ccb_course`(`course_id` ASC) USING BTREE,
   CONSTRAINT `fk_ccb_class` FOREIGN KEY (`class_id`) REFERENCES `classes` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `fk_ccb_course` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 23 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of class_course_bindings
 -- ----------------------------
-INSERT INTO `class_course_bindings` VALUES (1, 3, 1, '2025-12-29 16:28:53');
+INSERT INTO `class_course_bindings` VALUES (6, 3, 1, '2025-12-30 14:49:24');
+INSERT INTO `class_course_bindings` VALUES (10, 2, 2, '2025-12-30 17:08:11');
+INSERT INTO `class_course_bindings` VALUES (11, 2, 1, '2025-12-30 17:08:11');
+INSERT INTO `class_course_bindings` VALUES (12, 2, 3, '2025-12-30 17:08:11');
+INSERT INTO `class_course_bindings` VALUES (15, 4, 7, '2025-12-31 16:09:21');
+INSERT INTO `class_course_bindings` VALUES (16, 5, 8, '2025-12-31 16:10:00');
+INSERT INTO `class_course_bindings` VALUES (17, 1, 6, '2025-12-31 16:41:37');
+INSERT INTO `class_course_bindings` VALUES (18, 1, 1, '2025-12-31 16:41:37');
+INSERT INTO `class_course_bindings` VALUES (19, 1, 2, '2025-12-31 16:41:37');
+INSERT INTO `class_course_bindings` VALUES (20, 1, 3, '2025-12-31 16:41:37');
+INSERT INTO `class_course_bindings` VALUES (21, 1, 4, '2025-12-31 16:41:37');
+INSERT INTO `class_course_bindings` VALUES (22, 1, 5, '2025-12-31 16:41:37');
 
 -- ----------------------------
 -- Table structure for classes
@@ -55,14 +66,16 @@ CREATE TABLE `classes`  (
   INDEX `teacher_id`(`teacher_id` ASC) USING BTREE,
   INDEX `ix_classes_id`(`id` ASC) USING BTREE,
   CONSTRAINT `classes_ibfk_1` FOREIGN KEY (`teacher_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 6 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of classes
 -- ----------------------------
-INSERT INTO `classes` VALUES (1, '2025实训1班', 'comfyui', 2, '2025-12-26 16:01:20', NULL, NULL, NULL);
-INSERT INTO `classes` VALUES (2, '2025comfyui2班', '跨境电商', 2, '2025-12-29 10:21:33', 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=300&auto=format&fit=crop', '2025-12-29 10:18:00', '2025-12-31 15:47:00');
-INSERT INTO `classes` VALUES (3, '2025 实训3班', '商务英语1班', 2, '2025-12-29 16:28:53', 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=300&auto=format&fit=crop', '2025-12-29 08:28:00', '2025-12-30 16:00:00');
+INSERT INTO `classes` VALUES (1, '25跨境电商1班', '', 2, '2025-12-26 16:01:20', 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=300&auto=format&fit=crop', '2025-12-10 16:00:00', '2025-12-22 16:00:00');
+INSERT INTO `classes` VALUES (2, '25电子商务1班', '电商', 2, '2025-12-29 10:21:33', 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=300&auto=format&fit=crop', '2025-12-29 10:18:00', '2025-12-31 15:47:00');
+INSERT INTO `classes` VALUES (3, '25商务英语1班', '商务英语1班', 2, '2025-12-29 16:28:53', 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=300&auto=format&fit=crop', '2025-12-29 08:28:00', '2025-12-30 16:00:00');
+INSERT INTO `classes` VALUES (4, '25电子商务2班', '', 4, '2025-12-31 16:09:21', 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=300&auto=format&fit=crop', '2025-12-31 08:08:00', '2026-02-25 16:00:00');
+INSERT INTO `classes` VALUES (5, '25跨境电商2班', '', 4, '2025-12-31 16:10:00', 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=300&auto=format&fit=crop', '2025-12-30 16:00:00', '2026-02-11 16:00:00');
 
 -- ----------------------------
 -- Table structure for courses
@@ -78,14 +91,19 @@ CREATE TABLE `courses`  (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `fk_courses_owner`(`owner_id` ASC) USING BTREE,
   CONSTRAINT `fk_courses_owner` FOREIGN KEY (`owner_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 9 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of courses
 -- ----------------------------
-INSERT INTO `courses` VALUES (1, 'comfyui电商课程', 'http://127.0.0.1:8000/static/uploads/courses/f48d9e7d-4d3b-4b67-846b-663341a632ab.webp', 'AI生图技术在电商场景中的应用', 2, '2025-12-29 16:27:59');
-INSERT INTO `courses` VALUES (2, 'dify 课程', 'http://127.0.0.1:8000/static/uploads/courses/121a8ee1-6756-4f38-9617-305fd69f97bc.png', '可视化节点编排AI电商自动化工作流', 2, '2025-12-29 16:31:28');
-INSERT INTO `courses` VALUES (3, 'shopee 实战课程', 'http://127.0.0.1:8000/static/uploads/courses/4a816389-698b-469d-a958-2b3762d2d075.png', 'shopee虚拟仿真平台实战', 2, '2025-12-29 16:32:12');
+INSERT INTO `courses` VALUES (1, '【01】AI+(跨境)电商视觉营销设计', '/static/uploads/courses/f48d9e7d-4d3b-4b67-846b-663341a632ab.webp', 'AI生图技术在电商场景中的应用', 2, '2025-12-29 16:27:59');
+INSERT INTO `courses` VALUES (2, '【02】AI+智能体跨境客服应用', '/static/uploads/courses/121a8ee1-6756-4f38-9617-305fd69f97bc.png', '可视化节点编排AI电商自动化工作流', 2, '2025-12-29 16:31:28');
+INSERT INTO `courses` VALUES (3, '【03】AI提示词工程与跨境电商运营实务', '/static/uploads/courses/824528c9-caff-49cb-85df-4e5e46277d17.png', 'shopee虚拟仿真平台实战', 2, '2025-12-29 16:32:12');
+INSERT INTO `courses` VALUES (4, '【04】跨境AI+短视频运营实战', '/static/uploads/courses/829cd3c3-d1b1-4b0d-8a7e-63c543a9f588.png', '', 2, '2025-12-30 17:11:50');
+INSERT INTO `courses` VALUES (5, '【05】AI+跨境电商数据分析实务', '/static/uploads/courses/0486fddf-3fbc-4907-a7ed-ce9ec8c925c6.png', '', 2, '2025-12-30 17:12:10');
+INSERT INTO `courses` VALUES (6, '【06】Shopee虚拟仿真与实战应用（东盟市场）', '/static/uploads/courses/379724bb-5ef3-47a5-b1b4-84dc219f8f7d.png', '', 2, '2025-12-30 17:12:33');
+INSERT INTO `courses` VALUES (7, '【07】Ozon虚拟仿真与实战应用（中亚市场）', '/static/uploads/courses/3f48e3fb-130e-4acf-b059-0406583edf67.png', '', 2, '2025-12-30 17:12:49');
+INSERT INTO `courses` VALUES (8, '【08】东盟语种跨境直播实战', '/static/uploads/courses/e7c2c671-aa9b-4e1f-80d4-b0ff47e8c927.png', '', 2, '2025-12-30 17:13:34');
 
 -- ----------------------------
 -- Table structure for enrollments
@@ -102,7 +120,7 @@ CREATE TABLE `enrollments`  (
   INDEX `ix_enrollments_id`(`id` ASC) USING BTREE,
   CONSTRAINT `enrollments_ibfk_1` FOREIGN KEY (`class_id`) REFERENCES `classes` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `enrollments_ibfk_2` FOREIGN KEY (`student_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 7 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 13 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of enrollments
@@ -111,8 +129,41 @@ INSERT INTO `enrollments` VALUES (1, 1, 8, '2025-12-26 16:02:05');
 INSERT INTO `enrollments` VALUES (2, 1, 1, '2025-12-26 16:28:51');
 INSERT INTO `enrollments` VALUES (3, 2, 5, '2025-12-29 16:35:07');
 INSERT INTO `enrollments` VALUES (4, 2, 6, '2025-12-29 16:35:29');
-INSERT INTO `enrollments` VALUES (5, 2, 7, '2025-12-29 16:35:46');
 INSERT INTO `enrollments` VALUES (6, 3, 9, '2025-12-29 17:59:50');
+INSERT INTO `enrollments` VALUES (7, 3, 10, '2025-12-30 14:20:52');
+INSERT INTO `enrollments` VALUES (8, 2, 7, '2025-12-30 16:38:13');
+INSERT INTO `enrollments` VALUES (9, 2, 11, '2025-12-30 16:38:48');
+INSERT INTO `enrollments` VALUES (10, 4, 12, '2025-12-31 16:11:05');
+INSERT INTO `enrollments` VALUES (11, 4, 13, '2025-12-31 16:14:41');
+INSERT INTO `enrollments` VALUES (12, 5, 14, '2025-12-31 16:15:10');
+
+-- ----------------------------
+-- Table structure for teacher_course_access
+-- ----------------------------
+DROP TABLE IF EXISTS `teacher_course_access`;
+CREATE TABLE `teacher_course_access`  (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `teacher_id` int NOT NULL COMMENT '教师ID',
+  `course_id` int NOT NULL COMMENT '课程ID',
+  `created_at` datetime NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_teacher_course`(`teacher_id` ASC, `course_id` ASC) USING BTREE,
+  INDEX `fk_tca_course`(`course_id` ASC) USING BTREE,
+  CONSTRAINT `fk_tca_course` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
+  CONSTRAINT `fk_tca_teacher` FOREIGN KEY (`teacher_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
+) ENGINE = InnoDB AUTO_INCREMENT = 9 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '教师课程权限表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of teacher_course_access
+-- ----------------------------
+INSERT INTO `teacher_course_access` VALUES (1, 2, 1, '2025-12-31 14:34:39');
+INSERT INTO `teacher_course_access` VALUES (2, 2, 2, '2025-12-31 14:34:39');
+INSERT INTO `teacher_course_access` VALUES (3, 2, 3, '2025-12-31 14:34:39');
+INSERT INTO `teacher_course_access` VALUES (4, 2, 4, '2025-12-31 14:34:39');
+INSERT INTO `teacher_course_access` VALUES (5, 2, 5, '2025-12-31 14:34:39');
+INSERT INTO `teacher_course_access` VALUES (6, 2, 6, '2025-12-31 14:34:39');
+INSERT INTO `teacher_course_access` VALUES (7, 4, 7, '2025-12-31 16:15:55');
+INSERT INTO `teacher_course_access` VALUES (8, 4, 8, '2025-12-31 16:16:07');
 
 -- ----------------------------
 -- Table structure for teacher_profiles
@@ -134,12 +185,13 @@ CREATE TABLE `teacher_profiles`  (
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_user_id`(`user_id` ASC) USING BTREE,
   CONSTRAINT `fk_tp_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of teacher_profiles
 -- ----------------------------
-INSERT INTO `teacher_profiles` VALUES (1, 2, '张三', '男', '18250636866', '南宁职业技术大学', '电子商务学院', '高级讲师', 'happy', 'http://127.0.0.1:8000/static/uploads/avatars/1ee64345-a553-40ee-9ab1-c4e94ed90a75.png', '2025-12-29 11:21:18', '2025-12-29 14:11:46');
+INSERT INTO `teacher_profiles` VALUES (1, 2, '张三', '男', '18250636866', '南宁职业技术大学', '电子商务学院', '高级讲师', 'happy', '/static/uploads/avatars/1ee64345-a553-40ee-9ab1-c4e94ed90a75.png', '2025-12-29 11:21:18', '2025-12-31 15:21:35');
+INSERT INTO `teacher_profiles` VALUES (2, 4, '陈一', '女', '18250636867', '颜值大学', '电子商务学院', '副教授', '专业的', '/static/uploads/avatars/e2a0be43-da33-4473-8961-8de59f9e6c21.png', '2025-12-31 16:13:06', '2025-12-31 16:14:09');
 
 -- ----------------------------
 -- Table structure for users
@@ -158,20 +210,25 @@ CREATE TABLE `users`  (
   `student_number` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '学号',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `ix_users_username`(`username` ASC) USING BTREE,
-  INDEX `ix_users_id`(`id` ASC) USING BTREE,
-  UNIQUE INDEX `comfyui_port`(`comfyui_port` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 10 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+  UNIQUE INDEX `comfyui_port`(`comfyui_port` ASC) USING BTREE,
+  INDEX `ix_users_id`(`id` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 15 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of users
 -- ----------------------------
-INSERT INTO `users` VALUES (1, '18250636865', '$2b$12$jwxhQX9peRLmh0wxVq7xreuheYZDiDAIAIIzokZOnMsMr/R/RbVMS', 'student', 1, '2025-12-24 11:26:48', '2025-12-29 17:55:51', 8189, '张凯', '22014082032');
-INSERT INTO `users` VALUES (2, '18250636866', '$2b$12$OFGjgw52J9TWeZzKeG6gPOHUKKhi7EM3YYfUh2R1n7e43azYclPWy', 'teacher', 1, '2025-12-24 11:27:14', '2025-12-29 17:56:04', NULL, NULL, NULL);
-INSERT INTO `users` VALUES (4, '18250636867', '$2b$12$mVae3WIBNklVoxfL7qkLQ.ymZ9vRDq6vbwB2Za0cTStB1FO1DeYoa', 'teacher', 1, '2025-12-24 15:04:05', '2025-12-25 17:21:29', NULL, NULL, NULL);
+INSERT INTO `users` VALUES (1, '18250636865', '$2b$12$jwxhQX9peRLmh0wxVq7xreuheYZDiDAIAIIzokZOnMsMr/R/RbVMS', 'student', 1, '2025-12-24 11:26:48', '2025-12-31 16:53:23', 8189, '张凯', '22014082032');
+INSERT INTO `users` VALUES (2, '18250636866', '$2b$12$OFGjgw52J9TWeZzKeG6gPOHUKKhi7EM3YYfUh2R1n7e43azYclPWy', 'teacher', 1, '2025-12-24 11:27:14', '2025-12-31 17:11:07', NULL, NULL, NULL);
+INSERT INTO `users` VALUES (4, '18250636867', '$2b$12$mVae3WIBNklVoxfL7qkLQ.ymZ9vRDq6vbwB2Za0cTStB1FO1DeYoa', 'teacher', 1, '2025-12-24 15:04:05', '2025-12-31 17:11:51', NULL, NULL, NULL);
 INSERT INTO `users` VALUES (5, '18250636868', '$2b$12$LExgic9UmvpwwLtG5Gufs.08MAc8wx7EfZdv9CjYzn3QiLJnOUZdq', 'student', 1, '2025-12-24 17:26:36', '2025-12-25 17:38:52', 8190, '李四', '22014082034');
 INSERT INTO `users` VALUES (6, '18250636969', '$2b$12$2bR.Xy.PQzAQDApnmWxdSeC.bIEs0C1kklBR751IoX4/tNFuUCyt2', 'student', 1, '2025-12-25 16:30:01', '2025-12-25 16:47:31', 8191, '王五', '22014082035');
 INSERT INTO `users` VALUES (7, '18250636870', '$2b$12$JZUcksLjg6lZfnipDk.rS.Bqwgy4cH.dqmkuUgsvhQCSyw.c0wq9u', 'student', 1, '2025-12-25 16:34:04', '2025-12-25 16:51:53', 8192, '赵六', '22014082036');
 INSERT INTO `users` VALUES (8, '18250636871', '$2b$12$HEqQ8pj0rTTBVi97d5wi2.juSlBWJnQ0AZaov6tlgvoxsf79j5j8m', 'student', 1, '2025-12-26 16:02:05', '2025-12-26 17:00:26', 8193, '张龙', '22014082033');
 INSERT INTO `users` VALUES (9, '18250636872', '$2b$12$ahylOLX4IYYfxTXg5xF72.D0V32UfPDd2WDs9B.gLUON2w0cDqw6q', 'student', 1, '2025-12-29 17:59:50', NULL, NULL, '张七', '22014082037');
+INSERT INTO `users` VALUES (10, '18250636873', '$2b$12$oT0OqX4bUys/2obDlQtKCOxCvpB09s.AyOS83YbvQDq6GCXey5iWK', 'student', 1, '2025-12-30 14:20:52', NULL, NULL, '张四', '22014082021');
+INSERT INTO `users` VALUES (11, '18250636874', '$2b$12$KXKRsdVENh0EmciRYox5K.OtcLcNoeR/26duy4z24TPhpj75uPe5.', 'student', 1, '2025-12-30 16:38:48', '2025-12-31 17:11:28', NULL, '张五', '22014082022');
+INSERT INTO `users` VALUES (12, '18250636875', '$2b$12$pq9nEyWa41m4WKR/v.PON.artWlJPlEFgOB0sw5w.SrK0NsIfBEYG', 'student', 1, '2025-12-31 16:11:05', '2025-12-31 17:12:02', NULL, '张八', '22014082023');
+INSERT INTO `users` VALUES (13, '18250636876', '$2b$12$NRSQIoCDK7ZW.1HqSy3C8uecojj7O2aFa1YX0ZMWMQ95sbbZ9u28K', 'student', 1, '2025-12-31 16:14:41', NULL, NULL, '张九', '22014082024');
+INSERT INTO `users` VALUES (14, '18250636877', '$2b$12$4tZqq/x/k4LNU3hXUckHHeCkbCCIU7sN1Tab07dRj127smk8Q0a96', 'student', 1, '2025-12-31 16:15:10', NULL, NULL, '张十', '22014082025');
 
 SET FOREIGN_KEY_CHECKS = 1;

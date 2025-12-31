@@ -36,3 +36,13 @@ class ClassCourseBinding(Base):
     
     # 关联：课程 (Course)
     course = relationship("Course", back_populates="bindings")
+
+
+# 3. 教师购课权限表 (新增)
+class TeacherCourseAccess(Base):
+    __tablename__ = "teacher_course_access"
+
+    id = Column(Integer, primary_key=True, index=True)
+    teacher_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    course_id = Column(Integer, ForeignKey("courses.id"), nullable=False)
+    created_at = Column(DateTime, default=func.now())

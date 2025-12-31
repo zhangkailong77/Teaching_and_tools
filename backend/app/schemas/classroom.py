@@ -31,6 +31,10 @@ class ClassOut(ClassBase):
     bound_course_names: List[str] = []
     # 返回已绑定的课程ID列表，方便前端回显
     bound_course_ids: List[int] = [] 
+    bound_course_covers: List[Optional[str]] = [] 
+    teacher_name: Optional[str] = "未设置"
+    teacher_title: Optional[str] = "讲师"
+    teacher_avatar: Optional[str] = None 
 
     class Config:
         from_attributes = True

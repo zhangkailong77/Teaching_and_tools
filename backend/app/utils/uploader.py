@@ -2,11 +2,10 @@ import os
 import uuid
 import shutil
 from fastapi import UploadFile
+from app.core.config import settings
 
 # 配置本地存储根路径
 UPLOAD_DIR = "static/uploads"
-# 配置访问域名前缀 (本地开发用 localhost，上线改服务器IP)
-BASE_URL = "http://127.0.0.1:8000"
 
 async def save_file_locally(file: UploadFile, folder: str = "common") -> str:
     """
@@ -34,7 +33,7 @@ async def save_file_locally(file: UploadFile, folder: str = "common") -> str:
     # 4. 生成访问 URL
     # URL路径: http://127.0.0.1:8000/static/uploads/avatars/xxx.jpg
     # 注意：这里把反斜杠替换为正斜杠，兼容 Windows
-    url_path = f"{BASE_URL}/{UPLOAD_DIR}/{folder}/{unique_filename}".replace("\\", "/")
+    url_path = f"/{UPLOAD_DIR}/{folder}/{unique_filename}".replace("\\", "/")
     
     return url_path
 

@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     secret_key: str
     access_token_expire_minutes: int = 60
     database_url: str
+    base_url: str = "http://127.0.0.1:8000"
 
     # Pydantic V2 配置
     model_config = SettingsConfigDict(

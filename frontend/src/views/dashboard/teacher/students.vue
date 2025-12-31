@@ -11,6 +11,24 @@
           <span>教学管理</span> / <span class="current">学生名单</span>
         </div>
         <div class="actions">
+          <el-select 
+            v-model="selectedClassId" 
+            placeholder="全部班级" 
+            class="class-filter"
+            size="default"
+            clearable
+          >
+            <!-- 手动加一个“全部班级”选项，或者利用 clearable 清空 -->
+            <el-option label="全部班级" value="" />
+            
+            <el-option 
+              v-for="cls in classList" 
+              :key="cls.id" 
+              :label="cls.name" 
+              :value="cls.id" 
+            />
+          </el-select>
+
           <div class="search-box">
             <span class="icon">🔍</span>
             <input type="text" v-model="searchText" placeholder="搜索姓名或学号..." />
@@ -168,6 +186,7 @@ const isLoading = ref(false);
 const showStudentModal = ref(false);
 const showClassModal = ref(false);
 const classList = ref<ClassItem[]>([]); // 存储从后端拉取的班级列表
+const selectedClassId = ref<number | string>(''); 
 const courseLibrary = ref<CourseItem[]>([]);
 
 // 表单数据
@@ -195,8 +214,30 @@ const formatDate = (val: any) => {
 const students = ref<StudentItem[]>([]);
 
 const filteredStudents = computed(() => {
-  if (!searchText.value) return students.value;
-  return students.value.filter(s => s.name.includes(searchText.value) || s.code.includes(searchText.value));
+  let data = students.value;
+
+  // 1. 先按班级筛选
+  if (selectedClassId.value !== '') {
+    // 找到当前选中的班级对象
+    const targetClass = classList.value.find(c => c.id === Number(selectedClassId.value));
+    if (targetClass) {
+      // 对比班级名称 (因为 fetchStudentList 里把后端 class_name 映射为了 className)
+      data = data.filter(s => s.className === targetClass.name);
+    }
+  }
+
+  // 2. 再按关键字搜索
+  if (searchText.value) {
+    const lowerText = searchText.value.toLowerCase(); // 建议转小写比较
+    data = data.filter(s => 
+      s.name.includes(searchText.value) || 
+      s.code.includes(searchText.value) ||
+      // 建议顺便把手机号(username)也加入搜索
+      s.username.includes(searchText.value)
+    );
+  }
+  
+  return data;
 });
 
 const fetchStudentList = async () => {
@@ -507,5 +548,28 @@ $text-gray: #a4b0be;
 @keyframes popUp { 
   0% { opacity: 0; transform: scale(0.9) translateY(20px); }
   100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.class-filter {
+  width: 160px; /* 固定宽度，不用太宽 */
+  margin-right: 12px; /* 和搜索框保持间距 */
+
+  /* 深度选择器：修改内部输入框样式，使其跟你的搜索框风格一致 */
+  :deep(.el-input__wrapper) {
+    box-shadow: 0 0 0 1px #eee inset !important; /* 浅边框 */
+    border-radius: 8px; /* 圆角 */
+    padding: 4px 12px;
+    background-color: white;
+    
+    /* 悬停时 */
+    &:hover {
+      box-shadow: 0 0 0 1px #ccc inset !important;
+    }
+    
+    /* 聚焦时 (变青绿色) */
+    &.is-focus {
+      box-shadow: 0 0 0 1px $primary-color inset !important;
+    }
+  }
 }
 </style>

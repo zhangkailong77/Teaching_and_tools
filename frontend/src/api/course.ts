@@ -11,6 +11,10 @@ export interface ClassItem {
   end_date?: string;
   bound_course_names: string[]; 
   bound_course_ids: number[];
+  bound_course_covers: string[];
+  teacher_name?: string;
+  teacher_title?: string;
+  teacher_avatar?: string;
   styleColor?: string;
 }
 
@@ -76,4 +80,12 @@ export function getMyStudents() {
 // ✅ 新增：将学生移出班级
 export function removeStudentFromClass(classId: number, studentId: number) {
   return request.delete(`/classes/${classId}/students/${studentId}`);
+}
+
+
+
+// ------------------------------学生端-----------------------------
+// ✅ 新增：[学生端] 获取我加入的班级及课程信息
+export function getMyEnrolledClasses() {
+  return request.get<any, ClassItem[]>('/classes/my-enrolled-classes');
 }
