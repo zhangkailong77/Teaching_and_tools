@@ -1,5 +1,5 @@
 from typing import Any, List
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy import func, distinct
 
@@ -10,6 +10,8 @@ from app.models.course import Class, Enrollment
 from app.models.content import Course, ClassCourseBinding
 from app.schemas import classroom as class_schemas
 import logging
+import pandas as pd
+import io 
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -273,6 +275,11 @@ def read_my_students(
     for enrollment in results:
         student = enrollment.student
         classroom = enrollment.classroom
+
+        s_avatar = None
+        if student.student_profile:
+            s_avatar = student.student_profile.avatar
+        # 如果 profile 没头像，也可以查 users 表的 avatar (看你具体存哪了，通常是 profile)
         
         students_data.append({
             "id": student.id,
@@ -280,9 +287,11 @@ def read_my_students(
             "full_name": student.full_name,
             "student_number": student.student_number,
             "class_name": classroom.name,
+            "class_id": classroom.id,
             "joined_at": enrollment.joined_at,
             "is_active": student.is_active,
-            "progress": 0 # 暂时为 0
+            "progress": 0, # 暂时为 0
+            "avatar": s_avatar 
         })
         
     return students_data
@@ -347,6 +356,183 @@ def remove_student_from_class(
     return {"message": "移出成功"}
 
 
+# ------------------------------------------------------------------
+# [教师端] 批量导入学生 (Excel)
+# ------------------------------------------------------------------
+@router.post("/{class_id}/students/batch")
+def batch_import_students(
+    class_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    # 1. 权限校验
+    if current_user.role != "teacher":
+        raise HTTPException(status_code=403, detail="权限不足")
+    
+    class_obj = db.query(Class).filter(Class.id == class_id, Class.teacher_id == current_user.id).first()
+    if not class_obj:
+        raise HTTPException(status_code=404, detail="班级不存在或无权操作")
+
+    # 2. 读取 Excel 文件
+    try:
+        contents = file.file.read()
+        # 使用 pandas 读取流
+        df = pd.read_excel(io.BytesIO(contents))
+    except Exception:
+        raise HTTPException(status_code=400, detail="文件格式错误，请上传标准的 .xlsx 文件")
+
+    # 3. 字段映射 (Excel中文列名 -> 数据库字段)
+    # 假设模板列名为：姓名, 手机号, 学号
+    required_columns = ['姓名', '手机号', '学号']
+    
+    # 检查列名是否存在
+    if not set(required_columns).issubset(df.columns):
+        raise HTTPException(status_code=400, detail=f"Excel模板错误，必须包含列：{required_columns}")
+
+    # 4. 循环处理
+    success_count = 0
+    errors = [] # 记录失败原因
+    
+    # 将 NaN 替换为空字符串，防止报错
+    df = df.fillna("")
+
+    for index, row in df.iterrows():
+        row_num = index + 2 # Excel 从第2行开始是数据
+        
+        # 获取数据并清洗 (转为字符串并去空格)
+        name = str(row['姓名']).strip()
+        phone = str(row['手机号']).strip()
+        student_no = str(row['学号']).strip()
+        
+        # 处理可能的 .0 (比如手机号被读成了浮点数 138xxx.0)
+        if phone.endswith(".0"): phone = phone[:-2]
+        if student_no.endswith(".0"): student_no = student_no[:-2]
+
+        # 基础校验
+        if not phone or not name:
+            errors.append(f"第{row_num}行：姓名或手机号为空，已跳过")
+            continue
+
+        try:
+            # --- 用户逻辑 ---
+            student = db.query(User).filter(User.username == phone).first()
+            
+            if not student:
+                # 不存在 -> 创建新用户
+                hashed_password = security.get_password_hash("123456")
+                student = User(
+                    username=phone,
+                    hashed_password=hashed_password,
+                    role="student",
+                    is_active=True,
+                    full_name=name,
+                    student_number=student_no
+                )
+                db.add(student)
+                db.flush() # 拿到 ID
+            else:
+                # 已存在 -> 校验角色并更新信息
+                if student.role != "student":
+                    errors.append(f"第{row_num}行：手机号 {phone} 已注册为教师，无法添加")
+                    continue
+                # 更新姓名学号
+                student.full_name = name
+                student.student_number = student_no
+                db.add(student)
+                db.flush()
+
+            # --- 绑定逻辑 ---
+            # 检查是否已在当前班级
+            existing_enroll = db.query(Enrollment).filter(
+                Enrollment.student_id == student.id
+            ).first()
+
+            if existing_enroll:
+                if existing_enroll.class_id == class_id:
+                    # 已经在当前班，忽略，算作成功(或跳过)
+                    success_count += 1
+                else:
+                    # 已经在别的班，报错
+                    other_class = db.query(Class).filter(Class.id == existing_enroll.class_id).first()
+                    c_name = other_class.name if other_class else "其他班级"
+                    errors.append(f"第{row_num}行：{name} 已加入【{c_name}】，无法重复加入")
+            else:
+                # 未加入任何班 -> 绑定当前班
+                new_enroll = Enrollment(class_id=class_id, student_id=student.id)
+                db.add(new_enroll)
+                success_count += 1
+                
+        except Exception as e:
+            # 捕获单行错误，防止打断整个循环
+            errors.append(f"第{row_num}行：处理异常 - {str(e)}")
+            continue
+
+    # 5. 统一提交事务
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="数据库提交失败")
+
+    return {
+        "total_processed": len(df),
+        "success_count": success_count,
+        "error_count": len(errors),
+        "error_logs": errors
+    }
+
+
+
+# ------------------------------------------------------------------
+# [教师端] 编辑学生信息 (含转班功能)
+# ------------------------------------------------------------------
+@router.put("/students/{student_id}")
+def update_student_info(
+    student_id: int,
+    student_in: class_schemas.StudentUpdateFromTeacher,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    # 1. 查找学生
+    student = db.query(User).filter(User.id == student_id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="学生不存在")
+
+    # 2. 更新基础信息
+    student.full_name = student_in.full_name
+    student.student_number = student_in.student_number
+    
+    # 如果修改了手机号(username)，需要查重
+    if student.username != student_in.username:
+        exists = db.query(User).filter(User.username == student_in.username).first()
+        if exists:
+            raise HTTPException(status_code=400, detail="该手机号已被其他账号使用")
+        student.username = student_in.username
+
+    # 3. 处理转班逻辑 (如果传入的 class_id 变了)
+    # 先找到该学生当前在老师名下的 Enrollment
+    current_enrollment = db.query(Enrollment).join(Class).filter(
+        Enrollment.student_id == student_id,
+        Class.teacher_id == current_user.id
+    ).first()
+
+    if current_enrollment and current_enrollment.class_id != student_in.class_id:
+        # 校验目标班级是否属于该老师
+        target_class = db.query(Class).filter(Class.id == student_in.class_id, Class.teacher_id == current_user.id).first()
+        if not target_class:
+            raise HTTPException(status_code=403, detail="目标班级不存在或无权操作")
+        
+        # 修改关联
+        current_enrollment.class_id = student_in.class_id
+
+    db.add(student)
+    if current_enrollment:
+        db.add(current_enrollment)
+        
+    db.commit()
+    return {"message": "修改成功"}
+
 
 
 
@@ -375,9 +561,15 @@ def read_student_classes(
         if not cls:
             continue
 
+        real_student_count = db.query(Enrollment).filter(Enrollment.class_id == cls.id).count()
+
         t_name = "未知教师"
         t_title = "讲师"
         t_avatar = None
+
+        t_intro = None
+        t_school = None
+        t_college = None
 
         if cls.teacher:
             # 优先从 profile 取
@@ -389,6 +581,9 @@ def read_student_classes(
                     t_title = profile.title
                 # ✅ 获取头像路径
                 t_avatar = profile.avatar
+                t_intro = profile.intro
+                t_school = profile.school
+                t_college = profile.college
             else:
                 t_name = cls.teacher.username
 
@@ -424,13 +619,69 @@ def read_student_classes(
             "end_date": cls.end_date,
             "created_at": cls.created_at,
             
-            "student_count": 0, # 学生端不需要知道班里多少人，填0即可
+            "student_count": real_student_count, 
             "bound_course_names": c_names,
             "bound_course_ids": c_ids,
             "bound_course_covers": c_covers,
             "teacher_name": t_name,
             "teacher_title": t_title,
-            "teacher_avatar": t_avatar
+            "teacher_avatar": t_avatar,
+            "teacher_intro": t_intro,
+            "teacher_school": t_school,
+            "teacher_college": t_college
         })
+        
+    return results
+
+
+# ------------------------------------------------------------------
+# [学生端] 获取同班同学列表
+# ------------------------------------------------------------------
+@router.get("/{class_id}/classmates", response_model=List[class_schemas.ClassmateOut])
+def read_classmates(
+    class_id: int,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    # 1. 安全校验：调用者必须是该班级的学生
+    is_member = db.query(Enrollment).filter(
+        Enrollment.class_id == class_id,
+        Enrollment.student_id == current_user.id
+    ).first()
+
+    if not is_member:
+        raise HTTPException(status_code=403, detail="你不是该班级的成员，无法查看同学列表")
+
+    # 2. 查询该班级的所有学生
+    # 联表查询: Enrollment -> User
+    enrollments = db.query(Enrollment).filter(Enrollment.class_id == class_id).all()
+    
+    results = []
+    for enrollment in enrollments:
+        student = enrollment.student
+        
+        # 构造数据显示名字
+        display_name = student.full_name if student.full_name else student.username
+        
+        # 构造头像
+        display_avatar = None
+        if student.student_profile:
+            display_avatar = student.student_profile.avatar
+
+        # 数据对象
+        item = {
+            "name": display_name,
+            "avatar": display_avatar 
+        }
+
+        # ✅ 核心修改：排序逻辑
+        # 如果是当前登录用户，插入到列表最前面 (索引0)
+        if student.id == current_user.id:
+            # 可选：给自己的名字加个标记，比如 "张三 (我)"
+            # item["name"] = f"{display_name} (我)" 
+            results.insert(0, item)
+        else:
+            # 其他人追加到后面
+            results.append(item)
         
     return results

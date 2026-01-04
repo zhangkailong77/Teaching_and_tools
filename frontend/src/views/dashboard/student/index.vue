@@ -124,16 +124,29 @@
     <!-- 3. 右侧个人中心 (Right Panel) -->
     <aside class="right-panel">
       <div class="header-tools">
-        <span class="tool-icon">⋮</span>
+        <!-- ✅ 编辑按钮 -->
+        <span class="tool-icon edit-btn" @click="openProfileModal" title="编辑资料">✎</span>
       </div>
 
       <div class="profile-summary">
         <div class="avatar-large">
-          <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="avatar" />
+          <img 
+              v-if="userStore.userInfo?.avatar" 
+              :src="getImgUrl(userStore.userInfo.avatar)" 
+              class="real-avatar" 
+              alt="avatar" 
+          />
+          <div v-else class="text-avatar">
+              {{ getFirstChar(userStore.userInfo?.full_name || userStore.userInfo?.username) }}
+          </div>
           <div class="status-ring"></div>
         </div>
-        <h3>Good Morning, {{ userStore.userInfo?.username || 'Student' }}</h3>
-        <p>坚持学习，达成目标</p>
+        <h3>Good Morning, {{ studentProfile.real_name || userStore.userInfo?.username }}</h3>
+        <p class="user-class-info">
+          {{ studentProfile.class_name || '暂未入班' }}
+        </p>
+
+        <p class="slogan">坚持学习，达成目标</p>
         
         <div class="action-buttons">
           <button class="btn-circle">🔔</button>
@@ -168,22 +181,131 @@
           <!-- 更多导师... -->
         </div>
       </div>
-
     </aside>
+
+    <!-- ================= 学生资料编辑弹窗 ================= -->
+    <div class="modal-overlay" v-if="showProfileModal" @click.self="showProfileModal = false">
+      <div class="modal-content" style="width: 550px;">
+        <div class="modal-header">
+          <div class="header-left">
+            <span class="icon-bg" style="background: #e0f2f1; color: #00c9a7;">🎓</span>
+            <h3>我的学籍档案</h3>
+          </div>
+          <span class="close-btn" @click="showProfileModal = false">×</span>
+        </div>
+
+        <div class="modal-body">
+          
+          <!-- 头像上传 -->
+          <div class="avatar-upload-wrapper">
+            <div class="avatar-edit" @click="triggerFileInput">
+              <img 
+                v-if="profileForm.avatar" 
+                :src="getImgUrl(profileForm.avatar)" 
+                class="real-avatar" 
+                alt="avatar" 
+              />
+              <!-- 2. 否则显示文字头像 (优先取编辑框里的名字，没有再取账号) -->
+              <div v-else class="text-avatar">
+                  {{ getFirstChar(profileForm.real_name || userStore.userInfo?.username) }}
+              </div>
+              <div class="overlay"><span>📷</span></div>
+            </div>
+            <input type="file" ref="fileInputRef" accept="image/*" style="display:none" @change="handleFileChange" />
+          </div>
+
+          <!-- 只读信息区 (灰色背景) -->
+          <div class="info-card-readonly">
+            <div class="info-item">
+              <label>所属班级</label>
+              <span>{{ studentProfile.class_name }}</span>
+            </div>
+            <div class="info-item">
+              <label>学号</label>
+              <span>{{ studentProfile.student_number || '未录入' }}</span>
+            </div>
+            <div class="info-item">
+              <label>已修课程</label>
+              <span>{{ studentProfile.course_count }} 门</span>
+            </div>
+          </div>
+
+          <!-- 编辑表单 -->
+          <div class="form-row">
+            <div class="form-group">
+              <label>真实姓名</label>
+              <input 
+                type="text" 
+                v-model="profileForm.real_name" 
+                disabled 
+                class="is-disabled"
+              />
+            </div>
+            <div class="form-group">
+              <label>性别</label>
+              <el-select v-model="profileForm.gender" class="custom-select" placeholder="请选择">
+                <el-option label="男" value="男" />
+                <el-option label="女" value="女" />
+                <el-option label="保密" value="保密" />
+              </el-select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>手机号</label>
+            <input 
+              type="text" 
+              v-model="profileForm.phone" 
+              disabled 
+              class="is-disabled"
+            />
+          </div>
+
+          <div class="form-group">
+            <label>学习宣言 (简介)</label>
+            <textarea v-model="profileForm.intro" rows="2" placeholder="写一句话鼓励自己..."></textarea>
+          </div>
+
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn-text" @click="showProfileModal = false">取消</button>
+          <button class="btn-submit" @click="submitProfile" :disabled="isSubmitLoading">保存修改</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, reactive } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/modules/user';
 import request from '@/utils/request';
 import StudentSidebar from '@/components/StudentSidebar.vue';
 import { getImgUrl } from '@/utils/index';
 import { getMyEnrolledClasses, type ClassItem } from '@/api/course';
+import { uploadImage } from '@/api/common';
+// ✅ 引入新写的 API
+import { getMyStudentProfile, updateMyStudentProfile, type StudentProfile } from '@/api/profile';
 
 const router = useRouter();
 const userStore = useUserStore();
+
+const studentProfile = ref<Partial<StudentProfile>>({});
+// 编辑表单数据
+const profileForm = reactive<Partial<StudentProfile>>({
+  real_name: '',
+  gender: '保密',
+  phone: '',
+  intro: '',
+  avatar: ''
+});
+// 弹窗控制
+const showProfileModal = ref(false);
+const isSubmitLoading = ref(false);
+const fileInputRef = ref<HTMLInputElement | null>(null);
+
 // 定义状态
 const isLoading = ref(false);
 const comfyUrl = ref(''); // 用来存后端返回的 URL
@@ -209,9 +331,14 @@ const getRandomColor = () => {
   return colors[Math.floor(Math.random() * colors.length)];
 };
 
+const getFirstChar = (name?: string) => {
+  return name ? name.charAt(0).toUpperCase() : 'S';
+};
+
 onMounted(() => {
   userStore.fetchUserInfo();
   fetchMyCourses();
+  fetchProfile();
 });
 
 const fetchMyCourses = async () => {
@@ -258,6 +385,75 @@ const fetchMyCourses = async () => {
     courseList.value = tempList;
   } catch (error) {
     console.error("加载课程失败", error);
+  }
+};
+
+// 1. 获取档案
+const fetchProfile = async () => {
+  try {
+    const res = await getMyStudentProfile();
+    studentProfile.value = res;
+
+    // ✅ 关键修复：刷新页面后，把档案里的头像和姓名同步给 userStore
+    // 因为右侧边栏显示的是 userStore 里的数据
+    if (userStore.userInfo) {
+      if (res.avatar) {
+        userStore.userInfo.avatar = res.avatar;
+      }
+      if (res.real_name) {
+        userStore.userInfo.full_name = res.real_name;
+      }
+    }
+  } catch (error) {
+    console.error("加载档案失败", error);
+  }
+};
+
+// 2. 打开编辑弹窗
+const openProfileModal = () => {
+  Object.assign(profileForm, studentProfile.value);
+  if (userStore.userInfo?.username) {
+    profileForm.phone = userStore.userInfo.username;
+  }
+
+  showProfileModal.value = true;
+};
+
+// 3. 提交修改
+const submitProfile = async () => {
+  isSubmitLoading.value = true;
+  try {
+    const res = await updateMyStudentProfile(profileForm);
+    studentProfile.value = res;
+    
+    // ✅ 关键新增：同步更新右侧边栏显示的数据
+    if (userStore.userInfo) {
+      // 1. 更新头像
+      userStore.userInfo.avatar = res.avatar;
+      // 2. 更新姓名 (如果改了姓名，这里也需要同步显示)
+      if (res.real_name) {
+        userStore.userInfo.full_name = res.real_name;
+      }
+    }
+
+    showProfileModal.value = false;
+    alert('个人资料已更新');
+  } catch (error) {
+    console.error(error);
+  } finally {
+    isSubmitLoading.value = false;
+  }
+};
+
+// 4. 头像上传 (复用之前的逻辑，稍作调整)
+const triggerFileInput = () => fileInputRef.value?.click();
+const handleFileChange = async (event: Event) => {
+  const input = event.target as HTMLInputElement;
+  if (input.files && input.files[0]) {
+    try {
+      const res = await uploadImage(input.files[0], 'avatars');
+      profileForm.avatar = res.url; // 仅更新表单里的头像，保存后才生效
+    } catch(e) { alert('上传失败'); }
   }
 };
 
@@ -557,9 +753,53 @@ $text-gray: #a4b0be;
   .profile-summary {
     text-align: center;
     .avatar-large {
-      width: 80px; height: 80px; margin: 0 auto 15px; position: relative;
-      img { width: 100%; height: 100%; border-radius: 50%; }
-      .status-ring { position: absolute; inset: -4px; border: 2px solid $primary-color; border-radius: 50%; border-bottom-color: transparent; transform: rotate(-45deg); }
+      width: 80px; 
+  height: 80px; 
+  margin: 0 auto 15px; 
+  position: relative; 
+  cursor: pointer;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid #e0f2f1; /* 边框色 */
+  transition: all 0.3s;
+
+  &:hover {
+    border-color: $primary-color;
+    .avatar-overlay { opacity: 1; }
+  }
+
+  /* 图片头像 */
+  .real-avatar {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* ✅ 新增：文字头像样式 */
+  .text-avatar {
+    width: 100%;
+    height: 100%;
+    background-color: #e0f2f1; /* 浅青色背景 */
+    color: $primary-color;     /* 深青色文字 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;           /* 大字体 */
+    font-weight: bold;
+  }
+
+  /* 遮罩层 */
+  .avatar-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s;
+    span { font-size: 24px; }
+  }
     }
     h3 { font-size: 16px; margin-bottom: 5px; color: $text-dark; }
     p { font-size: 12px; color: $text-gray; margin-bottom: 20px; }
@@ -600,4 +840,55 @@ $text-gray: #a4b0be;
   object-fit: cover; /* 防止图片变形 */
   border: 1px solid #eee;
 }
+
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(4px); }
+
+.modal-content { background: white; width: 550px; border-radius: 16px; padding: 30px; box-shadow: 0 10px 40px rgba(0,0,0,0.15); display: flex; flex-direction: column; gap: 20px; animation: popUp 0.3s ease;
+  .modal-header { display: flex; justify-content: space-between; align-items: center; 
+    .header-left { display: flex; gap: 10px; align-items: center; .icon-bg { width: 36px; height: 36px; background: #e0f2f1; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; } h3 { margin: 0; font-size: 18px; font-weight: 700; color: $text-dark; } }
+    .close-btn { font-size: 24px; cursor: pointer; color: #999; &:hover { color: $text-dark; } }
+  }
+
+  .modal-body { display: flex; flex-direction: column; gap: 18px;
+    .form-group { label { font-size: 13px; font-weight: 600; display: block; margin-bottom: 8px; color: #555; } input, textarea { width: 100%; padding: 10px 12px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 14px; outline: none; transition: all 0.3s; &:focus { border-color: $primary-color; box-shadow: 0 0 0 4px rgba(0,201,167,0.1); } } }
+    .form-row { display: flex; gap: 20px; .form-group { flex: 1; } }
+    
+    /* 修复弹窗内的头像上传样式 */
+    .avatar-upload-wrapper { display: flex; flex-direction: column; align-items: center; margin-bottom: 10px;
+      .avatar-edit { width: 80px; height: 80px; border-radius: 50%; position: relative; cursor: pointer; overflow: hidden; border: 2px solid #e0f2f1; transition: all 0.3s;
+        img { width: 100%; height: 100%; object-fit: cover; }
+        .text-avatar {
+          width: 100%;
+          height: 100%;
+          background-color: #e0f2f1; /* 浅青色背景 */
+          color: $primary-color;     /* 深青色文字 */
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 32px;
+          font-weight: bold;
+        }
+        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; opacity: 0; transition: opacity 0.3s; span { color: white; font-size: 12px; font-weight: 600; } }
+        &:hover { border-color: $primary-color; .overlay { opacity: 1; } } }
+    }
+
+    /* 只读信息卡片 */
+    .info-card-readonly { background-color: #f8f9fa; border-radius: 10px; padding: 15px; display: flex; justify-content: space-between; margin-bottom: 10px; border: 1px dashed #e0e0e0;
+      .info-item { text-align: center; label { font-size: 12px; color: #a4b0be; display: block; margin-bottom: 4px; } span { font-size: 14px; font-weight: 600; color: #2d3436; } }
+    }
+  }
+
+  .modal-footer { display: flex; justify-content: flex-end; gap: 12px; margin-top: 10px;
+    button { padding: 12px 24px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all 0.2s; }
+    .btn-text { background: transparent; color: #666; &:hover { background: #f5f5f5; } }
+    .btn-submit { background: $primary-color; color: white; box-shadow: 0 4px 12px rgba(0,201,167,0.3); &:hover { filter: brightness(0.9); transform: translateY(-1px); } &:disabled { opacity: 0.6; cursor: not-allowed; } }
+  }
+}
+
+/* 下拉框修正 */
+.custom-select { width: 100%; }
+.custom-select :deep(.el-input__wrapper) { box-shadow: 0 0 0 1px #e0e0e0 inset !important; padding: 4px 12px; }
+.custom-select :deep(.el-input__wrapper.is-focus) { box-shadow: 0 0 0 1px #00c9a7 inset !important; }
+
+@keyframes popUp { from { transform: scale(0.9) translateY(20px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
 </style>

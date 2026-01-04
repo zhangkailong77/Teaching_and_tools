@@ -25,3 +25,24 @@ class TeacherProfile(Base):
 
     # 建立反向关联
     user = relationship("User", back_populates="teacher_profile")
+
+
+# ✅ 新增：学生档案模型
+class StudentProfile(Base):
+    __tablename__ = "student_profiles"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
+    
+    real_name = Column(String(50), nullable=True)
+    student_number = Column(String(30), nullable=True)
+    gender = Column(String(10), default="保密")
+    phone = Column(String(20), nullable=True)
+    avatar = Column(String(255), nullable=True)
+    intro = Column(Text, nullable=True)
+    
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+    # 反向关联
+    user = relationship("User", back_populates="student_profile")

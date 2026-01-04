@@ -20,4 +20,6 @@ export interface UserInfo {
   username: string;
   role: UserRole;
   is_active: boolean;
+  full_name?: string;
+  class_name_display?: string;
 }

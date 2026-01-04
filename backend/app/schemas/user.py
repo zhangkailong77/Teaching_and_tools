@@ -18,6 +18,8 @@ class UserResponse(UserBase):
 
     created_at: Optional[datetime] = None
     last_login: Optional[datetime] = None
+    full_name: Optional[str] = None
+    class_name_display: Optional[str] = None
 
     class Config:
         # Pydantic V2 写法，允许从 ORM 模型读取数据

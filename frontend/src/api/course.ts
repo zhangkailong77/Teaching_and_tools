@@ -36,7 +36,9 @@ export interface StudentItem {
   username: string;
   full_name: string;
   student_number: string;
+  avatar?: string;
   class_name: string;
+  class_id: number;
   joined_at: string;
   is_active: boolean;
   progress: number;
@@ -82,10 +84,50 @@ export function removeStudentFromClass(classId: number, studentId: number) {
   return request.delete(`/classes/${classId}/students/${studentId}`);
 }
 
+// 新增更新接口
+export function updateStudent(studentId: number, data: {
+  username: string;
+  full_name: string;
+  student_number: string;
+  class_id: number;
+}) {
+  return request.put(`/classes/students/${studentId}`, data);
+}
+
+// ✅ 新增：批量导入返回结果类型
+export interface ImportResult {
+  total_processed: number;
+  success_count: number;
+  error_count: number;
+  error_logs: string[];
+}
+
+// ✅ 新增：批量导入接口
+export function batchImportStudents(classId: number, file: File) {
+  const formData = new FormData();
+  formData.append('file', file); // 注意：后端参数名为 file
+  
+  // 上传文件通常需要较长时间，设置超时为 2分钟
+  return request.post<any, ImportResult>(`/classes/${classId}/students/batch`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 120000 
+  });
+}
+
 
 
 // ------------------------------学生端-----------------------------
 // ✅ 新增：[学生端] 获取我加入的班级及课程信息
 export function getMyEnrolledClasses() {
   return request.get<any, ClassItem[]>('/classes/my-enrolled-classes');
+}
+
+export interface ClassmateItem {
+  name: string;
+  avatar?: string;
+}
+
+// ✅ 新增：获取同班同学列表
+export function getClassmates(classId: number) {
+  return request.get<any, ClassmateItem[]>(`/classes/${classId}/classmates`);
 }

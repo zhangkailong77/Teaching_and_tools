@@ -36,6 +36,10 @@ class ClassOut(ClassBase):
     teacher_title: Optional[str] = "讲师"
     teacher_avatar: Optional[str] = None 
 
+    teacher_intro: Optional[str] = None
+    teacher_school: Optional[str] = None
+    teacher_college: Optional[str] = None
+
     class Config:
         from_attributes = True
 
@@ -60,8 +64,10 @@ class StudentListOut(BaseModel):
     username: str            # 手机号
     full_name: Optional[str] # 真实姓名
     student_number: Optional[str] # 学号
+    avatar: Optional[str] = None
     
     class_name: str          # 所属班级名称
+    class_id: int
     class_color: Optional[str] = "#00c9a7" # 前端展示用的颜色 (后端暂给默认值)
     
     joined_at: datetime      # 加入时间
@@ -69,6 +75,22 @@ class StudentListOut(BaseModel):
     
     # 进度暂时 Mock，因为还没有作业系统
     progress: int = 0       
+
+    class Config:
+        from_attributes = True
+
+
+# 2. 新增：更新学生信息的参数 (用于编辑弹窗)
+class StudentUpdateFromTeacher(BaseModel):
+    full_name: str
+    student_number: str
+    username: str  # 允许修改手机号
+    class_id: int  # 允许转班
+
+
+class ClassmateOut(BaseModel):
+    name: str    # 显示真实姓名或昵称
+    avatar: Optional[str] = None # 头像
 
     class Config:
         from_attributes = True

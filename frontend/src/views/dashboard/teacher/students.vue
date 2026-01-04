@@ -34,11 +34,13 @@
             <input type="text" v-model="searchText" placeholder="搜索姓名或学号..." />
           </div>
           <button class="btn-primary" @click="openAddStudentModal">+ 添加学生</button>
+          <button class="btn-outline" @click="openImportModal">📥 批量导入</button>
         </div>
       </header>
 
       <!-- 表格区域 -->
       <div class="table-container">
+        <div class="table-wrapper">
         <table class="student-table">
           <thead>
             <tr>
@@ -52,10 +54,18 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="student in filteredStudents" :key="student.id">
+            <tr v-for="student in paginatedStudents" :key="student.id">
               <td>
                 <div class="user-info">
-                  <img :src="`https://api.dicebear.com/7.x/avataaars/svg?seed=${student.id}`" alt="" class="avatar">
+                  <img 
+                    v-if="student.avatar" 
+                    :src="getImgUrl(student.avatar)" 
+                    class="avatar" 
+                    alt="avatar"
+                  />
+                  <div v-else class="avatar text-avatar">
+                    {{ getFirstChar(student.name) }}
+                  </div>
                   <span class="name">{{ student.name }}</span>
                 </div>
               </td>
@@ -79,26 +89,38 @@
                 </span>
               </td>
               <td>
-                <button class="action-btn edit">编辑</button>
-                <button class="action-btn delete">移除</button>
+                <button class="action-btn edit" @click="handleEdit(student)">编辑</button>
+                <button class="action-btn delete" @click="handleRemove(student)">移除</button>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
-      
       <!-- 分页 -->
       <div class="pagination">
-        <span>共 4 条数据</span>
+        <span>共 {{ filteredStudents.length }} 条数据</span>
         <div class="pages">
-          <button disabled>&lt;</button>
-          <button class="active">1</button>
-          <button>2</button>
-          <button>3</button>
-          <button>&gt;</button>
+          <!-- 上一页 -->
+          <button 
+            :disabled="currentPage === 1" 
+            @click="changePage(currentPage - 1)"
+          >
+            &lt;
+          </button>
+
+          <!-- 页码显示逻辑 (简单版：显示当前页) -->
+          <button class="active">{{ currentPage }}</button>
+          
+          <!-- 下一页 -->
+          <button 
+            :disabled="currentPage === totalPages || totalPages === 0" 
+            @click="changePage(currentPage + 1)"
+          >
+            &gt;
+          </button>
         </div>
       </div>
-
+      </div>
     </main>
 
     <!-- 弹窗 1: 添加学生 -->
@@ -166,6 +188,132 @@
 
       </div>
     </div>
+
+    <div class="modal-overlay" v-if="showEditModal" @click.self="showEditModal = false">
+      <div class="modal-content" style="width: 500px;">
+        <div class="modal-header">
+          <div class="header-left">
+            <span class="icon-bg" style="background: #e3f2fd; color: #0984e3;">✏️</span>
+            <h3>编辑学员信息</h3>
+          </div>
+          <span class="close-btn" @click="showEditModal = false">×</span>
+        </div>
+
+        <div class="modal-body">
+          <!-- 班级 (支持转班) -->
+          <div class="form-group">
+            <label>所属班级 (可转班)</label>
+            <div class="select-wrapper">
+              <select v-model="editForm.classId">
+                <option v-for="cls in classList" :key="cls.id" :value="cls.id">
+                  {{ cls.name }}
+                </option>
+              </select>
+              <span class="arrow">▼</span>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>真实姓名 <span class="required">*</span></label>
+              <input type="text" v-model="editForm.fullName" />
+            </div>
+            <div class="form-group">
+              <label>学号</label>
+              <input type="text" v-model="editForm.studentNumber" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>手机号 (登录账号) <span class="required">*</span></label>
+            <input type="text" v-model="editForm.username" />
+            <p class="hint" style="color: #ff9800;">⚠️ 修改手机号会改变学生的登录账号，请谨慎操作。</p>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn-text" @click="showEditModal = false">取消</button>
+          <button class="btn-submit" @click="submitEdit" :disabled="isEditLoading">
+            {{ isEditLoading ? '保存中...' : '保存修改' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-overlay" v-if="showImportModal" @click.self="showImportModal = false">
+      <div class="modal-content" style="width: 500px;">
+        <div class="modal-header">
+          <div class="header-left">
+            <span class="icon-bg" style="background: #e3f2fd; color: #0984e3;">📂</span>
+            <h3>批量导入学员</h3>
+          </div>
+          <span class="close-btn" @click="showImportModal = false">×</span>
+        </div>
+
+        <div class="modal-body">
+          
+          <!-- 结果展示区 (如果有结果) -->
+          <div v-if="importResult" class="result-box">
+            <div class="summary">
+              <span class="success">成功: {{ importResult.success_count }}</span>
+              <span class="error">失败: {{ importResult.error_count }}</span>
+            </div>
+            <!-- 错误日志 -->
+            <div v-if="importResult.error_logs.length > 0" class="error-list">
+              <p v-for="(log, idx) in importResult.error_logs" :key="idx">❌ {{ log }}</p>
+            </div>
+          </div>
+
+          <!-- 导入表单 (如果没有结果，或者有错误需要重试) -->
+          <div v-else>
+            <!-- 1. 选班级 -->
+            <div class="form-group">
+              <label>导入到哪个班级 <span class="required">*</span></label>
+              <div class="select-wrapper">
+                <select v-model="importClassId">
+                  <option disabled value="">请选择班级...</option>
+                  <option v-for="cls in classList" :key="cls.id" :value="cls.id">
+                    {{ cls.name }}
+                  </option>
+                </select>
+                <span class="arrow">▼</span>
+              </div>
+            </div>
+
+            <!-- 2. 下模板 -->
+            <div class="form-group">
+              <label>数据模板</label>
+              <div class="template-box">
+                <span>请按照模板格式填写姓名、手机号、学号</span>
+                <a href="#" @click.prevent="downloadTemplate">⬇️ 下载标准模板</a>
+              </div>
+            </div>
+
+            <!-- 3. 上传文件 -->
+            <div class="form-group">
+              <label>上传 Excel 文件</label>
+              <div class="upload-zone" @click="triggerImportInput" :class="{ 'has-file': importFile }">
+                <input type="file" ref="importInputRef" accept=".xlsx, .xls, .csv" style="display:none" @change="handleImportFileChange"/>
+                <div class="zone-content">
+                  <span class="icon">{{ importFile ? '📄' : '☁️' }}</span>
+                  <p class="text">{{ importFile ? importFile.name : '点击或拖拽文件到这里' }}</p>
+                  <p class="sub-text" v-if="!importFile">支持 .xlsx / .csv 格式</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn-text" @click="showImportModal = false">取消</button>
+          <!-- 只有选了班级和文件才亮 -->
+          <button class="btn-submit" @click="submitImport" :disabled="isImporting || !importFile || !importClassId">
+            {{ isImporting ? '导入中...' : '开始导入' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -174,8 +322,9 @@ import { ref, computed, reactive, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/modules/user';
 import { getMyCourses, type CourseItem } from '@/api/content';
-import { getMyClasses, createClass, addStudentToClass, getMyStudents, type ClassItem, type StudentItem } from '@/api/course';
+import { getMyClasses, createClass, addStudentToClass, getMyStudents, batchImportStudents, updateStudent, removeStudentFromClass, type ClassItem, type StudentItem, type ImportResult } from '@/api/course';
 import TeacherSidebar from '@/components/TeacherSidebar.vue';
+import { getImgUrl } from '@/utils/index'; 
 
 const router = useRouter();
 const userStore = useUserStore();
@@ -188,6 +337,138 @@ const showClassModal = ref(false);
 const classList = ref<ClassItem[]>([]); // 存储从后端拉取的班级列表
 const selectedClassId = ref<number | string>(''); 
 const courseLibrary = ref<CourseItem[]>([]);
+const showEditModal = ref(false);
+const isEditLoading = ref(false);
+
+const editForm = reactive({
+  id: 0,
+  username: '',
+  fullName: '',
+  studentNumber: '',
+  classId: '' as string | number // 允许转班
+});
+
+// --- 移除逻辑 ---
+const handleRemove = async (stu: StudentItem) => {
+  if (!confirm(`确定要将【${stu.name}】移出【${stu.class_name}】吗？\n该操作不会删除学生账号，仅解除班级关联。`)) return;
+  
+  try {
+    // 注意：这里需要传入 class_id，现在后端列表接口已经返回了 class_id
+    await removeStudentFromClass(stu.class_id, stu.id);
+    alert('移除成功');
+    fetchStudentList(); // 刷新列表
+  } catch (error) {
+    console.error(error);
+  }
+};
+
+// --- 编辑逻辑 ---
+const handleEdit = (stu: StudentItem) => {
+  // 回显数据
+  editForm.id = stu.id;
+  editForm.username = stu.username;
+  editForm.fullName = stu.full_name || '';
+  editForm.studentNumber = stu.student_number || '';
+  editForm.classId = stu.class_id;
+  
+  showEditModal.value = true;
+};
+
+const submitEdit = async () => {
+  if (!editForm.username || !editForm.fullName) return alert('姓名和手机号必填');
+  
+  isEditLoading.value = true;
+  try {
+    await updateStudent(editForm.id, {
+      username: editForm.username,
+      full_name: editForm.fullName,
+      student_number: editForm.studentNumber,
+      class_id: Number(editForm.classId)
+    });
+    alert('修改成功');
+    showEditModal.value = false;
+    fetchStudentList(); // 刷新列表
+  } catch (error) {
+    console.error(error);
+  } finally {
+    isEditLoading.value = false;
+  }
+};
+
+// ✅ 新增：批量导入相关状态
+const showImportModal = ref(false);
+const isImporting = ref(false);
+const importClassId = ref(''); // 选中的班级
+const importFile = ref<File | null>(null);
+const importResult = ref<ImportResult | null>(null); // 存储后端返回的结果
+const importInputRef = ref<HTMLInputElement | null>(null);
+
+// ✅ 辅助：生成并下载模版 (生成一个简单的 CSV 文件供老师填)
+const downloadTemplate = () => {
+  const csvContent = "姓名,手机号,学号\n张三,13800138000,2025001\n李四,13900139000,2025002";
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement("a");
+  const url = URL.createObjectURL(blob);
+  link.setAttribute("href", url);
+  link.setAttribute("download", "学员导入模板.csv"); // Excel 也能打开 CSV
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
+// 触发文件选择
+const triggerImportInput = () => importInputRef.value?.click();
+
+// 监听文件变化
+const handleImportFileChange = (event: Event) => {
+  const input = event.target as HTMLInputElement;
+  if (input.files && input.files[0]) {
+    importFile.value = input.files[0];
+    importResult.value = null; // 重置上一次的结果
+  }
+};
+
+// 提交导入
+const submitImport = async () => {
+  if (!importClassId.value) return alert('请先选择班级');
+  if (!importFile.value) return alert('请先上传文件');
+
+  isImporting.value = true;
+  importResult.value = null;
+
+  try {
+    const res = await batchImportStudents(Number(importClassId.value), importFile.value);
+    importResult.value = res; // 展示结果
+    
+    // 如果全部成功，刷新列表
+    if (res.error_count === 0) {
+      alert(`成功导入 ${res.success_count} 人！`);
+      showImportModal.value = false;
+      fetchStudentList();
+    }
+    // 如果有部分失败，不关闭弹窗，显示错误日志
+    else {
+      fetchStudentList(); // 哪怕部分成功，也刷新一下列表看看
+    }
+  } catch (error) {
+    console.error(error);
+    alert('导入失败，请检查文件格式');
+  } finally {
+    isImporting.value = false;
+  }
+};
+
+const openImportModal = () => {
+  importClassId.value = '';
+  importFile.value = null;
+  importResult.value = null;
+  // 如果当前页面已经筛选了班级 (selectedClassId)，自动填入
+  if (selectedClassId.value) {
+    importClassId.value = String(selectedClassId.value);
+  }
+  showImportModal.value = true;
+};
 
 // 表单数据
 const studentForm = reactive({ 
@@ -213,6 +494,10 @@ const formatDate = (val: any) => {
 
 const students = ref<StudentItem[]>([]);
 
+
+
+const currentPage = ref(1);
+const pageSize = ref(10); // 每页显示 10 条
 const filteredStudents = computed(() => {
   let data = students.value;
 
@@ -240,15 +525,32 @@ const filteredStudents = computed(() => {
   return data;
 });
 
+// 2. ✅ 新增：paginatedStudents (这是当前页实际显示的人)
+const paginatedStudents = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value;
+  const end = start + pageSize.value;
+  return filteredStudents.value.slice(start, end);
+});
+
+// 3. ✅ 新增：总页数计算
+const totalPages = computed(() => {
+  return Math.ceil(filteredStudents.value.length / pageSize.value);
+});
+
+// 4. ✅ 新增：切换页码函数
+const changePage = (page: number) => {
+  if (page < 1 || page > totalPages.value) return;
+  currentPage.value = page;
+};
+
 const fetchStudentList = async () => {
   try {
     const res = await getMyStudents();
-    // 为数据添加一些前端显示的颜色 (模拟)
     students.value = res.map(s => ({
       ...s,
-      // 这里的 name 映射后端返回的 full_name
       name: s.full_name || s.username, 
       code: s.student_number || '无学号',
+      avatar: s.avatar,
       className: s.class_name,
       joinDate: new Date(s.joined_at).toLocaleDateString(), // 格式化时间
       status: s.is_active ? 'active' : 'inactive',
@@ -259,6 +561,10 @@ const fetchStudentList = async () => {
   } catch (error) {
     console.error("获取学生列表失败", error);
   }
+};
+
+const getFirstChar = (name?: string) => {
+  return name ? name.charAt(0).toUpperCase() : '?';
 };
 
 onMounted(() => {
@@ -384,7 +690,20 @@ $text-gray: #a4b0be;
 
   /* 表格容器 */
   .table-container {
-    background: white; border-radius: 15px; padding: 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.02); min-height: 500px;
+    background: white; 
+    border-radius: 15px; 
+    padding: 20px; 
+    box-shadow: 0 5px 20px rgba(0,0,0,0.02); 
+  
+    flex: 1; 
+    overflow: hidden; 
+    display: flex;
+    flex-direction: column;
+
+    .table-wrapper {
+      flex: 1;
+      overflow-y: auto; /* 允许垂直滚动 */
+    }
     
     .student-table {
       width: 100%; border-collapse: collapse;
@@ -570,6 +889,64 @@ $text-gray: #a4b0be;
     &.is-focus {
       box-shadow: 0 0 0 1px $primary-color inset !important;
     }
+  }
+}
+
+/* 在原有的 .avatar 样式基础上补充 */
+.student-table {
+  /* ... */
+  .user-info {
+    /* 确保 .avatar 有基础宽高 */
+    .avatar { 
+      width: 32px; 
+      height: 32px; 
+      border-radius: 50%; 
+      object-fit: cover; 
+      flex-shrink: 0;
+    }
+    
+    /* ✅ 新增：文字头像样式 */
+    .text-avatar {
+      background-color: #e0f2f1; /* 浅青色 */
+      color: $primary-color;     /* 深青色文字 */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: bold;
+    }
+  }
+}
+
+/* 模板下载提示框 */
+.template-box {
+  background: #f8f9fa; border: 1px dashed #ddd; padding: 10px 15px; border-radius: 8px;
+  display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #666;
+  a { color: $primary-color; text-decoration: none; font-weight: 600; &:hover { text-decoration: underline; } }
+}
+
+/* 上传区域 */
+.upload-zone {
+  border: 2px dashed #e0e0e0; border-radius: 12px; height: 120px;
+  display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s;
+  &:hover { border-color: $primary-color; background-color: #f0fdfa; }
+  &.has-file { border-color: $primary-color; background-color: #e6fffa; }
+  
+  .zone-content { text-align: center; }
+  .icon { font-size: 28px; margin-bottom: 5px; display: block; }
+  .text { font-size: 14px; font-weight: 600; color: #333; margin: 0; }
+  .sub-text { font-size: 12px; color: #999; margin-top: 5px; }
+}
+
+/* 导入结果展示 */
+.result-box {
+  background: #fafafa; border-radius: 8px; padding: 15px;
+  .summary { display: flex; gap: 20px; font-weight: bold; margin-bottom: 10px; font-size: 16px;
+    .success { color: #52c41a; } .error { color: #ff4d4f; }
+  }
+  .error-list {
+    max-height: 200px; overflow-y: auto; background: #fff; border: 1px solid #eee; padding: 10px; border-radius: 6px;
+    p { color: #ff4d4f; font-size: 12px; margin-bottom: 4px; border-bottom: 1px dashed #f0f0f0; padding-bottom: 2px; }
   }
 }
 </style>
