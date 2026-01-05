@@ -42,6 +42,12 @@ const routes: RouteRecordRaw[] = [
         meta: { requiresAuth: true, role: 'teacher' }
       },
       {
+        path: 'teacher/courses/:id', 
+        name: 'TeacherCourseDetail',
+        component: () => import('@/views/dashboard/teacher/detail.vue'), // 稍后创建这个文件
+        meta: { requiresAuth: true, role: 'teacher' }
+      },
+      {
         path: 'teacher/classes', 
         name: 'TeacherClassManagement',
         component: () => import('@/views/dashboard/teacher/classes.vue'),

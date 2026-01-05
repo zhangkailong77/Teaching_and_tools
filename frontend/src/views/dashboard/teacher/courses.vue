@@ -49,11 +49,12 @@
           
           <!-- 底部按钮 (仅未锁定时可用) -->
           <div class="card-footer">
-            <button v-if="!course.is_locked" class="btn-view">查看详情</button>
+            <button v-if="!course.is_locked" class="btn-view" @click="router.push(`/dashboard/teacher/courses/${course.id}`)">
+              <span>查看详情</span>
+            </button>
             <button v-else class="btn-disabled" disabled>联系管理员开通</button>
           </div>
         </div>
-
       </div>
     </main>
   </div>
@@ -61,10 +62,12 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router'; 
 import TeacherSidebar from '@/components/TeacherSidebar.vue';
 import { getMyCourses, type CourseItem } from '@/api/content';
 import { getImgUrl } from '@/utils/index'; 
 
+const router = useRouter();
 const courseList = ref<CourseItem[]>([]);
 const defaultCover = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=300&auto=format&fit=crop';
 

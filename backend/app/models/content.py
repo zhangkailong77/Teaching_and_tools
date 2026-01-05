@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.base_class import Base
@@ -13,6 +13,11 @@ class Course(Base):
     intro = Column(Text, nullable=True)              # 简介
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=False) # 创建者
     created_at = Column(DateTime, default=func.now())
+    task_count = Column(Integer, default=0)
+    total_duration = Column(Integer, default=0)
+    lesson_count = Column(Integer, default=0)
+    course_type = Column(String(50), default="实训课程")
+    chapters = relationship("CourseChapter", back_populates="course", order_by="CourseChapter.sort_order", cascade="all, delete-orphan")
 
     # 关联：创建者 (User)
     # 注意：这里使用字符串 "User" 是为了防止循环引用
@@ -46,3 +51,45 @@ class TeacherCourseAccess(Base):
     teacher_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     course_id = Column(Integer, ForeignKey("courses.id"), nullable=False)
     created_at = Column(DateTime, default=func.now())
+
+
+# ------------------------------------------------------------------
+# 4. 课程章节 (CourseChapter)
+# ------------------------------------------------------------------
+class CourseChapter(Base):
+    __tablename__ = "course_chapters"
+
+    id = Column(Integer, primary_key=True, index=True)
+    course_id = Column(Integer, ForeignKey("courses.id"), nullable=False)
+    title = Column(String(255), nullable=False)
+    sort_order = Column(Integer, default=0)
+    created_at = Column(DateTime, default=func.now())
+
+    # 关联：所属课程
+    course = relationship("Course", back_populates="chapters")
+    
+    # 关联：包含的课时 (自动按 sort_order 排序)
+    lessons = relationship("CourseLesson", back_populates="chapter", order_by="CourseLesson.sort_order", cascade="all, delete-orphan")
+
+
+# ------------------------------------------------------------------
+# 5. 课时资源 (CourseLesson)
+# ------------------------------------------------------------------
+class CourseLesson(Base):
+    __tablename__ = "course_lessons"
+
+    id = Column(Integer, primary_key=True, index=True)
+    chapter_id = Column(Integer, ForeignKey("course_chapters.id"), nullable=False)
+    
+    title = Column(String(255), nullable=False)
+    resource_type = Column(String(20), nullable=False) # pdf, ppt, video
+    file_url = Column(String(500), nullable=True)      # 文件路径
+    
+    duration = Column(String(50), nullable=True)       # 时长/页数
+    is_free = Column(Boolean, default=False)           # 是否试看
+    
+    sort_order = Column(Integer, default=0)
+    created_at = Column(DateTime, default=func.now())
+
+    # 关联：所属章节
+    chapter = relationship("CourseChapter", back_populates="lessons")

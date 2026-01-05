@@ -7,6 +7,10 @@ class CourseBase(BaseModel):
     name: str
     cover: Optional[str] = None
     intro: Optional[str] = None
+    task_count: int = 0
+    total_duration: int = 0
+    lesson_count: int = 0
+    course_type: str = "实训课程"
 
 # 1. 创建课程时的参数
 class CourseCreate(CourseBase):
