@@ -327,12 +327,78 @@
 
         </div>
       </div>
+
+      <!-- ================= PPT 沉浸式放映厅 ================= -->
+      <div v-if="showPPTPlayer" class="ppt-player" :class="{ 'is-fullscreen': isFullscreen }" ref="pptContainerRef" @wheel.prevent="handlePPTWheel">
+      <!-- 1. 顶部栏 (鼠标悬停显示) -->
+      <div class="ppt-header">
+        <div class="title">{{ pptTitle }}</div>
+        <div class="controls">
+          <button class="btn-icon" @click="closePPTPlayer" title="退出">✕</button>
+        </div>
+      </div>
+
+      <!-- 2. 核心舞台 (居中显示单页) -->
+      <div class="ppt-body">
+        
+        <!-- A. 左侧缩略图侧边栏 (仅在非全屏时显示) -->
+        <div class="ppt-sidebar" v-if="!isFullscreen && pptTotalPages > 0" ref="pptSidebarRef">
+          <div 
+            v-for="pageNum in pptTotalPages" 
+            :key="pageNum"
+            class="thumb-item"
+            :class="{ active: pageNum === pptCurrentPage }"
+            @click="pptCurrentPage = pageNum"
+            :id="`thumb-item-${pageNum}`"
+          >
+            <span class="thumb-index">{{ pageNum }}</span>
+            <div class="thumb-preview">
+              <!-- 渲染小尺寸 PDF 作为缩略图 -->
+              <VuePdfEmbed
+                :source="pptUrl"
+                :page="pageNum"
+                :width="200"
+                class="thumb-canvas"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- B. 核心舞台 (右侧) -->
+        <!-- 去掉了之前的 .ppt-stage 样式里的居中，改为 flex-grow -->
+        <div class="ppt-stage" @click="changePPTPage(1)">
+          <VuePdfEmbed
+            :source="pptUrl"
+            :page="pptCurrentPage"
+            :width="dynamicPdfWidth"
+            class="ppt-slide"
+            @loaded="onPPTLoaded"
+          />
+        </div>
+
+      </div>
+
+      <!-- 3. 底部控制栏 (仿 WPS 播放条) -->
+      <div class="ppt-footer">
+        <!-- 翻页控制器 -->
+        <div class="page-nav">
+          <button class="nav-btn" @click.stop="changePPTPage(-1)" :disabled="pptCurrentPage <= 1">◀ 上一页</button>
+          <span class="page-num">第 <b>{{ pptCurrentPage }}</b> / {{ pptTotalPages }} 页</span>
+          <button class="nav-btn" @click.stop="changePPTPage(1)" :disabled="pptCurrentPage >= pptTotalPages">下一页 ▶</button>
+        </div>
+
+        <!-- 全屏按钮 -->
+        <div class="fullscreen-tool">
+          <button class="btn-fs" @click="triggerBrowserFullscreen">⛶ 全屏放映</button>
+        </div>
+      </div>
+    </div>
     </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, reactive, computed } from 'vue';
+import { ref, onMounted, reactive, computed, watch, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import TeacherSidebar from '@/components/TeacherSidebar.vue';
 import { getCourseDetail, getCourseChapters, type CourseItem, type CourseChapterItem } from '@/api/content';
@@ -356,6 +422,35 @@ const isFullscreen = ref(false); // 全屏状态
 const pdfContainerRef = ref<HTMLElement | null>(null); // 用于全屏的 DOM 引用
 const scale = ref(1.0);
 
+// === PPT 演示模式专用状态 ===
+const showPPTPlayer = ref(false);
+const pptUrl = ref('');
+const pptTitle = ref('');
+const pptCurrentPage = ref(1);
+const pptTotalPages = ref(0);
+const pptScale = ref(1.0); // 缩放比例
+const pptContainerRef = ref<HTMLElement | null>(null); // 全屏容器
+
+// 2. 新增一个计算属性
+const dynamicPdfWidth = computed(() => {
+  if (isFullscreen.value) {
+    // 全屏模式：使用屏幕真实宽度，保证高清且填满
+    return window.innerWidth;
+  }
+  // 非全屏模式：使用你指定的固定宽度
+  return 1500;
+});
+
+// ✅ 新增：动态计算 PPT 宽度
+import { useWindowSize } from '@vueuse/core'; // 如果没安装 vueuse，可以用原生 window.innerWidth
+// 为了简单，我们直接用原生 resize 监听
+const windowWidth = ref(window.innerWidth);
+
+// 监听窗口大小变化，保证清晰度
+window.addEventListener('resize', () => {
+  windowWidth.value = window.innerWidth;
+});
+
 const pdfChapterList = computed(() => {
   // 遍历所有章节，把里面的 lessons 过滤一遍
   return chapterList.value.map(chapter => ({
@@ -365,6 +460,27 @@ const pdfChapterList = computed(() => {
   }));
 });
 
+// 定义侧边栏容器引用 (可选，配合 Template)
+const pptSidebarRef = ref<HTMLElement | null>(null);
+// ✅ 新增：监听页码变化，自动滚动侧边栏
+watch(pptCurrentPage, (newPage) => {
+  // 使用 nextTick 确保 DOM 已经更新（高亮样式已生效）
+  nextTick(() => {
+    // 1. 找到当前页对应的缩略图元素
+    const targetElement = document.getElementById(`thumb-item-${newPage}`);
+    
+    // 2. 如果元素存在，并且侧边栏是显示状态
+    if (targetElement && !isFullscreen.value) {
+      // 3. 调用原生 API 让它滚动到可视区域
+      // block: 'center' 表示尽量把它滚到中间，体验最好
+      targetElement.scrollIntoView({
+        behavior: 'smooth', // 平滑滚动
+        block: 'center',    // 垂直方向居中
+        inline: 'nearest'
+      });
+    }
+  });
+});
 
 const materialList = computed(() => {
   const list: any[] = [];
@@ -384,23 +500,65 @@ const materialList = computed(() => {
 
 const handlePlayPPT = (fileUrl: string, title: string) => {
   if (!fileUrl) return alert('文件路径无效');
+  
+  // 依然使用 PDF 影子文件逻辑 (保证排版不乱)
   const pdfUrl = fileUrl.replace(/\.pptx?$/i, '_ppt.pdf');
-  const shadowLesson = {
-    id: -1, // 临时ID，不与左侧目录联动
-    title: title, // 使用 PPT 的标题
-    type: 'pdf',  // 伪装成 PDF 类型
-    file_url: pdfUrl // 使用转换后的 PDF 地址
-  };
-  handleLessonClick(shadowLesson);
+  
+  pptUrl.value = getImgUrl(pdfUrl);
+  pptTitle.value = title;
+  pptCurrentPage.value = 1; // 重置到第一页
+  pptScale.value = 1.0;
+  showPPTPlayer.value = true;
 };
 
-const closePPT = () => {
-  isPPTMode.value = false;
-  currentPPTUrl.value = '';
+// 2. 关闭演示
+const closePPTPlayer = () => {
+  showPPTPlayer.value = false;
+  pptUrl.value = '';
 };
 
-const onRendered = () => {
-  console.log('PPT 渲染完成');
+// 3. 翻页逻辑
+const changePPTPage = (delta: number) => {
+  const newPage = pptCurrentPage.value + delta;
+  if (newPage >= 1 && newPage <= pptTotalPages.value) {
+    pptCurrentPage.value = newPage;
+  }
+};
+
+// 4. 加载完成回调
+const onPPTLoaded = (doc: any) => {
+  pptTotalPages.value = doc.numPages;
+};
+
+// 5. 浏览器原生全屏
+const triggerBrowserFullscreen = () => {
+  if (pptContainerRef.value) {
+    if (!document.fullscreenElement) {
+      pptContainerRef.value.requestFullscreen();
+    } else {
+      document.exitFullscreen();
+    }
+  }
+};
+
+// === ✅ 新增：滚轮翻页防抖 ===
+let isWheeling = false;
+
+const handlePPTWheel = (e: WheelEvent) => {
+  // 如果正在翻页冷却中，忽略这次滚动
+  if (isWheeling) return;
+  
+  // 开启冷却 (300毫秒内不接受新的滚动)
+  isWheeling = true;
+  setTimeout(() => { isWheeling = false; }, 300);
+
+  // deltaY > 0 代表向下滚动 -> 下一页
+  // deltaY < 0 代表向上滚动 -> 上一页
+  if (e.deltaY > 0) {
+    changePPTPage(1);
+  } else {
+    changePPTPage(-1);
+  }
 };
 
 // ✅ 3. 修改点击课时的逻辑
@@ -901,40 +1059,124 @@ $text-gray: #a4b0be;
   }
 }
 
-/* --- PPT 沉浸式演示厅样式 --- */
-.ppt-cinema-mode {
-  position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-  background-color: #1a1a1a; /* 深色背景，沉浸感 */
-  z-index: 3000; /* 最高层级 */
-  display: flex; flex-direction: column;
+/* === PPT 放映厅样式 (升级版) === */
+.ppt-player {
+  position: fixed;
+  top: 0; left: 0; width: 100vw; height: 100vh;
+  background-color: #f5f7fa; 
+  color: #333;
+  z-index: 3000;
+  display: flex;
+  flex-direction: column;
+  user-select: none;
 
-  .cinema-header {
-    height: 60px; background: rgba(0,0,0,0.5); display: flex; justify-content: space-between; align-items: center; padding: 0 30px; color: white;
-    .close-btn { 
-      background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); 
-      color: white; padding: 6px 15px; border-radius: 20px; cursor: pointer;
-      &:hover { background: #e74c3c; border-color: #e74c3c; }
+  /* 顶部栏：默认浮在上面，背景半透明 */
+  .ppt-header {
+    position: absolute; top: 0; left: 0; width: 100%; height: 60px;
+    display: flex; justify-content: space-between; align-items: center; padding: 0 20px;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent); /* 渐变阴影 */
+    color: #fff; z-index: 20;
+    transition: opacity 0.3s;
+    opacity: 0; /* 默认隐藏，鼠标动了才显示 */
+    
+    .title { font-size: 16px; font-weight: bold; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+    .btn-icon { background: none; border: none; color: white; font-size: 24px; cursor: pointer; opacity: 0.8; &:hover { opacity: 1; } }
+  }
+
+  .ppt-body {
+    flex: 1; 
+    display: flex;
+    overflow: hidden; /* 防止溢出 */
+    position: relative;
+    /* 去掉之前的 padding，因为现在 header/footer 不再悬浮遮挡了 */
+    padding-top: 0; 
+    padding-bottom: 0;
+  }
+
+  /* ✅ 新增：左侧缩略图栏 */
+  .ppt-sidebar {
+    width: 260px;
+    background: #fff; /* 白底 */
+    border-right: 1px solid #e0e0e0;
+    overflow-y: auto;
+    display: flex; flex-direction: column; padding: 15px; gap: 15px; flex-shrink: 0;
+
+    .thumb-item {
+      display: flex; align-items: flex-start; gap: 10px; cursor: pointer; opacity: 0.8; transition: opacity 0.2s;
+      &:hover { opacity: 1; }
+      
+      &.active {
+        opacity: 1;
+        .thumb-preview { border-color: $primary-color; box-shadow: 0 0 0 3px rgba(0, 201, 167, 0.2); }
+        .thumb-index { color: $primary-color; font-weight: bold; }
+      }
+
+      .thumb-index { font-size: 12px; color: #999; margin-top: 2px; width: 18px; }
+      .thumb-preview {
+        border: 1px solid #eee; /* 给缩略图加个边框 */
+        border-radius: 4px; overflow: hidden; background: #eee;
+        width: 100%; height: auto; pointer-events: none;
+      }
     }
   }
 
-  .ppt-viewport {
-    flex: 1; 
-    display: flex; 
-    justify-content: center; 
-    align-items: center; /* 居中显示 PPT */
-    overflow: hidden;
+  /* 底部栏：默认浮在下面 */
+  .ppt-footer {
+    position: absolute; bottom: 0; left: 0; width: 100%; height: 70px;
+    background: linear-gradient(to top, rgba(0,0,0,0.9), transparent); /* 渐变阴影 */
+    display: flex; justify-content: space-between; align-items: center; padding: 0 40px;
+    color: #ccc; z-index: 20;
+    transition: opacity 0.3s;
+    opacity: 0; /* 默认隐藏 */
+
+    .page-nav {
+      display: flex; align-items: center; gap: 30px; margin: 0 auto; transform: translateX(80px);
+      .nav-btn { font-size: 16px; padding: 8px 20px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2); color: white; border-radius: 30px; backdrop-filter: blur(4px); &:hover { background: $primary-color; border-color: $primary-color; } &:disabled { opacity: 0.3; cursor: not-allowed; background: transparent; } }
+      .page-num { font-size: 16px; color: rgba(255,255,255,0.8); b { color: white; font-size: 20px; } }
+    }
+    .fullscreen-tool .btn-fs { background: transparent; border: 1px solid rgba(255,255,255,0.3); color: white; padding: 6px 12px; border-radius: 4px; &:hover { background: white; color: black; } }
+    .zoom-tools { visibility: hidden; } /* 演示模式隐藏缩放，因为是自适应的 */
+  }
+
+  /* 鼠标悬停在整个屏幕时，显示上下栏 */
+  &:hover {
+    .ppt-header, .ppt-footer { opacity: 1; }
+  }
+
+  /* === 🌟 核心舞台：全屏自适应 === */
+  .ppt-stage {
+    flex: 1;
+    /* ✅ 改动 2: 背景改为浅灰，突出中间的 PPT */
+    background: #e3e5e7; 
     
-    .ppt-renderer {
-      width: 100%;
-      height: 100%;
-      /* 强制 PPT 居中且适应屏幕 */
-      display: flex; 
-      justify-content: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    position: relative;
+    padding: 20px; /* 给四周留点呼吸空间 */
+
+    /* PDF 画布样式 */
+    :deep(.ppt-slide) {
+      /* ✅ 改动 3: 强制适应容器大小 (Contain) */
+      max-width: 100% !important;
+      max-height: 100% !important;
+      width: auto !important;
+      height: auto !important;
       
-      /* 覆盖组件内部样式，使其在深色背景下好看 */
-      :deep(.vue-office-pptx-slide) {
-        box-shadow: 0 0 50px rgba(0,0,0,0.5); /* 幻灯片投影 */
-      }
+      object-fit: contain; 
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15); /* 柔和阴影 */
+      background-color: white;
+    }
+  }
+
+  &.is-fullscreen .ppt-stage {
+    padding: 0; /* 全屏时去掉内边距，尽可能大 */
+    background: white;
+    
+    :deep(.ppt-slide) {
+      max-width: 100vw;
+      max-height: 100vh;
     }
   }
 }

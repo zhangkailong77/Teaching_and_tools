@@ -29,6 +29,19 @@ def import_course(db: Session, course_id: int):
 
     print(f"🚀 开始为课程【{course.name}】导入资源...")
 
+    course_dir_rel = f"course_{course.id}"
+    course_dir_abs = os.path.join(TARGET_ROOT, course_dir_rel)
+
+    if os.path.exists(course_dir_abs):
+        print(f"🧹 检测到旧文件目录，正在清理: {course_dir_abs}")
+        try:
+            # shutil.rmtree 会递归删除文件夹及其包含的所有内容
+            shutil.rmtree(course_dir_abs)
+            print("✅ 清理完成，准备写入新数据...")
+        except Exception as e:
+            print(f"❌ 清理旧文件失败: {e}")
+            return
+
     # 2. 遍历章节 (一级文件夹)
     chapters = sorted(os.listdir(SOURCE_DIR), key=natural_sort_key)
     
