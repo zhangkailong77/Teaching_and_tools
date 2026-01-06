@@ -311,7 +311,7 @@ const isLoading = ref(false);
 const comfyUrl = ref(''); // 用来存后端返回的 URL
 
 interface StudentCourseCard {
-  id: number;
+  id: string;
   name: string;
   className: string;
   cover: string;
@@ -350,6 +350,10 @@ const fetchMyCourses = async () => {
       // 如果班级绑定了课程，把每一门课都拆出来变成一个卡片
       if (cls.bound_course_names && cls.bound_course_names.length > 0) {
         cls.bound_course_names.forEach((cName, index) => {
+          const publicId = cls.bound_course_public_ids 
+                           ? cls.bound_course_public_ids[index] 
+                           : String(index);
+                           
           const specificCover = cls.bound_course_covers && cls.bound_course_covers[index] 
                                 ? cls.bound_course_covers[index] 
                                 : cls.cover_image;
@@ -360,7 +364,7 @@ const fetchMyCourses = async () => {
                                    : 0;
 
           tempList.push({
-            id: cls.bound_course_ids ? cls.bound_course_ids[index] : index,
+            id: publicId,
             name: cName,
             className: cls.name,
             

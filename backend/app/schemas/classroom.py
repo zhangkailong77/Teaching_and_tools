@@ -31,6 +31,7 @@ class ClassOut(ClassBase):
     bound_course_names: List[str] = []
     # 返回已绑定的课程ID列表，方便前端回显
     bound_course_ids: List[int] = [] 
+    bound_course_public_ids: List[str] = [] 
     bound_course_covers: List[Optional[str]] = [] 
     bound_course_progress: List[int] = [] 
     

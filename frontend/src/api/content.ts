@@ -51,12 +51,12 @@ export function getCourseChapters(courseId: string) {
 
 // --------------------【学生端】--------------------
 // ✅ 新增：[学生端] 获取课程详情
-export function getStudentCourseDetail(id: number) {
+export function getStudentCourseDetail(id: string) {
   return request.get<any, CourseItem>(`/content/student/courses/${id}`);
 }
 
 // ✅ 新增：[学生端] 获取章节目录
-export function getStudentCourseChapters(id: number) {
+export function getStudentCourseChapters(id: string) {
   return request.get<any, CourseChapterItem[]>(`/content/student/courses/${id}/chapters`);
 }
 

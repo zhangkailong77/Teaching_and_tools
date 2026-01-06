@@ -11,6 +11,7 @@ export interface ClassItem {
   end_date?: string;
   bound_course_names: string[]; 
   bound_course_ids: number[];
+  bound_course_public_ids: string[];
   bound_course_covers: string[];
   bound_course_progress: number[];
   teacher_name?: string;

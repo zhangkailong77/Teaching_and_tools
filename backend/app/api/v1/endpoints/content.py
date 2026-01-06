@@ -203,12 +203,17 @@ def check_student_permission(db: Session, user_id: int, course_id: int):
 # ------------------------------------------------------------------
 # 6. [学生] 获取课程详情 (用于概览页)
 # ------------------------------------------------------------------
-@router.get("/student/courses/{course_id}", response_model=schemas.CourseOut)
+@router.get("/student/courses/{public_id}", response_model=schemas.CourseOut)
 def read_student_course_detail(
-    course_id: int,
+    public_id: str,
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user),
 ):
+
+    course_id = decode_id(public_id)
+    if not course_id:
+        raise HTTPException(status_code=404, detail="课程不存在")
+
     if current_user.role != "student":
         raise HTTPException(status_code=403, detail="仅限学生访问")
 
@@ -230,12 +235,17 @@ def read_student_course_detail(
 # ------------------------------------------------------------------
 # 7. [学生] 获取课程章节目录 (用于学习页)
 # ------------------------------------------------------------------
-@router.get("/student/courses/{course_id}/chapters")
+@router.get("/student/courses/{public_id}/chapters")
 def read_student_course_chapters(
-    course_id: int,
+    public_id: str,
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user),
 ):
+
+    course_id = decode_id(public_id)
+    if not course_id:
+        raise HTTPException(status_code=404, detail="课程不存在")
+        
     if current_user.role != "student":
         raise HTTPException(status_code=403, detail="仅限学生访问")
 

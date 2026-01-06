@@ -441,7 +441,7 @@ const handlePPTWheel = (e: WheelEvent) => {
 };
 
 onMounted(async () => {
-  const id = Number(route.params.id);
+  const id = route.params.id as string;
   if (id) {
     // 调用学生专用 API
     const detail = await getStudentCourseDetail(id);

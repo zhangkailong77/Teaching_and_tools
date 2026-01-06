@@ -2,6 +2,7 @@ from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy import func, distinct
+from app.utils.hash import encode_id 
 
 from app.api import deps
 from app.core import security
@@ -620,6 +621,7 @@ def read_student_classes(
         
         c_names = []
         c_ids = []
+        c_public_ids = []
         c_covers = []
         c_progress = []
         
@@ -631,6 +633,7 @@ def read_student_classes(
             if course_obj:
                 c_names.append(course_obj.name)
                 c_ids.append(course_obj.id)
+                c_public_ids.append(encode_id(course_obj.id))
                 c_covers.append(course_obj.cover) 
                 # 简单的封面逻辑：取第一个绑定的课程封面作为展示
                 if not display_cover and course_obj.cover:
@@ -674,6 +677,7 @@ def read_student_classes(
             "student_count": real_student_count, 
             "bound_course_names": c_names,
             "bound_course_ids": c_ids,
+            "bound_course_public_ids": c_public_ids,
             "bound_course_covers": c_covers,
             "bound_course_progress": c_progress,
             "teacher_name": t_name,
