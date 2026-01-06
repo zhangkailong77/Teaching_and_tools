@@ -12,6 +12,7 @@ export interface ClassItem {
   bound_course_names: string[]; 
   bound_course_ids: number[];
   bound_course_covers: string[];
+  bound_course_progress: number[];
   teacher_name?: string;
   teacher_title?: string;
   teacher_avatar?: string;

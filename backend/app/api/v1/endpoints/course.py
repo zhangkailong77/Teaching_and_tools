@@ -7,7 +7,7 @@ from app.api import deps
 from app.core import security
 from app.models.user import User
 from app.models.course import Class, Enrollment
-from app.models.content import Course, ClassCourseBinding
+from app.models.content import Course, ClassCourseBinding, CourseChapter, CourseLesson, StudentLearningProgress
 from app.schemas import classroom as class_schemas
 import logging
 import pandas as pd
@@ -280,6 +280,34 @@ def read_my_students(
         if student.student_profile:
             s_avatar = student.student_profile.avatar
         # 如果 profile 没头像，也可以查 users 表的 avatar (看你具体存哪了，通常是 profile)
+
+        # --- B. ✅ 核心新增：计算该学生在当前班级的总进度 ---
+        progress_percent = 0
+        
+        # 1. 找出该班级绑定的所有课程 ID
+        bindings = db.query(ClassCourseBinding).filter(ClassCourseBinding.class_id == classroom.id).all()
+        bound_course_ids = [b.course_id for b in bindings]
+        
+        if bound_course_ids:
+            # 2. 计算分母：这些课程的总课时数
+            total_lessons = db.query(CourseLesson).join(CourseChapter)\
+                .filter(CourseChapter.course_id.in_(bound_course_ids))\
+                .count()
+            
+            # 3. 计算分子：该学生在这些课程中已完成的课时数 (status=2)
+            # 关联链: Progress -> Lesson -> Chapter
+            finished_count = db.query(StudentLearningProgress)\
+                .join(CourseLesson, StudentLearningProgress.lesson_id == CourseLesson.id)\
+                .join(CourseChapter, CourseLesson.chapter_id == CourseChapter.id)\
+                .filter(
+                    StudentLearningProgress.student_id == student.id,
+                    StudentLearningProgress.status == 2, # 已完成
+                    CourseChapter.course_id.in_(bound_course_ids) # 必须是当前班级绑定的课程
+                ).count()
+            
+            # 4. 计算百分比
+            if total_lessons > 0:
+                progress_percent = int((finished_count / total_lessons) * 100)
         
         students_data.append({
             "id": student.id,
@@ -290,7 +318,7 @@ def read_my_students(
             "class_id": classroom.id,
             "joined_at": enrollment.joined_at,
             "is_active": student.is_active,
-            "progress": 0, # 暂时为 0
+            "progress": progress_percent,
             "avatar": s_avatar 
         })
         
@@ -593,6 +621,7 @@ def read_student_classes(
         c_names = []
         c_ids = []
         c_covers = []
+        c_progress = []
         
         # 逻辑：优先显示课程的封面，如果没绑课，才显示班级封面
         display_cover = cls.cover_image 
@@ -607,14 +636,37 @@ def read_student_classes(
                 if not display_cover and course_obj.cover:
                     display_cover = course_obj.cover
 
-        # 5. 构造返回数据
-        # 注意：这里复用了 ClassOut，所以必须填满 ClassOut 定义的所有字段
+                # ========== ✅ 计算进度核心逻辑 ==========
+                # 1. 计算该课程的总课时数 (Course -> Chapter -> Lesson)
+                total_lessons = db.query(CourseLesson).join(CourseChapter)\
+                    .filter(CourseChapter.course_id == course_obj.id).count()
+                
+                # 2. 计算该学生已完成的课时数 (Status = 2)
+                # 关联路径: StudentLearningProgress -> CourseLesson -> CourseChapter -> Course
+                finished_count = db.query(StudentLearningProgress)\
+                    .join(CourseLesson, StudentLearningProgress.lesson_id == CourseLesson.id)\
+                    .join(CourseChapter, CourseLesson.chapter_id == CourseChapter.id)\
+                    .filter(
+                        CourseChapter.course_id == course_obj.id,
+                        StudentLearningProgress.student_id == current_user.id,
+                        StudentLearningProgress.status == 2 # 2代表已完成
+                    ).count()
+                
+                # 3. 计算百分比
+                if total_lessons > 0:
+                    percent = int((finished_count / total_lessons) * 100)
+                else:
+                    percent = 0
+                
+                c_progress.append(percent)
+
+
         results.append({
             "id": cls.id,
             "name": cls.name,
             "description": cls.description,
             "teacher_id": cls.teacher_id,
-            "cover_image": display_cover, # ✅ 使用智能判断后的封面
+            "cover_image": display_cover, 
             "start_date": cls.start_date,
             "end_date": cls.end_date,
             "created_at": cls.created_at,
@@ -623,6 +675,7 @@ def read_student_classes(
             "bound_course_names": c_names,
             "bound_course_ids": c_ids,
             "bound_course_covers": c_covers,
+            "bound_course_progress": c_progress,
             "teacher_name": t_name,
             "teacher_title": t_title,
             "teacher_avatar": t_avatar,

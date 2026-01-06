@@ -49,7 +49,7 @@
           
           <!-- 底部按钮 (仅未锁定时可用) -->
           <div class="card-footer">
-            <button v-if="!course.is_locked" class="btn-view" @click="router.push(`/dashboard/teacher/courses/${course.id}`)">
+            <button v-if="!course.is_locked" class="btn-view" @click="router.push('/dashboard/teacher/courses/' + course.public_id)">
               <span>查看详情</span>
             </button>
             <button v-else class="btn-disabled" disabled>联系管理员开通</button>

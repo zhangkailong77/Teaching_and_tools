@@ -8,3 +8,12 @@ venv/
 # IDE
 .vscode/
 .idea/
+
+# 忽略后端上传文件夹
+backend/static/uploads/
+
+# 忽略其他常见大文件
+*.mp4
+*.zip
+*.rar
+*.exe

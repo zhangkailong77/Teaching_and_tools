@@ -1,40 +1,34 @@
 <template>
   <div class="dashboard-container">
-    <TeacherSidebar />
+    <StudentSidebar />
 
     <main class="main-content">
+      
+      <!-- ================= 视图 A: 课程概览 (默认显示) ================= -->
       <div v-if="!isLearningMode" class="detail-view animate__fadeIn">
-      <header class="top-bar">
-        <div class="breadcrumb">
-          <span>教学管理</span> / 
-          <span class="link" @click="router.push('/dashboard/teacher/courses')">课程资源库</span> / 
-          <span class="current">课程详情</span>
-        </div>
-        <button class="btn-outline" @click="router.back()">← 返回列表</button>
-      </header>
+        <!-- 顶部导航 -->
+        <header class="top-bar">
+          <div class="breadcrumb">
+            <span>工作台</span> / 
+            <span class="link" @click="router.push('/dashboard/student')">课程中心</span> / 
+            <span class="current">开始学习</span>
+          </div>
+        </header>
 
-      <div v-if="loading" class="loading-box">加载中...</div>
-      <div v-else class="detail-container">
+        <!-- 课程信息卡片 -->
         <div class="course-header">
           <div class="cover-box">
-            <img :src="getImgUrl(courseInfo.cover) || defaultCover" alt="cover" />
+            <img :src="getImgUrl(courseInfo.cover)" alt="cover" />
           </div>
-
           <div class="info-box">
             <div class="tags">
-              <span class="tag">系统课程</span>
-              <span class="tag status" :class="{ locked: courseInfo.is_locked }">
-                {{ courseInfo.is_locked ? '🔒 未开通' : '✅ 已授权' }}
-              </span>
+              <span class="tag">实训课程</span>
+              <span class="tag status active">进行中</span>
             </div>
-
             <h1>{{ courseInfo.name }}</h1>
-            
-            <p class="desc">{{ courseInfo.intro || '该课程暂无详细介绍...' }}</p>
+            <p class="desc">{{ courseInfo.intro || '暂无简介' }}</p>
             
             <div class="stats-grid">
-              
-              <!-- 1. 任务数量 -->
               <div class="stat-item">
                 <div class="icon-box blue">📊</div>
                 <div class="stat-info">
@@ -45,8 +39,6 @@
                   </div>
                 </div>
               </div>
-
-              <!-- 2. 总时长 -->
               <div class="stat-item">
                 <div class="icon-box purple">⏱️</div>
                 <div class="stat-info">
@@ -57,8 +49,6 @@
                   </div>
                 </div>
               </div>
-
-              <!-- 3. 课时数 -->
               <div class="stat-item">
                 <div class="icon-box orange">📑</div>
                 <div class="stat-info">
@@ -69,8 +59,6 @@
                   </div>
                 </div>
               </div>
-
-              <!-- 4. 课程类型 -->
               <div class="stat-item">
                 <div class="icon-box green">🎓</div>
                 <div class="stat-info">
@@ -80,144 +68,85 @@
                   </div>
                 </div>
               </div>
-
             </div>
           </div>
         </div>
 
-        <!-- 3. 内容 Tabs (预留位置) -->
-        <div v-if="isLearningMode" class="learning-container">
-          <!-- 左侧：迷你目录 (复用之前的列表逻辑，稍微简化) -->
-          <div class="mini-sidebar">
-            <div class="sidebar-header">
-              <span>课程目录</span>
-              <button class="btn-exit" @click="exitLearningMode">退出学习 ✕</button>
-            </div>
-            <div class="sidebar-body">
-              <div v-for="(chapter, cIndex) in chapterList" :key="chapter.id" class="mini-chapter">
-                <div class="c-title" @click="toggleChapter(cIndex)">
-                  {{ chapter.title }}
-                </div>
-                <div v-show="chapter.isOpen" class="c-lessons">
-                  <div 
-                    v-for="lesson in chapter.lessons" 
-                    :key="lesson.id" 
-                    class="l-item"
-                    :class="{ active: currentLesson?.id === lesson.id }"
-                    @click="handleLessonClick(lesson)"
-                  >
-                    <span class="icon">{{ lesson.type === 'video' ? '📺' : '📄' }}</span>
-                    <span class="text">{{ lesson.title }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div v-else class="course-tabs">
+        <!-- 底部 Tabs -->
+        <div class="course-tabs">
           <div class="tab-header">
-            <span 
-              class="tab-item" 
-              :class="{ active: activeTab === 'intro' }" 
-              @click="activeTab = 'intro'"
-            >
-              课程介绍
-            </span>
-            <span 
-              class="tab-item" 
-              :class="{ active: activeTab === 'chapters' }" 
-              @click="activeTab = 'chapters'"
-            >
-              章节目录
-            </span>
-            <span 
-              class="tab-item" 
-              :class="{ active: activeTab === 'materials' }" 
-              @click="activeTab = 'materials'"
-            >
-              课件资料
-            </span>
+            <span class="tab-item" :class="{ active: activeTab === 'intro' }" @click="activeTab = 'intro'">课程介绍</span>
+            <span class="tab-item" :class="{ active: activeTab === 'chapters' }" @click="activeTab = 'chapters'">章节目录</span>
+            <span class="tab-item" :class="{ active: activeTab === 'materials' }" @click="activeTab = 'materials'">课件资料</span>
           </div>
           
           <div class="tab-content">
-            <!-- 暂时显示简介 -->
             <div v-if="activeTab === 'intro'" class="intro-text">
               <h3>关于本课程</h3>
               <p>{{ courseInfo.intro || '暂无详细介绍' }}</p>
             </div>
-
-            <!-- 内容块 2: 章节目录 (复用之前的漂亮样式) -->
+            <!-- 1. 章节目录 -->
             <div v-if="activeTab === 'chapters'" class="chapter-list">
               <div v-for="(chapter, index) in pdfChapterList" :key="chapter.id" class="chapter-item" :class="{ 'is-open': chapter.isOpen }">
-                <!-- 一级标题 -->
                 <div class="chapter-header" @click="toggleChapter(index)">
-                  <div class="left">
-                    <span class="arrow-icon">▼</span>
-                    <span class="title">{{ chapter.title }}</span>
-                  </div>
-                  <div class="right">
-                    <span class="count">{{ chapter.lessons.length }} 个课时</span>
-                  </div>
+                  <div class="left"><span class="arrow-icon">▼</span><span class="title">{{ chapter.title }}</span></div>
+                  <div class="right"><span class="count">{{ chapter.lessons.length }} 小节</span></div>
                 </div>
-
-                <!-- 二级列表 -->
                 <div class="lesson-group" v-show="chapter.isOpen">
-                  <div 
-                    v-for="lesson in chapter.lessons" 
-                    :key="lesson.id" 
-                    class="lesson-item"
-                    @click="handleLessonClick(lesson)"
-                  >
+                  <div v-for="lesson in chapter.lessons" :key="lesson.id" class="lesson-item" @click="handleLessonClick(lesson)">
                     <div class="lesson-left">
-                      <span class="type-icon ppt" v-if="lesson.type === 'ppt'">📑</span>
-                      <span class="type-icon video" v-else-if="lesson.type === 'video'">▶️</span>
+                      <span class="type-icon">{{ lesson.type === 'video' ? '▶️' : '' }}</span>
                       <span class="lesson-title">{{ lesson.title }}</span>
-                      <span v-if="lesson.isFree" class="badge-free">试读</span>
                     </div>
                     <div class="lesson-right">
-                      <span class="action-link" @click.stop="handleLessonClick(lesson)">
-                        {{ lesson.type === 'video' ? '播放视频' : '查看详情' }}
-                      </span>
+                      <button 
+                        v-if="lesson.status === 2" 
+                        class="status-btn finished"
+                        @click.stop="handleLessonClick(lesson)"
+                        title="点击复习"
+                      >
+                        已完成
+                      </button>
+                      
+                      <button 
+                        v-else-if="lesson.status === 1" 
+                        class="status-btn learning" 
+                        @click.stop="handleLessonClick(lesson)"
+                      >
+                        继续学习
+                      </button>
+                      
+                      <button 
+                        v-else 
+                        class="status-btn start" 
+                        @click.stop="handleLessonClick(lesson)"
+                      >
+                        开始学习
+                      </button>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-
-            <!-- 内容块 3: 课件资料 (暂时留空) -->
+            
+            <!-- 2. 课件资料 (PPT) -->
             <div v-if="activeTab === 'materials'" class="materials-list">
-              
-              <div v-if="materialList.length === 0" class="empty-state">
-                暂无课件资料
-              </div>
-
               <div class="material-item" v-for="item in materialList" :key="item.id">
                 <div class="left">
-                  <!-- 图标 -->
-                  <div class="icon-box ppt" v-if="item.type === 'ppt'">P</div>
-                  <div class="icon-box pdf" v-else>F</div>
-                  
-                  <div class="info">
-                    <div class="name">{{ item.title }}</div>
-                    <div class="chapter-tag">{{ item.chapterTitle }}</div>
-                  </div>
+                  <div class="icon-box ppt">P</div>
+                  <div class="info"><div class="name">{{ item.title }}</div><div class="chapter-tag">{{ item.chapterTitle }}</div></div>
                 </div>
-                
                 <div class="right">
-                  <button class="btn-play" @click="handlePlayPPT(item.file_url, item.title)">
-                    ▶ 幻灯片演示
-                  </button>
+                  <button class="btn-play" @click="handlePlayPPT(item.file_url, item.title)">▶ 幻灯片演示</button>
                 </div>
               </div>
+               <div v-if="materialList.length === 0" class="empty-state">暂无课件资料</div>
             </div>
           </div>
         </div>
-
-      </div>
       </div>
 
-      <!-- ================= 模式 B: 沉浸式学习模式 (全屏覆盖) ================= -->
+      <!-- ================= 视图 B: 沉浸式学习模式 (复用教师端逻辑) ================= -->
       <div v-else class="learning-mode-view" ref="pdfContainerRef">
         <!-- 左侧：深色磨砂侧边栏 -->
         <div class="learn-sidebar">
@@ -270,12 +199,11 @@
           </div>
 
           <!-- 内容渲染区 -->
-          <div class="content-stage">
+          <div class="content-stage" ref="scrollContainer" @scroll="handleScroll">
             <div class="pdf-paper-wrapper">
               <VuePdfEmbed 
                 v-if="currentLesson?.type === 'pdf'"
                 :source="getImgUrl(currentLesson.file_url)" 
-                :page="pdfPage"
                 :width="800 * scale"
                 @loaded="handlePdfLoaded"
                 class="pdf-canvas"
@@ -289,7 +217,7 @@
         </div>
       </div>
 
-      <!-- ================= PPT 沉浸式放映厅 ================= -->
+      <!-- ================= 视图 C: PPT 演示模式 (复用) ================= -->
       <div v-if="showPPTPlayer" class="ppt-player" :class="{ 'is-fullscreen': isFullscreen }" ref="pptContainerRef" @wheel.prevent="handlePPTWheel">
       <!-- 1. 顶部栏 (鼠标悬停显示) -->
       <div class="ppt-header">
@@ -354,34 +282,37 @@
         </div>
       </div>
       </div>
+
     </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, reactive, computed, watch, nextTick } from 'vue';
+import { ref, onMounted, computed, watch, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import TeacherSidebar from '@/components/TeacherSidebar.vue';
-import { getCourseDetail, getCourseChapters, type CourseItem, type CourseChapterItem } from '@/api/content';
+import StudentSidebar from '@/components/StudentSidebar.vue';
+import { getStudentCourseDetail, getStudentCourseChapters, updateProgress, type CourseItem, type CourseChapterItem } from '@/api/content';
 import { getImgUrl } from '@/utils/index';
 import VuePdfEmbed from 'vue-pdf-embed';
+import { useWindowSize } from '@vueuse/core';
 
-const activeTab = ref('intro'); 
 const route = useRoute();
 const router = useRouter();
 
-const loading = ref(true);
+// 状态
 const courseInfo = ref<Partial<CourseItem>>({});
-const defaultCover = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=300&auto=format&fit=crop';
 const chapterList = ref<CourseChapterItem[]>([]);
+const activeTab = ref('chapters'); // 学生端默认进目录
 
-// 新增pdf状态变量
+// 学习模式状态
 const isLearningMode = ref(false); // 是否进入学习模式
 const currentLesson = ref<any>(null); // 当前正在看的课时
 const pdfPageCount = ref(0); // 总页码
 const isFullscreen = ref(false); // 全屏状态
 const pdfContainerRef = ref<HTMLElement | null>(null); // 用于全屏的 DOM 引用
 const scale = ref(1.0);
+
+const scrollContainer = ref<HTMLElement | null>(null);
 
 // === PPT 演示模式专用状态 ===
 const showPPTPlayer = ref(false);
@@ -395,16 +326,12 @@ const pptContainerRef = ref<HTMLElement | null>(null); // 全屏容器
 // 2. 新增一个计算属性
 const dynamicPdfWidth = computed(() => {
   if (isFullscreen.value) {
-    // 全屏模式：使用屏幕真实宽度，保证高清且填满
     return window.innerWidth;
   }
-  // 非全屏模式：使用你指定的固定宽度
   return 1500;
 });
 
 // ✅ 新增：动态计算 PPT 宽度
-import { useWindowSize } from '@vueuse/core'; // 如果没安装 vueuse，可以用原生 window.innerWidth
-// 为了简单，我们直接用原生 resize 监听
 const windowWidth = ref(window.innerWidth);
 
 // 监听窗口大小变化，保证清晰度
@@ -413,30 +340,22 @@ window.addEventListener('resize', () => {
 });
 
 const pdfChapterList = computed(() => {
-  // 遍历所有章节，把里面的 lessons 过滤一遍
   return chapterList.value.map(chapter => ({
     ...chapter,
-    // 过滤条件：类型是 PDF (如果以后有视频，也可以加上 || l.type === 'video')
     lessons: chapter.lessons.filter(l => l.type === 'pdf')
   }));
 });
 
 // 定义侧边栏容器引用 (可选，配合 Template)
 const pptSidebarRef = ref<HTMLElement | null>(null);
-// ✅ 新增：监听页码变化，自动滚动侧边栏
 watch(pptCurrentPage, (newPage) => {
-  // 使用 nextTick 确保 DOM 已经更新（高亮样式已生效）
   nextTick(() => {
-    // 1. 找到当前页对应的缩略图元素
     const targetElement = document.getElementById(`thumb-item-${newPage}`);
     
-    // 2. 如果元素存在，并且侧边栏是显示状态
     if (targetElement && !isFullscreen.value) {
-      // 3. 调用原生 API 让它滚动到可视区域
-      // block: 'center' 表示尽量把它滚到中间，体验最好
       targetElement.scrollIntoView({
-        behavior: 'smooth', // 平滑滚动
-        block: 'center',    // 垂直方向居中
+        behavior: 'smooth', 
+        block: 'center',    
         inline: 'nearest'
       });
     }
@@ -447,11 +366,10 @@ const materialList = computed(() => {
   const list: any[] = [];
   chapterList.value.forEach(chapter => {
     chapter.lessons.forEach(lesson => {
-      // 过滤条件：类型是 PPT
       if (lesson.type === 'ppt') {
         list.push({
           ...lesson,
-          chapterTitle: chapter.title // 把章节名带上，方便列表显示
+          chapterTitle: chapter.title 
         });
       }
     });
@@ -467,7 +385,7 @@ const handlePlayPPT = (fileUrl: string, title: string) => {
   
   pptUrl.value = getImgUrl(pdfUrl);
   pptTitle.value = title;
-  pptCurrentPage.value = 1; // 重置到第一页
+  pptCurrentPage.value = 1; 
   pptScale.value = 1.0;
   showPPTPlayer.value = true;
 };
@@ -522,17 +440,92 @@ const handlePPTWheel = (e: WheelEvent) => {
   }
 };
 
-// ✅ 3. 修改点击课时的逻辑
+onMounted(async () => {
+  const id = Number(route.params.id);
+  if (id) {
+    // 调用学生专用 API
+    const detail = await getStudentCourseDetail(id);
+    courseInfo.value = detail;
+    
+    const chapters = await getStudentCourseChapters(id);
+    if (chapters.length > 0) chapters[0].isOpen = true;
+    chapterList.value = chapters;
+  }
+  window.addEventListener('resize', () => { windowWidth.value = window.innerWidth });
+});
+
+
+// ✅ 新增：滚动监听逻辑
+// 修改 handleScroll 函数
+const handleScroll = () => {
+  const el = scrollContainer.value;
+  if (!el || !currentLesson.value || !isLearningMode.value) return;
+
+  // 1. 判断是否“开始学习了” (只要滚动的距离超过 50px，或者滚动了 1%)
+  // 这里的逻辑是：如果当前是 0 (未开始) 且 滚轮动了，就改成 1 (进行中)
+  if (currentLesson.value.status === 0 && el.scrollTop > 50) {
+    console.log("检测到开始阅读，状态变更为：进行中");
+    
+    // 更新本地状态
+    currentLesson.value.status = 1;
+    updateLocalListStatus(currentLesson.value.id, 1);
+    
+    // 发送请求给后端
+    updateProgress({
+      lesson_id: currentLesson.value.id,
+      status: 1,
+      last_position: 1 // 暂时记为第1页
+    });
+  }
+
+  // 2. 判断是否“看完了” (滚动到底部)
+  // 允许 100px 的误差，防止有的浏览器滚不到最底
+  const isBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 100;
+
+  if (isBottom && currentLesson.value.status !== 2) {
+    console.log("已阅读到底部，状态变更为：已完成");
+    
+    // 更新本地状态
+    currentLesson.value.status = 2;
+    updateLocalListStatus(currentLesson.value.id, 2);
+    
+    // 发送请求给后端
+    updateProgress({
+      lesson_id: currentLesson.value.id,
+      status: 2,
+      last_position: pdfPageCount.value // 记为最后一页
+    });
+  }
+};
+
+// 辅助：更新本地列表状态 (避免刷新页面才变)
+const updateLocalListStatus = (lessonId: number, status: number) => {
+  pdfChapterList.value.forEach(ch => {
+    const l = ch.lessons.find(x => x.id === lessonId);
+    if (l) l.status = status;
+  });
+};
+
+
+// 交互函数 (复用教师端逻辑)
+const toggleChapter = (index: number) => { chapterList.value[index].isOpen = !chapterList.value[index].isOpen; };
 const handleLessonClick = (lesson: any) => {
   if (!lesson.file_url) return alert('该课时暂无文件');
   
   currentLesson.value = lesson;
   isLearningMode.value = true;
-  pdfPage.value = 1;
-  scale.value = 1.0; // 重置缩放
+  pdfPage.value = 1; 
+  scale.value = 1.0;
+
+  nextTick(() => {
+    if (lesson.status === 1 && scrollContainer.value) {
+
+    } else if (scrollContainer.value) {
+       scrollContainer.value.scrollTop = 0;
+    }
+  });
 };
 
-// ✅ 4. 退出学习模式
 const exitLearningMode = () => {
   isLearningMode.value = false;
   currentLesson.value = null;
@@ -557,55 +550,6 @@ const toggleFullscreen = () => {
 document.addEventListener('fullscreenchange', () => {
   isFullscreen.value = !!document.fullscreenElement;
 });
-
-// PDF 加载完成回调
-const handlePdfLoaded = (doc: any) => {
-  pdfPageCount.value = doc.numPages;
-};
-
-
-onMounted(async () => {
-  const id = route.params.id as string;
-  
-  if (id) {
-    await fetchDetail(id);
-    await fetchChapters(id);
-  }
-});
-
-const fetchDetail = async (id: string) => {
-  try {
-    loading.value = true;
-    const res = await getCourseDetail(id);
-    courseInfo.value = res;
-  } catch (error) {
-    console.error(error);
-  } finally {
-    loading.value = false;
-  }
-};
-
-// ✅ 新增：加载章节函数
-const fetchChapters = async (id: string) => {
-  try {
-    const res = await getCourseChapters(id);
-    // 默认展开第一个章节
-    if (res.length > 0) res[0].isOpen = true;
-    chapterList.value = res;
-  } catch (error) {
-    console.error("加载章节失败", error);
-  }
-};
-
-// Toggle 函数稍微改一下 (因为现在是 ref 数组，不是 reactive 对象直接修改)
-const toggleChapter = (index: number) => {
-  chapterList.value[index].isOpen = !chapterList.value[index].isOpen;
-};
-
-const formatDate = (isoStr?: string) => {
-  if (!isoStr) return '';
-  return new Date(isoStr).toLocaleDateString();
-};
 </script>
 
 <style scoped lang="scss">
@@ -1139,6 +1083,66 @@ $text-gray: #a4b0be;
     :deep(.ppt-slide) {
       max-width: 100vw;
       max-height: 100vh;
+    }
+  }
+}
+
+/* 状态按钮通用样式 */
+.status-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  padding: 6px 16px;
+  border-radius: 20px; /* 胶囊形状 */
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  border: 1px solid transparent; /* 预留边框 */
+  
+  .icon { font-size: 14px; }
+
+  /* 1. 开始学习 (描边风格) */
+  &.start {
+    background-color: transparent;
+    border-color: #e0e0e0;
+    color: #606266;
+    
+    &:hover {
+      border-color: $primary-color;
+      color: $primary-color;
+      background-color: rgba(0, 201, 167, 0.05);
+      transform: translateY(-1px);
+    }
+  }
+
+  /* 2. 继续学习 (暖色调，醒目) */
+  &.learning {
+    background-color: #fff7e6; /* 浅橙色背景 */
+    color: #fa8c16;            /* 深橙色文字 */
+    border-color: #ffd591;
+    
+    &:hover {
+      background-color: #fa8c16;
+      color: white;
+      border-color: #fa8c16;
+      box-shadow: 0 4px 10px rgba(250, 140, 22, 0.3);
+      transform: translateY(-1px);
+    }
+  }
+
+  /* 3. 已完成 (清爽绿，像勋章一样) */
+  &.finished {
+    background-color: #e6fffb; /* 极浅的青绿色背景 */
+    color: $primary-color;     /* 品牌主色文字 */
+    border-color: transparent; /* 无边框，像标签 */
+    
+    &:hover {
+      background-color: $primary-color;
+      color: white;
+      box-shadow: 0 4px 10px rgba(0, 201, 167, 0.3);
+      transform: translateY(-1px);
+      /* 鼠标放上去时，可以把文字变成“去复习” (可选高级效果，这里保持简单) */
     }
   }
 }

@@ -67,7 +67,7 @@
 
       <div class="course-grid">
         <!-- 课程卡片 v-for -->
-        <div class="course-card" v-for="(course, index) in courseList" :key="index">
+        <div class="course-card" v-for="(course, index) in courseList" :key="index" @click="router.push(`/dashboard/student/course/${course.id}`)">
           
           <!-- 封面区域 -->
           <div class="card-cover" :style="{ backgroundColor: course.color, backgroundImage: `url(${getImgUrl(course.cover)})`, backgroundSize: 'cover' }">
@@ -354,6 +354,11 @@ const fetchMyCourses = async () => {
                                 ? cls.bound_course_covers[index] 
                                 : cls.cover_image;
 
+          // ✅ 获取进度 (如果后端返回了，就用后端的；否则 0)
+          const specificProgress = cls.bound_course_progress && cls.bound_course_progress[index] !== undefined
+                                   ? cls.bound_course_progress[index]
+                                   : 0;
+
           tempList.push({
             id: cls.bound_course_ids ? cls.bound_course_ids[index] : index,
             name: cName,
@@ -361,7 +366,7 @@ const fetchMyCourses = async () => {
             
             cover: specificCover || '', // ✅ 使用精准封面
             
-            progress: 0,
+            progress: specificProgress, 
             color: getRandomColor(),
             teacherName: cls.teacher_name, 
             teacherTitle: cls.teacher_title,

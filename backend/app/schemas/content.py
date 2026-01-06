@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
+from app.utils.hash import encode_id
 
 # 基础字段
 class CourseBase(BaseModel):
@@ -27,8 +28,22 @@ class CourseOut(CourseBase):
     id: int
     owner_id: int
     created_at: datetime
+    public_id: Optional[str] = None
 
     is_locked: bool = False 
 
     class Config:
         from_attributes = True
+
+
+
+# ✅ 新增：进度更新参数
+class ProgressUpdate(BaseModel):
+    lesson_id: int
+    status: int      # 1 or 2
+    last_position: int
+
+# ✅ 新增：进度返回结构 (嵌套在 lesson 里)
+class LessonProgress(BaseModel):
+    status: int = 0      # 0/1/2
+    last_position: int = 1

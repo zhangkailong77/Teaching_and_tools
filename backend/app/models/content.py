@@ -93,3 +93,16 @@ class CourseLesson(Base):
 
     # 关联：所属章节
     chapter = relationship("CourseChapter", back_populates="lessons")
+
+
+# 6. 学习进度表
+class StudentLearningProgress(Base):
+    __tablename__ = "student_learning_progress"
+
+    id = Column(Integer, primary_key=True, index=True)
+    student_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    lesson_id = Column(Integer, ForeignKey("course_lessons.id"), nullable=False)
+    
+    status = Column(Integer, default=0) # 0:未开始, 1:进行中, 2:已完成
+    last_position = Column(Integer, default=1) # 阅读到的页码
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
