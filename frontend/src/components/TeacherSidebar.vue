@@ -26,7 +26,7 @@
       </router-link>
 
       <a href="#" class="menu-item">
-        <span class="icon">✍️</span> 作业批改
+        <span class="icon">✍️</span> 作业管理
         <span class="badge">12</span>
       </a>
       <a href="#" class="menu-item">

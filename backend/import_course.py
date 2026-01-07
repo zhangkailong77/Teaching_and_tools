@@ -9,7 +9,7 @@ from app.models.course import Class, Enrollment
 from app.models.content import Course, CourseChapter, CourseLesson
 
 # 配置：你的本地源文件夹路径
-SOURCE_DIR = r"C:\Users\13778\Desktop\shopee_course_source"
+SOURCE_DIR = r"D:\zkl\work\vue\2025教学系统研发课程资源\AI+(跨境)电商视觉营销设计"
 
 # 配置：目标存储路径 (后端静态目录)
 TARGET_ROOT = "static/uploads/materials"

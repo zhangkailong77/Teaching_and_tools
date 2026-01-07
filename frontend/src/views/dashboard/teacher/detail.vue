@@ -176,6 +176,13 @@
                       <span v-if="lesson.isFree" class="badge-free">试读</span>
                     </div>
                     <div class="lesson-right">
+                      <span 
+                        v-if="lesson.task" 
+                        class="action-btn task-btn"
+                        @click.stop="handleTaskClick(lesson.task)"
+                      >
+                        作业预览
+                      </span>
                       <span class="action-link" @click.stop="handleLessonClick(lesson)">
                         {{ lesson.type === 'video' ? '播放视频' : '查看详情' }}
                       </span>
@@ -354,6 +361,85 @@
         </div>
       </div>
       </div>
+
+      <el-drawer
+        v-model="showTaskDrawer"
+        title="作业详情"
+        direction="rtl"
+        size="500px"
+        class="task-drawer"
+      >
+        <template #header>
+          <div class="task-drawer-header">
+            <span class="icon">📝</span>
+            <h3>{{ currentTask?.title }}</h3>
+          </div>
+        </template>
+
+        <div class="task-drawer-body" v-loading="isDrawerLoading">
+          <!-- A. 题目预览区 -->
+          <div class="task-preview-box">
+            <h4>作业要求</h4>
+            <div class="content-text" v-html="currentTask?.content || '暂无详细描述'"></div>
+          </div>
+
+          <div class="divider-line"></div>
+
+          <!-- B. 分班发布设置区 (核心) -->
+          <div class="publish-section">
+            <h4>📅 发布设置 (设置截止时间即视为发布)</h4>
+            
+            <div v-if="publishList.length === 0" class="empty-hint">
+              暂无关联班级，请先去新建班级并绑定此课程。
+            </div>
+
+            <div class="class-publish-list">
+              <div class="cp-item" v-for="item in publishList" :key="item.class_id">
+                
+                <!-- 班级信息 -->
+                <div class="cp-info">
+                  <div class="cp-name">{{ item.class_name }}</div>
+                  <div class="cp-status">
+                    <span v-if="item.is_published" class="tag success">● 已发布</span>
+                    <span v-else class="tag gray">○ 未发布</span>
+                  </div>
+                </div>
+
+                <!-- 日期选择器 -->
+                <div class="cp-date">
+                  <v-date-picker 
+                    v-model="item.deadline" 
+                    mode="dateTime" 
+                    is24hr 
+                    :model-config="dateConfig" 
+                    color="teal"
+                    :popover="{ visibility: 'click', placement: 'bottom-end', keepVisibleOnInput: true }"
+                  >
+                    <template #default="{ inputValue, inputEvents }">
+                      <div class="input-mini">
+                        <!-- 图标放 input 前面或者后面都可以，CSS里用 position: absolute 定位了 -->
+                        <span class="icon">📅</span>
+                        <input :value="inputValue" v-on="inputEvents" placeholder="点击设置截止时间" readonly />
+                      </div>
+                    </template>
+                  </v-date-picker>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+          <!-- 底部按钮 -->
+          <div class="task-footer">
+            <button class="btn-primary" @click="handleSavePublish" :disabled="isPublishLoading">
+              {{ isPublishLoading ? '保存中...' : '保存并发布' }}
+            </button>
+          </div>
+        </div>
+
+
+
+      </el-drawer>
     </main>
   </div>
 </template>
@@ -362,7 +448,7 @@
 import { ref, onMounted, reactive, computed, watch, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import TeacherSidebar from '@/components/TeacherSidebar.vue';
-import { getCourseDetail, getCourseChapters, type CourseItem, type CourseChapterItem } from '@/api/content';
+import { getCourseDetail, getCourseChapters, getCourseTasks, getTaskPublishStatus, publishTaskToClasses, type CourseItem, type CourseChapterItem, type CourseTaskItem, type ClassTaskStatus } from '@/api/content';
 import { getImgUrl } from '@/utils/index';
 import VuePdfEmbed from 'vue-pdf-embed';
 
@@ -374,6 +460,56 @@ const loading = ref(true);
 const courseInfo = ref<Partial<CourseItem>>({});
 const defaultCover = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=300&auto=format&fit=crop';
 const chapterList = ref<CourseChapterItem[]>([]);
+
+// 定义抽屉状态
+const showTaskDrawer = ref(false);
+const currentTask = ref<any>(null); // 当前选中的作业内容
+const publishList = ref<ClassTaskStatus[]>([]); // 班级发布列表
+const isPublishLoading = ref(false);            // 保存按钮 Loading
+const isDrawerLoading = ref(false);             // 抽屉内容 Loading
+const dateConfig = { type: 'string', mask: 'YYYY-MM-DD HH:mm' };
+
+// ✅ 点击“做作业/查看作业”按钮
+const handleTaskClick = async (task: any) => {
+  currentTask.value = task;
+  showTaskDrawer.value = true;
+  isDrawerLoading.value = true; // 开始转圈
+  
+  try {
+    // 拉取该作业在各班级的发布情况
+    const res = await getTaskPublishStatus(task.id);
+    publishList.value = res;
+  } catch (error) {
+    console.error(error);
+  } finally {
+    isDrawerLoading.value = false;
+  }
+};
+
+// 4. 新增：保存发布设置
+const handleSavePublish = async () => {
+  if (!currentTask.value) return;
+  
+  isPublishLoading.value = true;
+  try {
+    // 构造提交数据
+    const configs = publishList.value.map(item => ({
+      class_id: item.class_id,
+      // 如果选了时间，转成 ISO 格式传给后端；没选传 undefined
+      deadline: item.deadline ? new Date(item.deadline).toISOString() : undefined
+    }));
+
+    await publishTaskToClasses(currentTask.value.id, configs);
+    
+    alert('发布设置已保存！');
+    showTaskDrawer.value = false;
+  } catch (error) {
+    console.error(error);
+    alert('保存失败');
+  } finally {
+    isPublishLoading.value = false;
+  }
+};
 
 // 新增pdf状态变量
 const isLearningMode = ref(false); // 是否进入学习模式
@@ -403,8 +539,7 @@ const dynamicPdfWidth = computed(() => {
 });
 
 // ✅ 新增：动态计算 PPT 宽度
-import { useWindowSize } from '@vueuse/core'; // 如果没安装 vueuse，可以用原生 window.innerWidth
-// 为了简单，我们直接用原生 resize 监听
+import { useWindowSize } from '@vueuse/core'; 
 const windowWidth = ref(window.innerWidth);
 
 // 监听窗口大小变化，保证清晰度
@@ -413,10 +548,8 @@ window.addEventListener('resize', () => {
 });
 
 const pdfChapterList = computed(() => {
-  // 遍历所有章节，把里面的 lessons 过滤一遍
   return chapterList.value.map(chapter => ({
     ...chapter,
-    // 过滤条件：类型是 PDF (如果以后有视频，也可以加上 || l.type === 'video')
     lessons: chapter.lessons.filter(l => l.type === 'pdf')
   }));
 });
@@ -564,12 +697,26 @@ const handlePdfLoaded = (doc: any) => {
 };
 
 
+// 1. 定义任务列表状态
+const taskList = ref<CourseTaskItem[]>([]);
+
+// 2. 新增获取任务的函数
+const fetchTasks = async (id: string) => {
+  try {
+    const res = await getCourseTasks(id);
+    taskList.value = res;
+  } catch (error) {
+    console.error("加载任务失败", error);
+  }
+};
+
 onMounted(async () => {
   const id = route.params.id as string;
   
   if (id) {
     await fetchDetail(id);
     await fetchChapters(id);
+    await fetchTasks(id);
   }
 });
 
@@ -595,6 +742,14 @@ const fetchChapters = async (id: string) => {
   } catch (error) {
     console.error("加载章节失败", error);
   }
+};
+
+// 4. 辅助函数：去除 HTML 标签（用于列表预览）
+const stripHtml = (html: string) => {
+  if (!html) return '';
+  const tmp = document.createElement('DIV');
+  tmp.innerHTML = html;
+  return tmp.textContent || tmp.innerText || '';
 };
 
 // Toggle 函数稍微改一下 (因为现在是 ref 数组，不是 reactive 对象直接修改)
@@ -1140,6 +1295,152 @@ $text-gray: #a4b0be;
       max-width: 100vw;
       max-height: 100vh;
     }
+  }
+}
+
+/* 作业按钮样式 */
+.task-btn {
+  font-size: 12px;
+  color: #119fe0; /* 橙色，区分于课件的青色 */
+  background: #f8f8f8;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-right: 10px; /* 和课件按钮拉开距离 */
+  font-weight: 600;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #418add;
+    color: white;
+  }
+}
+
+/* 抽屉样式微调 */
+.task-drawer-header {
+  display: flex; align-items: center; gap: 12px;
+  /* 图标背景 */
+  .icon { 
+    font-size: 20px; 
+    background: #e0f2f1; /* 浅青色背景 */
+    color: $primary-color; 
+    width: 36px; height: 36px; 
+    display: flex; align-items: center; justify-content: center; 
+    border-radius: 10px; 
+  }
+  h3 { margin: 0; font-size: 18px; color: $text-dark; font-weight: 700; }
+}
+
+.task-preview-box {
+  padding: 0 5px;
+  h4 { margin: 0 0 12px; color: #333; font-size: 15px; font-weight: 600; }
+  /* 作业要求内容框 */
+  .content-text { 
+    font-size: 14px; color: #555; line-height: 1.8; 
+    background: #f8f9fa; /* 极浅灰 */
+    padding: 20px; 
+    border-radius: 12px; 
+    border: 1px solid #eee;
+  }
+}
+
+.divider-line { height: 1px; background: #f0f0f0; margin: 25px 0; }
+
+.publish-section {
+  padding: 0 5px;
+  h4 { 
+    margin: 0 0 15px; color: $text-dark; font-size: 15px; font-weight: 600; 
+    display: flex; align-items: center; gap: 8px;
+    &::before { content: ''; display: block; width: 4px; height: 16px; background: $primary-color; border-radius: 2px; }
+  }
+  
+  .class-publish-list {
+    display: flex; flex-direction: column; gap: 12px;
+    
+    /* 班级列表项卡片 */
+    .cp-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px; 
+      border: 1px solid #f0f0f0; /* 极细边框 */
+      border-radius: 12px; 
+      background: white;
+      transition: all 0.2s ease;
+      
+      /* 悬停效果 */
+      &:hover {
+        border-color: $primary-color;
+        background-color: #f0fdfa; /* 悬停变淡青色 */
+        box-shadow: 0 4px 12px rgba(0, 201, 167, 0.08);
+      }
+      
+      .cp-info {
+        .cp-name { font-weight: 600; font-size: 14px; margin-bottom: 6px; color: $text-dark; }
+        .cp-status {
+          .tag { font-size: 12px; display: inline-flex; align-items: center; gap: 4px; font-weight: 500;}
+          .tag.success { color: $primary-color; }
+          .tag.gray { color: #ccc; }
+        }
+      }
+      
+      /* 日期选择器容器 */
+      .cp-date {
+        width: 200px;
+        .input-mini {
+          position: relative;
+          input { 
+            width: 100%; 
+            padding: 8px 12px 8px 30px; /* 左边留空给图标 */
+            font-size: 13px; 
+            border: 1px solid #e0e0e0; 
+            border-radius: 8px; 
+            outline: none; 
+            cursor: pointer;
+            color: #555;
+            background: #fff;
+            transition: border-color 0.2s;
+            
+            &:hover { border-color: #bbb; }
+            &:focus { border-color: $primary-color; box-shadow: 0 0 0 3px rgba(0,201,167,0.1); }
+          }
+          /* 图标放到左边，更符合直觉 */
+          .icon { 
+            position: absolute; left: 10px; top: 50%; 
+            transform: translateY(-50%); font-size: 14px; color: $primary-color; 
+          }
+        }
+      }
+    }
+  }
+}
+
+.task-footer {
+  margin-top: 30px; 
+  padding-top: 20px;
+  border-top: 1px solid #f5f5f5;
+  text-align: right;
+  
+  .btn-primary { 
+    width: 100%; 
+    justify-content: center; 
+    padding: 14px; /* 加大点击区域 */
+    border-radius: 12px; 
+    border: none; 
+    background: $primary-color; /* 实心青绿色 */
+    color: white; 
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 6px 15px rgba(0, 201, 167, 0.3); /* 漂亮的投影 */
+    transition: all 0.2s;
+
+    &:hover { 
+      filter: brightness(0.95); 
+      transform: translateY(-2px); 
+      box-shadow: 0 8px 20px rgba(0, 201, 167, 0.4);
+    }
+    
+    &:active { transform: translateY(0); }
+    &:disabled { background: #ccc; box-shadow: none; cursor: not-allowed; }
   }
 }
 </style>

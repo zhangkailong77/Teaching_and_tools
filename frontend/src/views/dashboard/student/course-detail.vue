@@ -99,6 +99,35 @@
                       <span class="lesson-title">{{ lesson.title }}</span>
                     </div>
                     <div class="lesson-right">
+                      <!-- ✅ 作业按钮逻辑 -->
+                      <template v-if="lesson.assignment && lesson.assignment.status !== 'none'">
+                        
+                        <!-- 情况A: 已批改 -->
+                        <span v-if="lesson.assignment.status === 'graded'" class="homework-tag score">
+                          {{ lesson.assignment.score }}分
+                        </span>
+
+                        <!-- 情况B: 已提交 -->
+                        <span v-else-if="lesson.assignment.status === 'submitted'" class="homework-tag submitted">
+                          已提交
+                        </span>
+
+                        <!-- 情况C: 待做 (且课程已学完) -->
+                        <button 
+                          v-else-if="lesson.status === 2" 
+                          class="btn-homework"
+                          @click.stop="handleHomeworkClick(lesson)"
+                        >
+                          ✏️ 做作业
+                        </button>
+                        
+                        <!-- 情况D: 待做 (但课程没学完) -->
+                        <span v-else class="homework-tag locked" title="请先完成学习">
+                          🔒 作业锁定
+                        </span>
+
+                      </template>
+
                       <button 
                         v-if="lesson.status === 2" 
                         class="status-btn finished"
@@ -283,6 +312,50 @@
       </div>
       </div>
 
+      <!-- ================= 作业提交抽屉 ================= -->
+      <el-drawer
+        v-model="showHomeworkDrawer"
+        title="作业提交"
+        direction="rtl"
+        size="500px"
+      >
+        <div class="homework-body">
+          <div class="hw-header">
+            <h3>{{ currentAssignment?.lessonTitle }}</h3>
+            <div class="hw-meta">
+              <span>截止时间: {{ currentAssignment?.deadline ? new Date(currentAssignment.deadline).toLocaleDateString() : '无限制' }}</span>
+            </div>
+          </div>
+
+          <!-- 题目要求 -->
+          <div class="hw-requirement">
+            <h4>作业要求：</h4>
+            <p>{{ currentAssignment?.contentRequirement }}</p>
+          </div>
+
+          <!-- 答题区 -->
+          <div class="hw-answer-area">
+            <h4>你的答案：</h4>
+            <textarea 
+              v-model="submissionContent" 
+              rows="8" 
+              placeholder="在此输入答案，或点击下方按钮上传截图..."
+            ></textarea>
+            
+            <div class="toolbar">
+              <button class="btn-icon" @click="triggerUpload">📷 上传图片</button>
+              <input type="file" ref="uploadInputRef" accept="image/*" style="display:none" @change="handleUpload"/>
+            </div>
+          </div>
+
+          <div class="hw-footer">
+            <button class="btn-primary" @click="handleSubmitHomework" :disabled="isSubmitting">
+              {{ isSubmitting ? '提交中...' : '提交作业' }}
+            </button>
+          </div>
+        </div>
+      </el-drawer>
+
     </main>
   </div>
 </template>
@@ -292,6 +365,8 @@ import { ref, onMounted, computed, watch, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import StudentSidebar from '@/components/StudentSidebar.vue';
 import { getStudentCourseDetail, getStudentCourseChapters, updateProgress, type CourseItem, type CourseChapterItem } from '@/api/content';
+import { submitHomework } from '@/api/homework';
+import { uploadImage } from '@/api/common';
 import { getImgUrl } from '@/utils/index';
 import VuePdfEmbed from 'vue-pdf-embed';
 import { useWindowSize } from '@vueuse/core';
@@ -550,6 +625,77 @@ const toggleFullscreen = () => {
 document.addEventListener('fullscreenchange', () => {
   isFullscreen.value = !!document.fullscreenElement;
 });
+
+
+// --------作业相关--------
+// 作业抽屉状态
+const showHomeworkDrawer = ref(false);
+const currentAssignment = ref<any>(null); // 当前选中的作业信息
+const submissionContent = ref(''); // 学生填写的答案
+const isSubmitting = ref(false);
+const uploadInputRef = ref<HTMLInputElement | null>(null);
+
+// 点击“做作业”按钮
+const handleHomeworkClick = (lesson: any) => {
+  // A. 前置检查：必须先学完课程
+  if (lesson.status !== 2) {
+    alert('请先完成本节课的学习（翻阅到最后一页）后再进行作业！');
+    return;
+  }
+  
+  // B. 打开抽屉
+  currentAssignment.value = {
+    ...lesson.assignment,
+    lessonTitle: lesson.title,
+    // 这里为了演示，我们假设题目就是标题。
+    // 实际项目中，你可能需要调用 getTaskDetail 接口去获取详细的作业要求富文本
+    contentRequirement: `请根据【${lesson.title}】的教学内容，完成相关实操并上传截图。` 
+  };
+  
+  // 如果已提交过，这里应该回显（目前后端没返回具体content，暂时置空）
+  submissionContent.value = ''; 
+  showHomeworkDrawer.value = true;
+};
+
+// 图片上传逻辑 (插入到文本框)
+const triggerUpload = () => uploadInputRef.value?.click();
+
+const handleUpload = async (e: Event) => {
+  const files = (e.target as HTMLInputElement).files;
+  if (files && files[0]) {
+    try {
+      const res = await uploadImage(files[0], 'common');
+      // 简单地把图片 Markdown 或 HTML 插入文本框
+      submissionContent.value += `\n\n![截图](${res.url})`;
+    } catch (error) {
+      alert('上传失败');
+    }
+  }
+};
+
+// 提交作业
+const handleSubmitHomework = async () => {
+  if (!submissionContent.value) return alert('请填写作业内容或上传截图');
+  
+  isSubmitting.value = true;
+  try {
+    await submitHomework(currentAssignment.value.assignment_id, {
+      content: submissionContent.value
+    });
+    alert('作业提交成功！');
+    showHomeworkDrawer.value = false;
+    
+    // 刷新页面数据，更新按钮状态
+    const id = route.params.id as string;
+    await fetchChapters(id);
+    
+  } catch (error) {
+    console.error(error);
+  } finally {
+    isSubmitting.value = false;
+  }
+};
+// -----------------
 </script>
 
 <style scoped lang="scss">
@@ -1145,5 +1291,37 @@ $text-gray: #a4b0be;
       /* 鼠标放上去时，可以把文字变成“去复习” (可选高级效果，这里保持简单) */
     }
   }
+}
+
+/* 作业按钮样式 */
+.homework-tag {
+  font-size: 12px; padding: 2px 8px; border-radius: 4px; margin-right: 10px;
+  &.score { color: #52c41a; background: #f6ffed; border: 1px solid #b7eb8f; font-weight: bold; }
+  &.submitted { color: #1890ff; background: #e6f7ff; border: 1px solid #91d5ff; }
+  &.locked { color: #999; background: #f5f5f5; border: 1px solid #ddd; cursor: not-allowed; }
+}
+
+.btn-homework {
+  background: #fff7e6; border: 1px solid #ffd591; color: #fa8c16;
+  padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 10px;
+  &:hover { background: #fa8c16; color: white; }
+}
+
+/* 抽屉样式 */
+.homework-body {
+  padding: 10px;
+  .hw-header { border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 15px;
+    h3 { margin: 0 0 5px; color: $text-dark; }
+    .hw-meta { font-size: 12px; color: #999; }
+  }
+  .hw-requirement { background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 20px; color: #555; font-size: 14px; }
+  
+  .hw-answer-area {
+    textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; resize: vertical; outline: none; font-family: inherit; &:focus { border-color: $primary-color; } }
+    .toolbar { margin-top: 10px; }
+    .btn-icon { background: white; border: 1px solid #ddd; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; &:hover { color: $primary-color; border-color: $primary-color; } }
+  }
+  
+  .hw-footer { margin-top: 30px; button { width: 100%; padding: 12px; background: $primary-color; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; &:disabled { opacity: 0.6; } } }
 }
 </style>

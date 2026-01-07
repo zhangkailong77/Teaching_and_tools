@@ -20,11 +20,11 @@ class Course(Base):
     chapters = relationship("CourseChapter", back_populates="course", order_by="CourseChapter.sort_order", cascade="all, delete-orphan")
 
     # 关联：创建者 (User)
-    # 注意：这里使用字符串 "User" 是为了防止循环引用
     owner = relationship("User", back_populates="owned_courses")
     
     # 关联：绑定关系 (ClassCourseBinding)
     bindings = relationship("ClassCourseBinding", back_populates="course")
+    tasks = relationship("CourseTask", back_populates="course", order_by="CourseTask.sort_order", cascade="all, delete-orphan")
 
 
 # 2. 班级-课程 绑定表 (ClassCourseBinding)
@@ -93,6 +93,7 @@ class CourseLesson(Base):
 
     # 关联：所属章节
     chapter = relationship("CourseChapter", back_populates="lessons")
+    task = relationship("CourseTask", back_populates="lesson", uselist=False)
 
 
 # 6. 学习进度表
@@ -106,3 +107,29 @@ class StudentLearningProgress(Base):
     status = Column(Integer, default=0) # 0:未开始, 1:进行中, 2:已完成
     last_position = Column(Integer, default=1) # 阅读到的页码
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+
+# ==========================================
+# 课程作业模板 (CourseTask) - 静态资源
+# ==========================================
+class CourseTask(Base):
+    __tablename__ = "course_tasks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    course_id = Column(Integer, ForeignKey("courses.id"), nullable=False)
+    
+    title = Column(String(255), nullable=False)
+    content = Column(Text, nullable=True) # 作业要求
+    sort_order = Column(Integer, default=0)
+    
+    created_at = Column(DateTime, default=func.now())
+    lesson_id = Column(Integer, ForeignKey("course_lessons.id"), nullable=True)
+
+    # 关联：所属课程
+    course = relationship("Course", back_populates="tasks")
+    
+    # 关联：被实例化成了哪些班级作业 (跨文件关联，使用字符串)
+    class_assignments = relationship("ClassAssignment", back_populates="origin_task")
+
+    # 关联：所属课时
+    lesson = relationship("CourseLesson", back_populates="task")

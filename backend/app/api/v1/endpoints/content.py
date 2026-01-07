@@ -6,8 +6,8 @@ from app.utils.hash import encode_id, decode_id
 from app.api import deps
 from app.models.user import User
 from app.schemas import content as schemas
-from app.models.course import Enrollment
-from app.models.content import Course, CourseChapter, CourseLesson, TeacherCourseAccess, ClassCourseBinding, StudentLearningProgress
+from app.models.course import Enrollment, Class, ClassAssignment, StudentSubmission
+from app.models.content import Course, CourseChapter, CourseLesson, TeacherCourseAccess, ClassCourseBinding, StudentLearningProgress, CourseTask
 
 router = APIRouter()
 
@@ -157,13 +157,22 @@ def read_course_chapters(
         
         lesson_list = []
         for l in lessons:
+            task_info = None
+            if l.task:
+                task_info = {
+                    "id": l.task.id,
+                    "title": l.task.title,
+                    "content": l.task.content
+                }
+
             lesson_list.append({
                 "id": l.id,
                 "title": l.title,
                 "type": l.resource_type, # pdf / video / ppt
                 "duration": l.duration,
                 "is_free": l.is_free,
-                "file_url": l.file_url   # ✅ 这个字段很关键，前端预览要用
+                "file_url": l.file_url,   # ✅ 这个字段很关键，前端预览要用
+                "task": task_info
             })
 
         results.append({
@@ -176,6 +185,125 @@ def read_course_chapters(
     return results
 
 
+
+# ------------------------------------------------------------------
+# 6. 获取课程的标准作业模板列表
+# ------------------------------------------------------------------
+@router.get("/courses/{public_id}/tasks", response_model=List[schemas.CourseTaskOut])
+def read_course_tasks(
+    public_id: str,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    # 1. 解密 ID
+    course_id = decode_id(public_id)
+    if not course_id:
+        raise HTTPException(status_code=404, detail="课程不存在")
+
+    # 2. 检查课程是否存在
+    course = db.query(Course).filter(Course.id == course_id).first()
+    if not course:
+        raise HTTPException(status_code=404, detail="课程不存在")
+
+    # 3. 查询作业模板 (按 sort_order 排序)
+    tasks = db.query(CourseTask).filter(
+        CourseTask.course_id == course_id
+    ).order_by(CourseTask.sort_order).all()
+    
+    return tasks
+
+
+# ------------------------------------------------------------------
+# [教师端] 获取某作业在各班级的发布情况
+# ------------------------------------------------------------------
+@router.get("/tasks/{task_id}/publish_status", response_model=List[schemas.ClassTaskStatus])
+def get_task_publish_status(
+    task_id: int,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    # 1. 查作业模板
+    task = db.query(CourseTask).filter(CourseTask.id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="作业模板不存在")
+
+    # 2. 查该老师名下，绑定了该课程的所有班级
+    # 逻辑：Class -> ClassCourseBinding -> Course (id == task.course_id)
+    relevant_classes = db.query(Class).join(ClassCourseBinding)\
+        .filter(
+            Class.teacher_id == current_user.id,
+            ClassCourseBinding.course_id == task.course_id
+        ).all()
+
+    results = []
+    for cls in relevant_classes:
+        # 3. 查该班级是否已发布过这个作业
+        assignment = db.query(ClassAssignment).filter(
+            ClassAssignment.class_id == cls.id,
+            ClassAssignment.origin_task_id == task.id
+        ).first()
+
+        results.append({
+            "class_id": cls.id,
+            "class_name": cls.name,
+            "deadline": assignment.deadline if assignment else None,
+            "is_published": True if assignment else False
+        })
+
+    return results
+
+
+# ------------------------------------------------------------------
+# [教师端] 批量设置/更新作业截止时间 (发布作业)
+# ------------------------------------------------------------------
+@router.post("/tasks/{task_id}/publish")
+def publish_task_to_classes(
+    task_id: int,
+    publish_data: schemas.TaskPublishRequest,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    # 1. 查作业模板
+    task = db.query(CourseTask).filter(CourseTask.id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="作业模板不存在")
+
+    count = 0
+    
+    for config in publish_data.configs:
+        # 2. 校验班级权限 (防止给别人的班级发作业)
+        cls = db.query(Class).filter(Class.id == config.class_id, Class.teacher_id == current_user.id).first()
+        if not cls:
+            continue # 跳过非法班级
+
+        # 3. 查找是否已存在实例 (Upsert 逻辑)
+        assignment = db.query(ClassAssignment).filter(
+            ClassAssignment.class_id == cls.id,
+            ClassAssignment.origin_task_id == task.id
+        ).first()
+
+        if assignment:
+            # A. 已存在 -> 更新截止时间
+            assignment.deadline = config.deadline
+            # 如果之前是草稿，改为进行中
+            if assignment.status == 0: 
+                assignment.status = 1
+        else:
+            # B. 不存在 -> 创建新实例 (正式发布)
+            new_assignment = ClassAssignment(
+                class_id=cls.id,
+                origin_task_id=task.id,
+                title=task.title,
+                content=task.content,
+                deadline=config.deadline,
+                status=1 # 默认为进行中
+            )
+            db.add(new_assignment)
+        
+        count += 1
+
+    db.commit()
+    return {"message": f"成功更新了 {count} 个班级的作业配置"}
 
 
 # ==================================================================
@@ -245,6 +373,17 @@ def read_student_course_chapters(
     course_id = decode_id(public_id)
     if not course_id:
         raise HTTPException(status_code=404, detail="课程不存在")
+
+    enrollment = db.query(Enrollment).join(ClassCourseBinding, Enrollment.class_id == ClassCourseBinding.class_id)\
+        .filter(
+            Enrollment.student_id == current_user.id,
+            ClassCourseBinding.course_id == course_id
+        ).first()
+    
+    if not enrollment:
+        raise HTTPException(status_code=403, detail="未找到班级关联信息")
+    
+    current_class_id = enrollment.class_id
         
     if current_user.role != "student":
         raise HTTPException(status_code=403, detail="仅限学生访问")
@@ -261,6 +400,44 @@ def read_student_course_chapters(
         
         lesson_list = []
         for l in lessons:
+            # === ✅ 作业状态计算核心逻辑 ===
+            assignment_info = {
+                "assignment_id": None,
+                "status": "none", # 默认未发布
+                "deadline": None,
+                "score": None
+            }
+            
+            # A. 检查这节课有没有绑定作业模板
+            if l.task:
+                # B. 检查班级有没有发布这个作业
+                assignment = db.query(ClassAssignment).filter(
+                    ClassAssignment.class_id == current_class_id,
+                    ClassAssignment.origin_task_id == l.task.id
+                ).first()
+                
+                if assignment:
+                    assignment_info["assignment_id"] = assignment.id
+                    assignment_info["deadline"] = assignment.deadline
+                    
+                    # C. 检查学生有没有提交
+                    submission = db.query(StudentSubmission).filter(
+                        StudentSubmission.assignment_id == assignment.id,
+                        StudentSubmission.student_id == current_user.id
+                    ).first()
+                    
+                    if submission:
+                        if submission.status == 1: # 已批改
+                            assignment_info["status"] = "graded"
+                            assignment_info["score"] = submission.score
+                        else:
+                            assignment_info["status"] = "submitted"
+                    else:
+                        # 没提交，检查是否过期
+                        # 这里简单处理，如果 assignment.status == 2 也可以算 expired
+                        assignment_info["status"] = "pending"
+            # ==============================
+
             progress = db.query(StudentLearningProgress).filter(
                 StudentLearningProgress.student_id == current_user.id,
                 StudentLearningProgress.lesson_id == l.id
@@ -269,6 +446,13 @@ def read_student_course_chapters(
             p_status = progress.status if progress else 0
             p_position = progress.last_position if progress else 1
 
+            task_info = None
+            if l.task:
+                task_info = {
+                    "id": l.task.id,
+                    "title": l.task.title
+                }
+
             lesson_list.append({
                 "id": l.id,
                 "title": l.title,
@@ -276,8 +460,10 @@ def read_student_course_chapters(
                 "duration": l.duration,
                 "is_free": l.is_free, # 学生端其实都是免费的
                 "file_url": l.file_url,
+                "task": task_info,
                 "status": p_status,
-                "last_position": p_position
+                "last_position": p_position,
+                "assignment": assignment_info
                 # TODO: 未来在这里添加 "is_finished": True/False
             })
 

@@ -24,3 +24,4 @@ class User(Base):
     enrollments = relationship("Enrollment", back_populates="student")
     student_profile = relationship("StudentProfile", back_populates="user", uselist=False)
     owned_courses = relationship("Course", back_populates="owner")
+    submissions = relationship("StudentSubmission", back_populates="student")

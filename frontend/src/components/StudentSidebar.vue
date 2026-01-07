@@ -20,9 +20,9 @@
       <a href="#" class="menu-item">
         <span class="icon">💻</span> 我的实训
       </a>
-      <a href="#" class="menu-item">
+      <router-link to="/dashboard/student/homeworks" class="menu-item" active-class="active">
         <span class="icon">📝</span> 作业任务
-      </a>
+      </router-link>
       <router-link to="/dashboard/student/my-class" class="menu-item" active-class="active">
           <span class="icon">👥</span> 我的班级
       </router-link>
