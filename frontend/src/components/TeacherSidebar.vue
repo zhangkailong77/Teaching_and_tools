@@ -25,10 +25,13 @@
         <span class="icon">📦</span> 课程资源
       </router-link>
 
-      <a href="#" class="menu-item">
+      <router-link to="/dashboard/teacher/homeworks" class="menu-item" active-class="active">
         <span class="icon">✍️</span> 作业管理
-        <span class="badge">12</span>
-      </a>
+        <span class="badge" v-if="userStore.pendingHomeworkCount > 0">
+          {{ userStore.pendingHomeworkCount }}
+        </span>
+      </router-link>
+      
       <a href="#" class="menu-item">
         <span class="icon">📊</span> 考试中心
       </a>
@@ -47,9 +50,14 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/modules/user';
+import { onMounted, ref } from 'vue'; 
 
 const router = useRouter();
 const userStore = useUserStore();
+
+onMounted(() => {
+  userStore.refreshPendingCount();
+});
 
 const handleLogout = () => {
   userStore.logout();

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text, Date
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text, Date, JSON 
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.base_class import Base
@@ -86,6 +86,9 @@ class StudentSubmission(Base):
     
     submitted_at = Column(DateTime, default=func.now())
     graded_at = Column(DateTime, nullable=True)
+
+    annotated_content = Column(Text, nullable=True)
+    annotations = Column(JSON, nullable=True)
 
     # 关联
     assignment = relationship("ClassAssignment", back_populates="submissions")

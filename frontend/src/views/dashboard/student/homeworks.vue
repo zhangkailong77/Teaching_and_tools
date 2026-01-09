@@ -13,7 +13,7 @@
           <!-- 简单的顶部数据条 -->
           <div class="stat-pill">
             <span class="label">本周已提交</span>
-            <span class="val">3</span>
+            <span class="val">虚拟数据0</span>
           </div>
           <div class="stat-pill highlight">
             <span class="label">待完成</span>
@@ -65,15 +65,18 @@
               v-for="task in filteredList" 
               :key="task.id"
               :class="{ 'urgent': isUrgent(task.deadline) && task.status === 0 }"
+              :style="{
+                backgroundImage: `linear-gradient(to right, #fff 50%, rgba(255,255,255,0) 100%), url(${getImgUrl(task.course_cover)})`
+              }"
             >
               <!-- 左侧装饰条 -->
               <div class="status-bar"></div>
 
-              <div class="card-content">
+              <div class="card-content" style="position: relative; z-index: 2; width: 100%;">
                 <div class="meta-row">
                   <span class="course-tag">{{ task.course_name }}</span>
                   <span class="lesson-tag">{{ task.lesson_title }}</span>
-                  <span class="deadline-tag" v-if="task.deadline">
+                  <span class="deadline-tag" v-if="task.deadline" style="background: rgba(255,255,255,0.8); padding: 2px 6px; border-radius: 4px;">
                     📅 {{ formatDate(task.deadline) }} 截止
                   </span>
                 </div>
@@ -141,11 +144,20 @@
             <p>“ 积跬步，以至千里 ”</p>
           </div>
 
+          <div class="dashboard-card trend-card">
+            <h4>📈 成绩走势</h4>
+            <div ref="lineChartRef" class="line-chart-container"></div>
+          </div>
+
         </div>
       </div>
 
       <!-- 抽屉组件 -->
-      <HomeworkDrawer ref="drawerRef" @success="fetchData" />
+      <HomeworkDrawer 
+        ref="drawerRef" 
+        @success="fetchData" 
+        @close="fetchData" 
+      />
 
     </main>
   </div>
@@ -155,8 +167,9 @@
 import { ref, computed, onMounted, watch, nextTick } from 'vue';
 import StudentSidebar from '@/components/StudentSidebar.vue';
 import HomeworkDrawer from '@/components/HomeworkDrawer.vue';
-import { getMyHomeworkTodos, type AssignmentCard } from '@/api/homework';
+import { getMyHomeworkTodos, getMyHomeworkScores, type AssignmentCard } from '@/api/homework';
 import * as echarts from 'echarts'; // 引入 ECharts
+import { getImgUrl } from '@/utils/index';
 
 // --- 状态定义 ---
 const currentTab = ref(0);
@@ -168,6 +181,7 @@ const chartRef = ref<HTMLElement | null>(null);
 onMounted(async () => {
   await fetchData();
   initChart();
+  initLineChart();
 });
 
 const fetchData = async () => {
@@ -208,7 +222,10 @@ const initChart = () => {
   if (chartRef.value) {
     myChart = echarts.init(chartRef.value);
     updateChart();
-    window.addEventListener('resize', () => myChart?.resize());
+    window.addEventListener('resize', () => {
+      myChart?.resize();
+      lineChart?.resize(); 
+    });
   }
 };
 
@@ -250,6 +267,11 @@ const updateChart = () => {
 // 监听数据变化刷新图表
 watch(allTasks, updateChart);
 
+// ✅ 新增：监听 Tab 切换，强制刷新数据，防止状态滞后
+watch(currentTab, () => {
+  fetchData();
+});
+
 // --- 交互与工具函数 ---
 const handleOpenDrawer = (task: AssignmentCard) => drawerRef.value.open(task);
 
@@ -264,6 +286,70 @@ const isUrgent = (d: string) => {
 const getDaysLeft = (d: string) => {
   const diff = new Date(d).getTime() - new Date().getTime();
   return Math.ceil(diff / (1000 * 3600 * 24));
+};
+
+
+// --- 监听成绩变化刷新图表 ---
+const lineChartRef = ref<HTMLElement | null>(null);
+let lineChart: echarts.ECharts | null = null;
+
+// 3. 初始化折线图函数
+const initLineChart = async () => {
+  if (!lineChartRef.value) return;
+  
+  // 获取数据
+  let data = [];
+  try {
+    data = await getMyHomeworkScores();
+  } catch (e) { console.error(e); }
+
+  // 如果没有数据，搞点假数据演示一下效果 (开发阶段)
+  if (data.length === 0) {
+    data = [
+      { date: '10-01', score: 85 },
+      { date: '10-05', score: 88 },
+      { date: '10-10', score: 92 },
+      { date: '10-15', score: 90 },
+      { date: '10-20', score: 95 }
+    ];
+  }
+
+  lineChart = echarts.init(lineChartRef.value);
+  
+  const option = {
+    grid: { top: 30, right: 10, bottom: 20, left: 30 },
+    tooltip: { trigger: 'axis' },
+    xAxis: {
+      type: 'category',
+      data: data.map(i => i.date),
+      axisLine: { show: false },
+      axisTick: { show: false },
+      axisLabel: { color: '#999', fontSize: 10 }
+    },
+    yAxis: {
+      type: 'value',
+      min: 60, // 或者是 0，看你需求
+      max: 100,
+      splitLine: { lineStyle: { type: 'dashed', color: '#eee' } }
+    },
+    series: [
+      {
+        data: data.map(i => i.score),
+        type: 'line',
+        smooth: true, // 波浪线
+        symbol: 'circle',
+        symbolSize: 6,
+        itemStyle: { color: '#00c9a7' }, // 你的主色
+        areaStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: 'rgba(0, 201, 167, 0.4)' },
+            { offset: 1, color: 'rgba(0, 201, 167, 0.01)' }
+          ])
+        }
+      }
+    ]
+  };
+  lineChart.setOption(option);
 };
 </script>
 
@@ -366,6 +452,10 @@ $text-light: #999;
       &:hover { border-color: $earth-dark; color: $earth-dark; background: $earth-light; }
     }
   }
+
+  background-size: cover;
+  background-position: center right; /* 图片靠右 */
+  background-repeat: no-repeat;
 }
 
 /* === 右侧：数据看板 === */
@@ -407,5 +497,11 @@ $text-light: #999;
 .quote-card {
   background: $earth-light; border: none;
   p { margin: 0; color: $earth-brown; font-style: italic; text-align: center; font-size: 13px; font-family: serif; }
+}
+
+/* 趋势图容器 */
+.line-chart-container {
+  width: 100%;
+  height: 200px; /* 或者 180px */
 }
 </style>

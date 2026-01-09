@@ -19,8 +19,6 @@
       <!-- 2. 题目要求 -->
       <div class="hw-requirement">
         <h4>📝 作业要求：</h4>
-        <!-- 这里假设 content 是富文本，如果后端只返回了标题，这里可能需要再调一次详情接口 -->
-        <!-- 为了简化，假设列表接口或者打开时传入了 content -->
         <div class="rich-text" v-html="taskInfo.content || '暂无详细描述'"></div>
       </div>
 
@@ -35,9 +33,41 @@
         <h4>{{ isReadOnly ? '我的提交：' : '填写答案：' }}</h4>
         
         <!-- 只读模式 (已提交/已批改) -->
-        <div v-if="isReadOnly" class="answer-read-only">
-          {{ submissionContent }}
-          <!-- 如果有图片，解析 markdown 显示图片 (这里简化处理) -->
+        <div v-if="isReadOnly" class="read-only-wrapper">
+          
+          <!-- A. 成绩单 (仅已批改显示) -->
+          <div v-if="taskInfo.status === 2" class="score-report">
+            <div class="score-circle">{{ taskInfo.score }}</div>
+            <div class="report-info">
+              <h4>老师评语：</h4>
+              <p>{{ taskInfo.feedback || '暂无评语' }}</p>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <!-- B. 作业内容 (支持高亮) -->
+          <div class="submission-viewer">
+            <div 
+               class="rich-content" 
+               v-html="formatContent(resultData.content || submissionContent)"
+             ></div>
+          </div>
+
+          <!-- C. 批注列表 (仅当有批注时显示) -->
+          <div v-if="resultData.annotations && resultData.annotations.length > 0" class="annotations-box">
+            <h4>老师批注：</h4>
+            <div 
+              v-for="note in resultData.annotations" 
+              :key="note.id" 
+              class="note-item"
+              :class="{ active: activeAnnotationId === note.id }"
+            >
+              <span class="marker-dot"></span>
+              <p>{{ note.text }}</p>
+            </div>
+          </div>
+
         </div>
 
         <!-- 编辑模式 (未提交) -->
@@ -70,6 +100,13 @@
 import { ref, computed, reactive } from 'vue';
 import { submitHomework } from '@/api/homework';
 import { uploadImage } from '@/api/common';
+import { getSubmissionResult, type SubmissionResult } from '@/api/homework';
+import { getImgUrl } from '@/utils/index';
+import { marked } from 'marked';
+
+const resultData = ref<Partial<SubmissionResult>>({});
+const activeAnnotationId = ref<string | null>(null); // 当前点击的高亮ID
+
 
 // 定义 Props 不需要，我们要用 defineExpose 暴露方法给父组件调用
 const emit = defineEmits(['success']);
@@ -97,19 +134,46 @@ const statusText = computed(() => ['待提交', '已提交', '已批改'][taskIn
 const statusClass = computed(() => ['pending', 'submitted', 'graded'][taskInfo.status]);
 
 // === 对外暴露的方法：打开抽屉 ===
-const open = (task: any) => {
+const open = async (task: any) => {
   visible.value = true;
-  // 初始化数据
-  taskInfo.id = task.assignment_id || task.id; // 兼容不同接口字段
-  taskInfo.title = task.title || task.lessonTitle;
-  taskInfo.content = task.content || task.contentRequirement || '请完成本节课实训任务。';
-  taskInfo.deadline = task.deadline;
-  taskInfo.status = task.status === 'pending' || task.status === 0 ? 0 : (task.status === 'graded' || task.status === 2 ? 2 : 1);
-  taskInfo.score = task.score;
-  taskInfo.feedback = task.feedback; // 如果接口有返回的话
+  loading.value = true;
+
+  try {
+    taskInfo.id = task.assignment_id || task.id; // 兼容不同接口字段
+    taskInfo.title = task.title || task.lessonTitle;
+    taskInfo.content = task.content || task.contentRequirement || '请完成本节课实训任务。';
+    taskInfo.deadline = task.deadline;
+    taskInfo.status = task.status === 'pending' || task.status === 0 ? 0 : (task.status === 'graded' || task.status === 2 ? 2 : 1);
+    taskInfo.score = task.score;
+    taskInfo.feedback = task.feedback; // 如果接口有返回的话
   
-  // 如果是已提交，这里应该回显内容 (目前假设 content 没存，暂时置空，真实场景需调接口获取详情)
-  submissionContent.value = task.my_content || ''; 
+    if (task.status !== 0) {
+      const res = await getSubmissionResult(taskInfo.id);
+      
+      // 回显提交内容
+      submissionContent.value = res.content;
+      
+      // 回显批改结果
+      taskInfo.score = res.score;
+      taskInfo.feedback = res.feedback;
+      resultData.value = res; // 存入完整数据以供高亮显示
+    } else {
+      submissionContent.value = '';
+    }
+  } catch (e) {
+    console.error(e);
+  } finally {
+    loading.value = false;
+  }
+};
+const handleHighlightClick = (e: MouseEvent) => {
+  const target = e.target as HTMLElement;
+  if (target.classList.contains('highlight-marker')) {
+    const id = target.getAttribute('data-id');
+    if (id) {
+      activeAnnotationId.value = id; // 激活对应的批注卡片
+    }
+  }
 };
 
 // 提交逻辑
@@ -143,6 +207,17 @@ const handleUpload = async (e: Event) => {
 const formatDate = (str?: string) => str ? new Date(str).toLocaleDateString() : '无限制';
 
 defineExpose({ open });
+
+// 增加一个格式化函数
+const formatContent = (content?: string) => {
+  if (!content) return '';
+  const processedContent = content.replace(/\]\((.*?)\)/g, (match, url) => {
+    return `](${getImgUrl(url)})`;
+  });
+
+  // 然后再解析成 HTML
+  return marked.parse(processedContent);
+};
 </script>
 
 <style scoped lang="scss">
@@ -172,4 +247,52 @@ $primary-color: #00c9a7;
   .toolbar { margin-top: 10px; .btn-icon { background: white; border: 1px solid #ddd; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; &:hover { color: $primary-color; border-color: $primary-color; } } }
 }
 .hw-footer { margin-top: 30px; button { width: 100%; padding: 12px; background: $primary-color; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; &:disabled { opacity: 0.6; } } }
+
+/* 成绩单样式 */
+.score-report {
+  background: #f6ffed; border: 1px solid #b7eb8f; border-radius: 8px; padding: 15px;
+  display: flex; align-items: center; gap: 20px; margin-bottom: 20px;
+  
+  .score-circle {
+    width: 60px; height: 60px; border-radius: 50%; background: #52c41a; color: white;
+    font-size: 24px; font-weight: bold; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 10px rgba(82, 196, 26, 0.3);
+  }
+  .report-info { flex: 1; h4 { margin: 0 0 5px; color: #333; } p { margin: 0; color: #666; font-size: 14px; } }
+}
+
+/* 高亮交互样式 */
+.rich-content {
+  line-height: 1.8; font-size: 14px; color: #333; padding: 10px; border: 1px dashed #ddd; border-radius: 8px; background: #fafafa;
+  
+  /* 必须加上 :deep 才能影响 v-html 里的内容 */
+  :deep(.highlight-marker) {
+    background-color: #fff1b8; border-bottom: 2px solid #fadb14; cursor: pointer; transition: background 0.2s;
+    &:hover { background-color: #ffec3d; }
+  }
+
+  :deep(img) {
+    max-width: 100%;       /* 宽度不超容器 */
+    max-height: 300px;     /* 高度限制 */
+    object-fit: contain;   /* 保持比例 */
+    border-radius: 8px;
+    border: 1px solid #eee;
+    margin-top: 10px;
+    display: block;
+  }
+}
+
+/* 批注列表样式 */
+.annotations-box {
+  margin-top: 20px; border-top: 1px solid #eee; padding-top: 15px;
+  
+  .note-item {
+    display: flex; gap: 10px; padding: 10px; border-radius: 6px; margin-bottom: 5px; transition: all 0.2s;
+    .marker-dot { width: 8px; height: 8px; background: #fadb14; border-radius: 50%; margin-top: 6px; flex-shrink: 0; }
+    p { margin: 0; font-size: 13px; color: #555; }
+    
+    /* 激活状态 (点击高亮时) */
+    &.active { background: #fffbe6; transform: translateX(5px); border-left: 3px solid #fadb14; }
+  }
+}
 </style>

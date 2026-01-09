@@ -20,9 +20,105 @@ export interface AssignmentCard {
   deadline: string;
   status: number; // 0, 1, 2
   score: number;
+  course_cover?: string;
 }
 
 // ✅ 新增：获取我的作业任务列表
 export function getMyHomeworkTodos() {
   return request.get<any, AssignmentCard[]>('/homeworks/my-todos');
+}
+
+// 获取成绩趋势
+export function getMyHomeworkScores() {
+  return request.get<any, { title: string; score: number; date: string }[]>('/homeworks/my-scores');
+}
+
+
+// =======================
+// 教师端接口
+// =======================
+
+export interface HomeworkStatsV2 {
+  pending_count: number;
+  pie_data: { submitted: number; graded: number; unsubmitted: number };
+  rank_data: { class_name: string; rate: number }[];
+}
+
+export interface TeacherAssignmentItem {
+  id: number;
+  title: string;
+  course_name: string;
+  deadline: string;
+  stats: {
+    total: number;
+    graded: number;
+    submitted: number;
+    unsubmitted: number;
+  };
+}
+
+export interface ClassHomeworkGroup {
+  class_id: number;
+  class_name: string;
+  pending_count: number;
+  assignments: TeacherAssignmentItem[];
+  isExpanded?: boolean; // 前端辅助字段：是否展开
+}
+
+// 1. 获取首页统计 (新版)
+export function getTeacherHomeworkStats() {
+  return request.get<any, HomeworkStatsV2>('/homeworks/teacher/stats');
+}
+
+// 2. 获取作业列表 (新版 - 分组)
+export function getTeacherHomeworkList() {
+  return request.get<any, ClassHomeworkGroup[]>('/homeworks/teacher/list');
+}
+
+
+export interface SubmissionItem {
+  student_id: number;
+  student_name: string;
+  student_number: string;
+  avatar?: string;
+  status: number; // 0:未交, 1:已交, 2:已批
+  submission_id?: number;
+  content?: string;
+  score?: number;
+  feedback?: string;
+  submitted_at?: string;
+}
+
+export interface GradingData {
+  assignment_title: string;
+  assignment_content: string;
+  students: SubmissionItem[];
+}
+
+// 获取批改列表
+export function getAssignmentSubmissions(assignmentId: number) {
+  return request.get<any, GradingData>(`/homeworks/${assignmentId}/submissions`);
+}
+
+// 提交评分
+export function submitGrade(submissionId: number, data: { score: number; feedback: string }) {
+  return request.post(`/homeworks/submissions/${submissionId}/grade`, data);
+}
+
+// ✅ 新增：获取批改详情
+export interface SubmissionResult {
+  submission_id: number;
+  status: number;
+  score: number;
+  feedback: string;
+  content: string; // 可能是带高亮的 HTML
+  annotations: { id: string; text: string }[];
+  assignment_title: string;
+  assignment_requirement: string;
+  submitted_at: string;
+  graded_at: string;
+}
+
+export function getSubmissionResult(assignmentId: number) {
+  return request.get<any, SubmissionResult>(`/homeworks/${assignmentId}/result`);
 }

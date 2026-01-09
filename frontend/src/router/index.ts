@@ -64,7 +64,19 @@ const routes: RouteRecordRaw[] = [
         name: 'TeacherClassManagement',
         component: () => import('@/views/dashboard/teacher/classes.vue'),
         meta: { requiresAuth: true, role: 'teacher' }
-      }
+      },
+      {
+        path: 'teacher/homeworks', 
+        name: 'TeacherHomeworks',
+        component: () => import('@/views/dashboard/teacher/homeworksManager.vue'), // 稍后创建
+        meta: { requiresAuth: true, role: 'teacher' }
+      },
+      {
+        path: 'teacher/homeworks/:id', 
+        name: 'TeacherGrading',
+        component: () => import('@/views/dashboard/teacher/homeworksGrading.vue'), // 稍后创建
+        meta: { requiresAuth: true, role: 'teacher' }
+      },
     ]
   }
 ];
