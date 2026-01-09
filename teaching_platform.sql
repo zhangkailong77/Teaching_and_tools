@@ -11,11 +11,41 @@
  Target Server Version : 80042 (8.0.42)
  File Encoding         : 65001
 
- Date: 05/01/2026 17:50:49
+ Date: 09/01/2026 17:41:24
 */
 
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
+
+-- ----------------------------
+-- Table structure for class_assignments
+-- ----------------------------
+DROP TABLE IF EXISTS `class_assignments`;
+CREATE TABLE `class_assignments`  (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `class_id` int NOT NULL COMMENT '所属班级ID',
+  `origin_task_id` int NULL DEFAULT NULL COMMENT '源于哪个课程任务ID(为空代表老师自定义作业)',
+  `title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '作业标题',
+  `content` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '作业要求',
+  `deadline` datetime NULL DEFAULT NULL COMMENT '截止时间',
+  `status` int NULL DEFAULT 0 COMMENT '0:待发布, 1:进行中, 2:已截止',
+  `created_at` datetime NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `fk_assign_class`(`class_id` ASC) USING BTREE,
+  INDEX `fk_assign_origin`(`origin_task_id` ASC) USING BTREE,
+  CONSTRAINT `fk_assign_class` FOREIGN KEY (`class_id`) REFERENCES `classes` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
+  CONSTRAINT `fk_assign_origin` FOREIGN KEY (`origin_task_id`) REFERENCES `course_tasks` (`id`) ON DELETE SET NULL ON UPDATE RESTRICT
+) ENGINE = InnoDB AUTO_INCREMENT = 7 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '班级作业发布表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of class_assignments
+-- ----------------------------
+INSERT INTO `class_assignments` VALUES (1, 1, 1, '实训任务1：完成Shopee店铺入驻', '<p>请按照课件指导，完成店铺注册流程。</p><p><strong>提交要求：</strong>上传店铺后台首页截图，需包含店铺名称。</p>', '2026-01-09 00:00:00', 1, '2026-01-07 15:30:25');
+INSERT INTO `class_assignments` VALUES (2, 3, 1, '实训任务1：完成Shopee店铺入驻', '<p>请按照课件指导，完成店铺注册流程。</p><p><strong>提交要求：</strong>上传店铺后台首页截图，需包含店铺名称。</p>', NULL, 1, '2026-01-07 17:48:11');
+INSERT INTO `class_assignments` VALUES (3, 1, 2, '实训任务2：配置店铺物流渠道', '进入卖家中心 -> 物流设置，开启 SLS 物流渠道。<br>提交设置成功的界面截图。', '2026-01-09 16:00:00', 1, '2026-01-07 17:49:46');
+INSERT INTO `class_assignments` VALUES (4, 3, 2, '实训任务2：配置店铺物流渠道', '进入卖家中心 -> 物流设置，开启 SLS 物流渠道。<br>提交设置成功的界面截图。', NULL, 1, '2026-01-07 17:49:46');
+INSERT INTO `class_assignments` VALUES (5, 1, 3, '实训任务3：完成首个商品上架', '1. 标题包含核心关键词<br>2. 上传至少5张主图<br>3. 填写完整的属性<br>提交商品前台链接。', '2026-01-10 16:00:00', 1, '2026-01-07 17:49:51');
+INSERT INTO `class_assignments` VALUES (6, 3, 3, '实训任务3：完成首个商品上架', '1. 标题包含核心关键词<br>2. 上传至少5张主图<br>3. 填写完整的属性<br>提交商品前台链接。', NULL, 1, '2026-01-07 17:49:51');
 
 -- ----------------------------
 -- Table structure for class_course_bindings
@@ -31,21 +61,21 @@ CREATE TABLE `class_course_bindings`  (
   INDEX `fk_ccb_course`(`course_id` ASC) USING BTREE,
   CONSTRAINT `fk_ccb_class` FOREIGN KEY (`class_id`) REFERENCES `classes` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `fk_ccb_course` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 32 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 41 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of class_course_bindings
 -- ----------------------------
-INSERT INTO `class_course_bindings` VALUES (6, 3, 1, '2025-12-30 14:49:24');
 INSERT INTO `class_course_bindings` VALUES (10, 2, 2, '2025-12-30 17:08:11');
 INSERT INTO `class_course_bindings` VALUES (11, 2, 1, '2025-12-30 17:08:11');
 INSERT INTO `class_course_bindings` VALUES (12, 2, 3, '2025-12-30 17:08:11');
 INSERT INTO `class_course_bindings` VALUES (15, 4, 7, '2025-12-31 16:09:21');
 INSERT INTO `class_course_bindings` VALUES (16, 5, 8, '2025-12-31 16:10:00');
-INSERT INTO `class_course_bindings` VALUES (28, 1, 1, '2025-12-31 17:19:22');
-INSERT INTO `class_course_bindings` VALUES (29, 1, 2, '2025-12-31 17:19:22');
-INSERT INTO `class_course_bindings` VALUES (30, 1, 3, '2025-12-31 17:19:22');
-INSERT INTO `class_course_bindings` VALUES (31, 1, 4, '2025-12-31 17:19:22');
+INSERT INTO `class_course_bindings` VALUES (36, 1, 1, '2026-01-06 11:40:50');
+INSERT INTO `class_course_bindings` VALUES (37, 1, 2, '2026-01-06 11:40:50');
+INSERT INTO `class_course_bindings` VALUES (38, 1, 6, '2026-01-06 11:40:50');
+INSERT INTO `class_course_bindings` VALUES (39, 3, 1, '2026-01-07 15:40:13');
+INSERT INTO `class_course_bindings` VALUES (40, 3, 6, '2026-01-07 15:40:13');
 
 -- ----------------------------
 -- Table structure for classes
@@ -88,15 +118,16 @@ CREATE TABLE `course_chapters`  (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `fk_chapter_course`(`course_id` ASC) USING BTREE,
   CONSTRAINT `fk_chapter_course` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 22 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '课程章节表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 31 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '课程章节表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of course_chapters
 -- ----------------------------
-INSERT INTO `course_chapters` VALUES (18, 6, '第01章 平台入驻与基础建设', 1, '2026-01-05 17:44:07');
-INSERT INTO `course_chapters` VALUES (19, 6, '第02章 商品运营与店铺装修', 2, '2026-01-05 17:44:08');
-INSERT INTO `course_chapters` VALUES (20, 6, '第03章 营销推广与流量获取', 3, '2026-01-05 17:44:08');
-INSERT INTO `course_chapters` VALUES (21, 6, '第04章 订单履约与售后服务', 4, '2026-01-05 17:44:08');
+INSERT INTO `course_chapters` VALUES (26, 6, '第01章 平台入驻与基础建设', 1, '2026-01-06 10:24:04');
+INSERT INTO `course_chapters` VALUES (27, 6, '第02章 商品运营与店铺装修', 2, '2026-01-06 10:24:04');
+INSERT INTO `course_chapters` VALUES (28, 6, '第03章 营销推广与流量获取', 3, '2026-01-06 10:24:04');
+INSERT INTO `course_chapters` VALUES (29, 6, '第04章 订单履约与售后服务', 4, '2026-01-06 10:24:05');
+INSERT INTO `course_chapters` VALUES (30, 1, '第01章 测试', 1, '2026-01-07 09:54:16');
 
 -- ----------------------------
 -- Table structure for course_lessons
@@ -115,51 +146,79 @@ CREATE TABLE `course_lessons`  (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `fk_lesson_chapter`(`chapter_id` ASC) USING BTREE,
   CONSTRAINT `fk_lesson_chapter` FOREIGN KEY (`chapter_id`) REFERENCES `course_chapters` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 161 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '课时资源表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 242 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '课时资源表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of course_lessons
 -- ----------------------------
-INSERT INTO `course_lessons` VALUES (121, 18, '任务1 Shopee平台店铺入驻指导', 'pdf', '/static/uploads/materials/course_6/chapter_18/任务1 Shopee平台店铺入驻指导.pdf', '15页', 0, 0, '2026-01-05 17:44:08');
-INSERT INTO `course_lessons` VALUES (122, 18, '任务1 Shopee平台店铺入驻指导', 'ppt', '/static/uploads/materials/course_6/chapter_18/任务1 Shopee平台店铺入驻指导.pptx', '15页', 0, 0, '2026-01-05 17:44:08');
-INSERT INTO `course_lessons` VALUES (123, 18, '任务2 Shopee平台卖家端功能介绍', 'pdf', '/static/uploads/materials/course_6/chapter_18/任务2 Shopee平台卖家端功能介绍.pdf', '15页', 0, 0, '2026-01-05 17:44:08');
-INSERT INTO `course_lessons` VALUES (124, 18, '任务2 Shopee平台卖家端功能介绍', 'ppt', '/static/uploads/materials/course_6/chapter_18/任务2 Shopee平台卖家端功能介绍.pptx', '15页', 0, 0, '2026-01-05 17:44:08');
-INSERT INTO `course_lessons` VALUES (125, 18, '任务3 Shopee平台店铺基础设置', 'pdf', '/static/uploads/materials/course_6/chapter_18/任务3 Shopee平台店铺基础设置.pdf', '15页', 0, 0, '2026-01-05 17:44:08');
-INSERT INTO `course_lessons` VALUES (126, 18, '任务3 Shopee平台店铺基础设置', 'ppt', '/static/uploads/materials/course_6/chapter_18/任务3 Shopee平台店铺基础设置.pptx', '15页', 0, 0, '2026-01-05 17:44:08');
-INSERT INTO `course_lessons` VALUES (127, 18, '任务4 Shopee平台物流设置指导', 'pdf', '/static/uploads/materials/course_6/chapter_18/任务4 Shopee平台物流设置指导.pdf', '15页', 0, 0, '2026-01-05 17:44:08');
-INSERT INTO `course_lessons` VALUES (128, 18, '任务4 Shopee平台物流设置指导', 'ppt', '/static/uploads/materials/course_6/chapter_18/任务4 Shopee平台物流设置指导.pptx', '15页', 0, 0, '2026-01-05 17:44:08');
-INSERT INTO `course_lessons` VALUES (129, 19, '任务5 如何在Shopee平台进行商品上架', 'pdf', '/static/uploads/materials/course_6/chapter_19/任务5 如何在Shopee平台进行商品上架.pdf', '15页', 0, 0, '2026-01-05 17:44:08');
-INSERT INTO `course_lessons` VALUES (130, 19, '任务5 如何在Shopee平台进行商品上架', 'ppt', '/static/uploads/materials/course_6/chapter_19/任务5 如何在Shopee平台进行商品上架.pptx', '15页', 0, 0, '2026-01-05 17:44:08');
-INSERT INTO `course_lessons` VALUES (131, 19, '任务6 Shopee平台商品优化技巧（标题、类目、属性）', 'pdf', '/static/uploads/materials/course_6/chapter_19/任务6 Shopee平台商品优化技巧（标题、类目、属性）.pdf', '15页', 0, 0, '2026-01-05 17:44:08');
-INSERT INTO `course_lessons` VALUES (132, 19, '任务6 Shopee平台商品优化技巧（标题、类目、属性）', 'ppt', '/static/uploads/materials/course_6/chapter_19/任务6 Shopee平台商品优化技巧（标题、类目、属性）.pptx', '15页', 0, 0, '2026-01-05 17:44:08');
-INSERT INTO `course_lessons` VALUES (133, 19, '任务7 Shopee平台商品优化技巧（描述、图片、视频）', 'pdf', '/static/uploads/materials/course_6/chapter_19/任务7 Shopee平台商品优化技巧（描述、图片、视频）.pdf', '15页', 0, 0, '2026-01-05 17:44:08');
-INSERT INTO `course_lessons` VALUES (134, 19, '任务7 Shopee平台商品优化技巧（描述、图片、视频）', 'ppt', '/static/uploads/materials/course_6/chapter_19/任务7 Shopee平台商品优化技巧（描述、图片、视频）.pptx', '15页', 0, 0, '2026-01-05 17:44:08');
-INSERT INTO `course_lessons` VALUES (135, 19, '任务8 Shopee平台商店介绍设置流程', 'pdf', '/static/uploads/materials/course_6/chapter_19/任务8 Shopee平台商店介绍设置流程.pdf', '15页', 0, 0, '2026-01-05 17:44:08');
-INSERT INTO `course_lessons` VALUES (136, 19, '任务8 Shopee平台商店介绍设置流程', 'ppt', '/static/uploads/materials/course_6/chapter_19/任务8 Shopee平台商店介绍设置流程.pptx', '15页', 0, 0, '2026-01-05 17:44:08');
-INSERT INTO `course_lessons` VALUES (137, 19, '任务9 Shopee平台店铺装修指南', 'pdf', '/static/uploads/materials/course_6/chapter_19/任务9 Shopee平台店铺装修指南.pdf', '15页', 0, 0, '2026-01-05 17:44:08');
-INSERT INTO `course_lessons` VALUES (138, 19, '任务9 Shopee平台店铺装修指南', 'ppt', '/static/uploads/materials/course_6/chapter_19/任务9 Shopee平台店铺装修指南.pptx', '15页', 0, 0, '2026-01-05 17:44:08');
-INSERT INTO `course_lessons` VALUES (139, 19, '任务10 Shopee平台店铺装修：装饰组件的运用', 'pdf', '/static/uploads/materials/course_6/chapter_19/任务10 Shopee平台店铺装修：装饰组件的运用.pdf', '15页', 0, 0, '2026-01-05 17:44:08');
-INSERT INTO `course_lessons` VALUES (140, 19, '任务10 Shopee平台店铺装修：装饰组件的运用', 'ppt', '/static/uploads/materials/course_6/chapter_19/任务10 Shopee平台店铺装修：装饰组件的运用.pptx', '15页', 0, 0, '2026-01-05 17:44:08');
-INSERT INTO `course_lessons` VALUES (141, 20, '任务11 Shopee平台如何设置优惠券', 'pdf', '/static/uploads/materials/course_6/chapter_20/任务11 Shopee平台如何设置优惠券.pdf', '15页', 0, 0, '2026-01-05 17:44:08');
-INSERT INTO `course_lessons` VALUES (142, 20, '任务11 Shopee平台如何设置优惠券', 'ppt', '/static/uploads/materials/course_6/chapter_20/任务11 Shopee平台如何设置优惠券.pptx', '15页', 0, 0, '2026-01-05 17:44:08');
-INSERT INTO `course_lessons` VALUES (143, 20, '任务12 Shopee平台折扣活动设置流程', 'pdf', '/static/uploads/materials/course_6/chapter_20/任务12 Shopee平台折扣活动设置流程.pdf', '15页', 0, 0, '2026-01-05 17:44:08');
-INSERT INTO `course_lessons` VALUES (144, 20, '任务12 Shopee平台折扣活动设置流程', 'ppt', '/static/uploads/materials/course_6/chapter_20/任务12 Shopee平台折扣活动设置流程.pptx', '15页', 0, 0, '2026-01-05 17:44:08');
-INSERT INTO `course_lessons` VALUES (145, 20, '任务13 Shopee平台套装优惠设置流程 (Bundle Deal)', 'pdf', '/static/uploads/materials/course_6/chapter_20/任务13 Shopee平台套装优惠设置流程 (Bundle Deal).pdf', '15页', 0, 0, '2026-01-05 17:44:08');
-INSERT INTO `course_lessons` VALUES (146, 20, '任务13 Shopee平台套装优惠设置流程 (Bundle Deal)', 'ppt', '/static/uploads/materials/course_6/chapter_20/任务13 Shopee平台套装优惠设置流程 (Bundle Deal).pptx', '15页', 0, 0, '2026-01-05 17:44:08');
-INSERT INTO `course_lessons` VALUES (147, 20, '任务14 Shopee平台设置限时选购使用方法 (Flash Deal)', 'pdf', '/static/uploads/materials/course_6/chapter_20/任务14 Shopee平台设置限时选购使用方法 (Flash Deal).pdf', '15页', 0, 0, '2026-01-05 17:44:08');
-INSERT INTO `course_lessons` VALUES (148, 20, '任务14 Shopee平台设置限时选购使用方法 (Flash Deal)', 'ppt', '/static/uploads/materials/course_6/chapter_20/任务14 Shopee平台设置限时选购使用方法 (Flash Deal).pptx', '15页', 0, 0, '2026-01-05 17:44:08');
-INSERT INTO `course_lessons` VALUES (149, 20, '任务15 Shopee平台广告 (Ads) 投放流程', 'pdf', '/static/uploads/materials/course_6/chapter_20/任务15 Shopee平台广告 (Ads) 投放流程.pdf', '15页', 0, 0, '2026-01-05 17:44:08');
-INSERT INTO `course_lessons` VALUES (150, 20, '任务15 Shopee平台广告 (Ads) 投放流程', 'ppt', '/static/uploads/materials/course_6/chapter_20/任务15 Shopee平台广告 (Ads) 投放流程.pptx', '15页', 0, 0, '2026-01-05 17:44:08');
-INSERT INTO `course_lessons` VALUES (151, 20, '任务16 Shopee平台站外渠道广告功能介绍', 'pdf', '/static/uploads/materials/course_6/chapter_20/任务16 Shopee平台站外渠道广告功能介绍.pdf', '15页', 0, 0, '2026-01-05 17:44:08');
-INSERT INTO `course_lessons` VALUES (152, 20, '任务16 Shopee平台站外渠道广告功能介绍', 'ppt', '/static/uploads/materials/course_6/chapter_20/任务16 Shopee平台站外渠道广告功能介绍.pptx', '15页', 0, 0, '2026-01-05 17:44:08');
-INSERT INTO `course_lessons` VALUES (153, 21, '任务17 Shopee平台订单发货流程', 'pdf', '/static/uploads/materials/course_6/chapter_21/任务17 Shopee平台订单发货流程.pdf', '15页', 0, 0, '2026-01-05 17:44:09');
-INSERT INTO `course_lessons` VALUES (154, 21, '任务17 Shopee平台订单发货流程', 'ppt', '/static/uploads/materials/course_6/chapter_21/任务17 Shopee平台订单发货流程.pptx', '15页', 0, 0, '2026-01-05 17:44:09');
-INSERT INTO `course_lessons` VALUES (155, 21, '任务18 Shopee平台退货退款处理流程', 'pdf', '/static/uploads/materials/course_6/chapter_21/任务18 Shopee平台退货退款处理流程.pdf', '15页', 0, 0, '2026-01-05 17:44:09');
-INSERT INTO `course_lessons` VALUES (156, 21, '任务18 Shopee平台退货退款处理流程', 'ppt', '/static/uploads/materials/course_6/chapter_21/任务18 Shopee平台退货退款处理流程.pptx', '15页', 0, 0, '2026-01-05 17:44:09');
-INSERT INTO `course_lessons` VALUES (157, 21, '任务19 关于Shopee平台售前、售中、售后咨询服务', 'pdf', '/static/uploads/materials/course_6/chapter_21/任务19 关于Shopee平台售前、售中、售后咨询服务.pdf', '15页', 0, 0, '2026-01-05 17:44:09');
-INSERT INTO `course_lessons` VALUES (158, 21, '任务19 关于Shopee平台售前、售中、售后咨询服务', 'ppt', '/static/uploads/materials/course_6/chapter_21/任务19 关于Shopee平台售前、售中、售后咨询服务.pptx', '15页', 0, 0, '2026-01-05 17:44:09');
-INSERT INTO `course_lessons` VALUES (159, 21, '任务20 Shopee平台如何使用运费测算工具', 'pdf', '/static/uploads/materials/course_6/chapter_21/任务20 Shopee平台如何使用运费测算工具.pdf', '15页', 0, 0, '2026-01-05 17:44:09');
-INSERT INTO `course_lessons` VALUES (160, 21, '任务20 Shopee平台如何使用运费测算工具', 'ppt', '/static/uploads/materials/course_6/chapter_21/任务20 Shopee平台如何使用运费测算工具.pptx', '15页', 0, 0, '2026-01-05 17:44:09');
+INSERT INTO `course_lessons` VALUES (201, 26, '任务1 Shopee平台店铺入驻指导', 'pdf', '/static/uploads/materials/course_6/chapter_26/任务1 Shopee平台店铺入驻指导.pdf', '15页', 0, 0, '2026-01-06 10:24:04');
+INSERT INTO `course_lessons` VALUES (202, 26, '任务1 Shopee平台店铺入驻指导', 'ppt', '/static/uploads/materials/course_6/chapter_26/任务1 Shopee平台店铺入驻指导.pptx', '15页', 0, 0, '2026-01-06 10:24:04');
+INSERT INTO `course_lessons` VALUES (203, 26, '任务2 Shopee平台卖家端功能介绍', 'pdf', '/static/uploads/materials/course_6/chapter_26/任务2 Shopee平台卖家端功能介绍.pdf', '15页', 0, 0, '2026-01-06 10:24:04');
+INSERT INTO `course_lessons` VALUES (204, 26, '任务2 Shopee平台卖家端功能介绍', 'ppt', '/static/uploads/materials/course_6/chapter_26/任务2 Shopee平台卖家端功能介绍.pptx', '15页', 0, 0, '2026-01-06 10:24:04');
+INSERT INTO `course_lessons` VALUES (205, 26, '任务3 Shopee平台店铺基础设置', 'pdf', '/static/uploads/materials/course_6/chapter_26/任务3 Shopee平台店铺基础设置.pdf', '15页', 0, 0, '2026-01-06 10:24:04');
+INSERT INTO `course_lessons` VALUES (206, 26, '任务3 Shopee平台店铺基础设置', 'ppt', '/static/uploads/materials/course_6/chapter_26/任务3 Shopee平台店铺基础设置.pptx', '15页', 0, 0, '2026-01-06 10:24:04');
+INSERT INTO `course_lessons` VALUES (207, 26, '任务4 Shopee平台物流设置指导', 'pdf', '/static/uploads/materials/course_6/chapter_26/任务4 Shopee平台物流设置指导.pdf', '15页', 0, 0, '2026-01-06 10:24:04');
+INSERT INTO `course_lessons` VALUES (208, 26, '任务4 Shopee平台物流设置指导', 'ppt', '/static/uploads/materials/course_6/chapter_26/任务4 Shopee平台物流设置指导.pptx', '15页', 0, 0, '2026-01-06 10:24:04');
+INSERT INTO `course_lessons` VALUES (209, 27, '任务5 如何在Shopee平台进行商品上架', 'pdf', '/static/uploads/materials/course_6/chapter_27/任务5 如何在Shopee平台进行商品上架.pdf', '15页', 0, 0, '2026-01-06 10:24:04');
+INSERT INTO `course_lessons` VALUES (210, 27, '任务5 如何在Shopee平台进行商品上架', 'ppt', '/static/uploads/materials/course_6/chapter_27/任务5 如何在Shopee平台进行商品上架.pptx', '15页', 0, 0, '2026-01-06 10:24:04');
+INSERT INTO `course_lessons` VALUES (211, 27, '任务6 Shopee平台商品优化技巧（标题、类目、属性）', 'pdf', '/static/uploads/materials/course_6/chapter_27/任务6 Shopee平台商品优化技巧（标题、类目、属性）.pdf', '15页', 0, 0, '2026-01-06 10:24:04');
+INSERT INTO `course_lessons` VALUES (212, 27, '任务6 Shopee平台商品优化技巧（标题、类目、属性）', 'ppt', '/static/uploads/materials/course_6/chapter_27/任务6 Shopee平台商品优化技巧（标题、类目、属性）.pptx', '15页', 0, 0, '2026-01-06 10:24:04');
+INSERT INTO `course_lessons` VALUES (213, 27, '任务7 Shopee平台商品优化技巧（描述、图片、视频）', 'pdf', '/static/uploads/materials/course_6/chapter_27/任务7 Shopee平台商品优化技巧（描述、图片、视频）.pdf', '15页', 0, 0, '2026-01-06 10:24:04');
+INSERT INTO `course_lessons` VALUES (214, 27, '任务7 Shopee平台商品优化技巧（描述、图片、视频）', 'ppt', '/static/uploads/materials/course_6/chapter_27/任务7 Shopee平台商品优化技巧（描述、图片、视频）.pptx', '15页', 0, 0, '2026-01-06 10:24:04');
+INSERT INTO `course_lessons` VALUES (215, 27, '任务8 Shopee平台商店介绍设置流程', 'pdf', '/static/uploads/materials/course_6/chapter_27/任务8 Shopee平台商店介绍设置流程.pdf', '15页', 0, 0, '2026-01-06 10:24:04');
+INSERT INTO `course_lessons` VALUES (216, 27, '任务8 Shopee平台商店介绍设置流程', 'ppt', '/static/uploads/materials/course_6/chapter_27/任务8 Shopee平台商店介绍设置流程.pptx', '15页', 0, 0, '2026-01-06 10:24:04');
+INSERT INTO `course_lessons` VALUES (217, 27, '任务9 Shopee平台店铺装修指南', 'pdf', '/static/uploads/materials/course_6/chapter_27/任务9 Shopee平台店铺装修指南.pdf', '15页', 0, 0, '2026-01-06 10:24:04');
+INSERT INTO `course_lessons` VALUES (218, 27, '任务9 Shopee平台店铺装修指南', 'ppt', '/static/uploads/materials/course_6/chapter_27/任务9 Shopee平台店铺装修指南.pptx', '15页', 0, 0, '2026-01-06 10:24:04');
+INSERT INTO `course_lessons` VALUES (219, 27, '任务10 Shopee平台店铺装修：装饰组件的运用', 'pdf', '/static/uploads/materials/course_6/chapter_27/任务10 Shopee平台店铺装修：装饰组件的运用.pdf', '15页', 0, 0, '2026-01-06 10:24:04');
+INSERT INTO `course_lessons` VALUES (220, 27, '任务10 Shopee平台店铺装修：装饰组件的运用', 'ppt', '/static/uploads/materials/course_6/chapter_27/任务10 Shopee平台店铺装修：装饰组件的运用.pptx', '15页', 0, 0, '2026-01-06 10:24:04');
+INSERT INTO `course_lessons` VALUES (221, 28, '任务11 Shopee平台如何设置优惠券', 'pdf', '/static/uploads/materials/course_6/chapter_28/任务11 Shopee平台如何设置优惠券.pdf', '15页', 0, 0, '2026-01-06 10:24:05');
+INSERT INTO `course_lessons` VALUES (222, 28, '任务11 Shopee平台如何设置优惠券', 'ppt', '/static/uploads/materials/course_6/chapter_28/任务11 Shopee平台如何设置优惠券.pptx', '15页', 0, 0, '2026-01-06 10:24:05');
+INSERT INTO `course_lessons` VALUES (223, 28, '任务12 Shopee平台折扣活动设置流程', 'pdf', '/static/uploads/materials/course_6/chapter_28/任务12 Shopee平台折扣活动设置流程.pdf', '15页', 0, 0, '2026-01-06 10:24:05');
+INSERT INTO `course_lessons` VALUES (224, 28, '任务12 Shopee平台折扣活动设置流程', 'ppt', '/static/uploads/materials/course_6/chapter_28/任务12 Shopee平台折扣活动设置流程.pptx', '15页', 0, 0, '2026-01-06 10:24:05');
+INSERT INTO `course_lessons` VALUES (225, 28, '任务13 Shopee平台套装优惠设置流程 (Bundle Deal)', 'pdf', '/static/uploads/materials/course_6/chapter_28/任务13 Shopee平台套装优惠设置流程 (Bundle Deal).pdf', '15页', 0, 0, '2026-01-06 10:24:05');
+INSERT INTO `course_lessons` VALUES (226, 28, '任务13 Shopee平台套装优惠设置流程 (Bundle Deal)', 'ppt', '/static/uploads/materials/course_6/chapter_28/任务13 Shopee平台套装优惠设置流程 (Bundle Deal).pptx', '15页', 0, 0, '2026-01-06 10:24:05');
+INSERT INTO `course_lessons` VALUES (227, 28, '任务14 Shopee平台设置限时选购使用方法 (Flash Deal)', 'pdf', '/static/uploads/materials/course_6/chapter_28/任务14 Shopee平台设置限时选购使用方法 (Flash Deal).pdf', '15页', 0, 0, '2026-01-06 10:24:05');
+INSERT INTO `course_lessons` VALUES (228, 28, '任务14 Shopee平台设置限时选购使用方法 (Flash Deal)', 'ppt', '/static/uploads/materials/course_6/chapter_28/任务14 Shopee平台设置限时选购使用方法 (Flash Deal).pptx', '15页', 0, 0, '2026-01-06 10:24:05');
+INSERT INTO `course_lessons` VALUES (229, 28, '任务15 Shopee平台广告 (Ads) 投放流程', 'pdf', '/static/uploads/materials/course_6/chapter_28/任务15 Shopee平台广告 (Ads) 投放流程.pdf', '15页', 0, 0, '2026-01-06 10:24:05');
+INSERT INTO `course_lessons` VALUES (230, 28, '任务15 Shopee平台广告 (Ads) 投放流程', 'ppt', '/static/uploads/materials/course_6/chapter_28/任务15 Shopee平台广告 (Ads) 投放流程.pptx', '15页', 0, 0, '2026-01-06 10:24:05');
+INSERT INTO `course_lessons` VALUES (231, 28, '任务16 Shopee平台站外渠道广告功能介绍', 'pdf', '/static/uploads/materials/course_6/chapter_28/任务16 Shopee平台站外渠道广告功能介绍.pdf', '15页', 0, 0, '2026-01-06 10:24:05');
+INSERT INTO `course_lessons` VALUES (232, 28, '任务16 Shopee平台站外渠道广告功能介绍', 'ppt', '/static/uploads/materials/course_6/chapter_28/任务16 Shopee平台站外渠道广告功能介绍.pptx', '15页', 0, 0, '2026-01-06 10:24:05');
+INSERT INTO `course_lessons` VALUES (233, 29, '任务17 Shopee平台订单发货流程', 'pdf', '/static/uploads/materials/course_6/chapter_29/任务17 Shopee平台订单发货流程.pdf', '15页', 0, 0, '2026-01-06 10:24:05');
+INSERT INTO `course_lessons` VALUES (234, 29, '任务17 Shopee平台订单发货流程', 'ppt', '/static/uploads/materials/course_6/chapter_29/任务17 Shopee平台订单发货流程.pptx', '15页', 0, 0, '2026-01-06 10:24:05');
+INSERT INTO `course_lessons` VALUES (235, 29, '任务18 Shopee平台退货退款处理流程', 'pdf', '/static/uploads/materials/course_6/chapter_29/任务18 Shopee平台退货退款处理流程.pdf', '15页', 0, 0, '2026-01-06 10:24:05');
+INSERT INTO `course_lessons` VALUES (236, 29, '任务18 Shopee平台退货退款处理流程', 'ppt', '/static/uploads/materials/course_6/chapter_29/任务18 Shopee平台退货退款处理流程.pptx', '15页', 0, 0, '2026-01-06 10:24:05');
+INSERT INTO `course_lessons` VALUES (237, 29, '任务19 关于Shopee平台售前、售中、售后咨询服务', 'pdf', '/static/uploads/materials/course_6/chapter_29/任务19 关于Shopee平台售前、售中、售后咨询服务.pdf', '15页', 0, 0, '2026-01-06 10:24:05');
+INSERT INTO `course_lessons` VALUES (238, 29, '任务19 关于Shopee平台售前、售中、售后咨询服务', 'ppt', '/static/uploads/materials/course_6/chapter_29/任务19 关于Shopee平台售前、售中、售后咨询服务.pptx', '15页', 0, 0, '2026-01-06 10:24:05');
+INSERT INTO `course_lessons` VALUES (239, 29, '任务20 Shopee平台如何使用运费测算工具', 'pdf', '/static/uploads/materials/course_6/chapter_29/任务20 Shopee平台如何使用运费测算工具.pdf', '15页', 0, 0, '2026-01-06 10:24:05');
+INSERT INTO `course_lessons` VALUES (240, 29, '任务20 Shopee平台如何使用运费测算工具', 'ppt', '/static/uploads/materials/course_6/chapter_29/任务20 Shopee平台如何使用运费测算工具.pptx', '15页', 0, 0, '2026-01-06 10:24:05');
+INSERT INTO `course_lessons` VALUES (241, 30, '任务01 局部重绘工作流', 'pdf', '/static/uploads/materials/course_1/chapter_30/任务01 局部重绘工作流.pdf', '15页', 0, 0, '2026-01-07 09:54:16');
+
+-- ----------------------------
+-- Table structure for course_tasks
+-- ----------------------------
+DROP TABLE IF EXISTS `course_tasks`;
+CREATE TABLE `course_tasks`  (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `course_id` int NOT NULL COMMENT '所属课程ID',
+  `title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '作业标题',
+  `content` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '作业要求(富文本/HTML)',
+  `sort_order` int NULL DEFAULT 0 COMMENT '排序',
+  `created_at` datetime NULL DEFAULT CURRENT_TIMESTAMP,
+  `lesson_id` int NULL DEFAULT NULL COMMENT '关联的课时ID',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `fk_task_course`(`course_id` ASC) USING BTREE,
+  INDEX `fk_task_lesson`(`lesson_id` ASC) USING BTREE,
+  CONSTRAINT `fk_task_course` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
+  CONSTRAINT `fk_task_lesson` FOREIGN KEY (`lesson_id`) REFERENCES `course_lessons` (`id`) ON DELETE SET NULL ON UPDATE RESTRICT
+) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '课程作业模板表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of course_tasks
+-- ----------------------------
+INSERT INTO `course_tasks` VALUES (1, 6, '实训任务1：完成Shopee店铺入驻', '<p>请按照课件指导，完成店铺注册流程。</p><p><strong>提交要求：</strong>上传店铺后台首页截图，需包含店铺名称。</p>', 1, '2026-01-07 11:35:58', 201);
+INSERT INTO `course_tasks` VALUES (2, 6, '实训任务2：配置店铺物流渠道', '进入卖家中心 -> 物流设置，开启 SLS 物流渠道。<br>提交设置成功的界面截图。', 2, '2026-01-07 11:35:58', 203);
+INSERT INTO `course_tasks` VALUES (3, 6, '实训任务3：完成首个商品上架', '1. 标题包含核心关键词<br>2. 上传至少5张主图<br>3. 填写完整的属性<br>提交商品前台链接。', 3, '2026-01-07 11:35:58', 205);
+INSERT INTO `course_tasks` VALUES (4, 6, '期末考核：店铺装修闭环', '使用“装修大师”完成店铺首页装修，包括轮播图、商品分类栏。', 4, '2026-01-07 11:35:58', 207);
 
 -- ----------------------------
 -- Table structure for courses
@@ -266,6 +325,37 @@ INSERT INTO `enrollments` VALUES (60, 1, 53, '2026-01-04 17:31:30');
 INSERT INTO `enrollments` VALUES (61, 1, 54, '2026-01-04 17:31:30');
 
 -- ----------------------------
+-- Table structure for student_learning_progress
+-- ----------------------------
+DROP TABLE IF EXISTS `student_learning_progress`;
+CREATE TABLE `student_learning_progress`  (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `student_id` int NOT NULL COMMENT '学生ID',
+  `lesson_id` int NOT NULL COMMENT '课时ID',
+  `status` int NULL DEFAULT 0 COMMENT '0:未开始, 1:进行中, 2:已完成',
+  `last_position` int NULL DEFAULT 1 COMMENT '最后阅读页码',
+  `updated_at` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_student_lesson`(`student_id` ASC, `lesson_id` ASC) USING BTREE,
+  INDEX `fk_slp_lesson`(`lesson_id` ASC) USING BTREE,
+  CONSTRAINT `fk_slp_lesson` FOREIGN KEY (`lesson_id`) REFERENCES `course_lessons` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
+  CONSTRAINT `fk_slp_student` FOREIGN KEY (`student_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
+) ENGINE = InnoDB AUTO_INCREMENT = 10 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of student_learning_progress
+-- ----------------------------
+INSERT INTO `student_learning_progress` VALUES (1, 1, 201, 2, 1, '2026-01-06 15:35:11');
+INSERT INTO `student_learning_progress` VALUES (2, 1, 203, 2, 1, '2026-01-06 15:33:14');
+INSERT INTO `student_learning_progress` VALUES (3, 1, 205, 2, 0, '2026-01-06 15:41:31');
+INSERT INTO `student_learning_progress` VALUES (4, 1, 207, 2, 0, '2026-01-06 15:41:41');
+INSERT INTO `student_learning_progress` VALUES (5, 1, 209, 2, 0, '2026-01-06 15:58:10');
+INSERT INTO `student_learning_progress` VALUES (6, 1, 211, 1, 1, '2026-01-06 15:57:45');
+INSERT INTO `student_learning_progress` VALUES (7, 8, 201, 2, 0, '2026-01-06 17:05:33');
+INSERT INTO `student_learning_progress` VALUES (8, 8, 203, 1, 1, '2026-01-06 17:05:38');
+INSERT INTO `student_learning_progress` VALUES (9, 15, 201, 2, 0, '2026-01-09 16:47:53');
+
+-- ----------------------------
 -- Table structure for student_profiles
 -- ----------------------------
 DROP TABLE IF EXISTS `student_profiles`;
@@ -283,7 +373,7 @@ CREATE TABLE `student_profiles`  (
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_sp_user_id`(`user_id` ASC) USING BTREE,
   CONSTRAINT `fk_sp_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '学生详细档案表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 8 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '学生详细档案表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of student_profiles
@@ -292,6 +382,41 @@ INSERT INTO `student_profiles` VALUES (1, 1, '张十一', '22014082032', '男', 
 INSERT INTO `student_profiles` VALUES (2, 8, '张二', '22014082033', '保密', '18250636871', '/static/uploads/avatars/36c89a39-76e6-4973-8536-4ec4837ba50c.png', NULL, '2026-01-04 15:39:40', '2026-01-04 15:39:56');
 INSERT INTO `student_profiles` VALUES (3, 15, '贾一', '22014083001', '保密', '13800000001', '/static/uploads/avatars/05958dc6-7eea-4f43-bd42-85beb748c40a.png', NULL, '2026-01-04 16:58:48', '2026-01-04 17:18:55');
 INSERT INTO `student_profiles` VALUES (4, 18, '贾四', '22014083004', '保密', NULL, NULL, NULL, '2026-01-04 17:56:55', '2026-01-04 17:56:55');
+INSERT INTO `student_profiles` VALUES (5, 32, '林九', '22014081009', '保密', NULL, NULL, NULL, '2026-01-07 17:51:58', '2026-01-07 17:51:58');
+INSERT INTO `student_profiles` VALUES (6, 9, '张七', '22014082037', '保密', NULL, NULL, NULL, '2026-01-07 17:52:13', '2026-01-07 17:52:13');
+INSERT INTO `student_profiles` VALUES (7, 5, '李四', '22014082034', '保密', NULL, NULL, NULL, '2026-01-07 17:52:31', '2026-01-07 17:52:31');
+
+-- ----------------------------
+-- Table structure for student_submissions
+-- ----------------------------
+DROP TABLE IF EXISTS `student_submissions`;
+CREATE TABLE `student_submissions`  (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `assignment_id` int NOT NULL COMMENT '关联的作业ID',
+  `student_id` int NOT NULL COMMENT '学生ID',
+  `content` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '提交内容(富文本/图片URL)',
+  `score` int NULL DEFAULT NULL COMMENT '分数(0-100)',
+  `feedback` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '老师评语',
+  `status` int NULL DEFAULT 0 COMMENT '0:已提交/未批改, 1:已批改, 2:被打回',
+  `submitted_at` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '提交时间',
+  `graded_at` datetime NULL DEFAULT NULL COMMENT '批改时间',
+  `annotated_content` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '带有批注高亮的HTML内容',
+  `annotations` json NULL COMMENT '批注列表数据',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_student_assign`(`assignment_id` ASC, `student_id` ASC) USING BTREE,
+  INDEX `fk_sub_student`(`student_id` ASC) USING BTREE,
+  CONSTRAINT `fk_sub_assign` FOREIGN KEY (`assignment_id`) REFERENCES `class_assignments` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
+  CONSTRAINT `fk_sub_student` FOREIGN KEY (`student_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
+) ENGINE = InnoDB AUTO_INCREMENT = 6 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '学生作业提交表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of student_submissions
+-- ----------------------------
+INSERT INTO `student_submissions` VALUES (1, 1, 1, '\n\n![截图](/static/uploads/common/c77b39d8-4e52-4b65-814f-389210951c65.png)\n', 90, '', 2, '2026-01-09 10:39:57', '2026-01-09 15:03:22', NULL, NULL);
+INSERT INTO `student_submissions` VALUES (2, 3, 1, '\n\n![截图](/static/uploads/common/c77b39d8-4e52-4b65-814f-389210951c65.png)\n', 80, '请补充细节。', 2, '2026-01-09 10:40:31', '2026-01-09 16:15:37', '<p><img src=\"http://120.41.224.2:8000/static/uploads/common/c77b39d8-4e52-4b65-814f-389210951c65.png\" alt=\"截图\">\n<span class=\"highlight-marker flash-highlight\" data-id=\"note-1767945062572\">配置</span><span class=\"highlight-marker\" data-id=\"note-1767944241875\"></span></p>\n', '[]');
+INSERT INTO `student_submissions` VALUES (3, 5, 1, '完成首个商品上架\n完成首个商品上架\n完成首个商品上架\n完成首个商品上架\n\n![截图](/static/uploads/common/209dbd52-1577-46c9-9e75-172602c69a7e.png)', 60, '📷 图片不清晰，请重交。', 2, '2026-01-09 16:16:32', '2026-01-09 16:17:51', '<p><span class=\"highlight-marker\" data-id=\"note-1767946629852\">完成首个商品上架</span>\n完成首个商品上架\n完成首<span class=\"highlight-marker\" data-id=\"note-1767946665021\">个商品上</span>架\n完成首个商品上架</p>\n<p><img src=\"http://120.41.224.2:8000/static/uploads/common/209dbd52-1577-46c9-9e75-172602c69a7e.png\" alt=\"截图\"></p>\n', '[{\"id\": \"note-1767946629852\", \"text\": \"123123131231\"}, {\"id\": \"note-1767946665021\", \"text\": \"dasdasdasd\"}]');
+INSERT INTO `student_submissions` VALUES (4, 5, 8, '完成首个商品上架完成首个商品上架完成首个商品上架完成首个商品上架完成首个商品上架完成首个商品上架完成首个商品上架完成首个商品上架完成首个商品上架完成首个商品上架完成首个商品上架完成首个商品上架完成首个商品上架完成首个商品上架完成首个商品上架完成首个商品上架完成首个商品上架完成首个商品上架完成首个商品上架完成首个商品上架完成首个商品上架完成首个商品上架完成首个商品上架完成首个商品上架完成首个商品上架完成首个商品上架完成首个商品上架\n\n![截图](/static/uploads/common/f6d0169c-0f84-4b57-804b-7a637eb13396.png)', 80, '👍 做得很好！', 2, '2026-01-09 16:21:44', '2026-01-09 16:47:17', '<p>完成首个商品上架完成首个商品上架完成首个商品上架完成首个商品上架完成首个商品上架完成首个商品上架完成首个商品上架完成首个商品上架完成首个商品上架完成首个商品上架完成首个商品上架完成首个商品上架完成首个商品上架完成首个商品上架完成首个商品上架完成首个商品上架完成首个商品上架完成首个<span class=\"highlight-marker\" data-id=\"note-1767948428518\">商品上架完成首个商品上架完成首个商品上架完成首个商品上架完成首个商品上架完成首个商品上架完成首个商品上架完成首个商品上架完成首个商品上架完成首个商品上架</span></p>\n<p><img src=\"http://120.41.224.2:8000/static/uploads/common/f6d0169c-0f84-4b57-804b-7a637eb13396.png\" alt=\"截图\"></p>\n', '[{\"id\": \"note-1767948428518\", \"text\": \"很好\"}]');
+INSERT INTO `student_submissions` VALUES (5, 5, 15, '123123131\n\n![截图](/static/uploads/common/98381303-3f04-4dcb-a588-ea46e0c1a1e4.png)', NULL, NULL, 1, '2026-01-09 16:48:22', NULL, NULL, NULL);
 
 -- ----------------------------
 -- Table structure for teacher_course_access
@@ -373,20 +498,20 @@ CREATE TABLE `users`  (
 -- ----------------------------
 -- Records of users
 -- ----------------------------
-INSERT INTO `users` VALUES (1, '18250636865', '$2b$12$jwxhQX9peRLmh0wxVq7xreuheYZDiDAIAIIzokZOnMsMr/R/RbVMS', 'student', 1, '2025-12-24 11:26:48', '2026-01-05 08:53:43', 8189, '张十一', '22014082032');
-INSERT INTO `users` VALUES (2, '18250636866', '$2b$12$OFGjgw52J9TWeZzKeG6gPOHUKKhi7EM3YYfUh2R1n7e43azYclPWy', 'teacher', 1, '2025-12-24 11:27:14', '2026-01-05 17:43:28', NULL, NULL, NULL);
+INSERT INTO `users` VALUES (1, '18250636865', '$2b$12$jwxhQX9peRLmh0wxVq7xreuheYZDiDAIAIIzokZOnMsMr/R/RbVMS', 'student', 1, '2025-12-24 11:26:48', '2026-01-09 16:50:18', 8189, '张十一', '22014082032');
+INSERT INTO `users` VALUES (2, '18250636866', '$2b$12$OFGjgw52J9TWeZzKeG6gPOHUKKhi7EM3YYfUh2R1n7e43azYclPWy', 'teacher', 1, '2025-12-24 11:27:14', '2026-01-09 16:48:33', NULL, NULL, NULL);
 INSERT INTO `users` VALUES (4, '18250636867', '$2b$12$mVae3WIBNklVoxfL7qkLQ.ymZ9vRDq6vbwB2Za0cTStB1FO1DeYoa', 'teacher', 1, '2025-12-24 15:04:05', '2026-01-04 17:57:41', NULL, NULL, NULL);
-INSERT INTO `users` VALUES (5, '18250636868', '$2b$12$LExgic9UmvpwwLtG5Gufs.08MAc8wx7EfZdv9CjYzn3QiLJnOUZdq', 'student', 1, '2025-12-24 17:26:36', '2025-12-25 17:38:52', 8190, '李四', '22014082034');
+INSERT INTO `users` VALUES (5, '18250636868', '$2b$12$LExgic9UmvpwwLtG5Gufs.08MAc8wx7EfZdv9CjYzn3QiLJnOUZdq', 'student', 1, '2025-12-24 17:26:36', '2026-01-07 17:52:32', 8190, '李四', '22014082034');
 INSERT INTO `users` VALUES (6, '18250636969', '$2b$12$2bR.Xy.PQzAQDApnmWxdSeC.bIEs0C1kklBR751IoX4/tNFuUCyt2', 'student', 1, '2025-12-25 16:30:01', '2025-12-25 16:47:31', 8191, '王五', '22014082035');
 INSERT INTO `users` VALUES (7, '18250636870', '$2b$12$JZUcksLjg6lZfnipDk.rS.Bqwgy4cH.dqmkuUgsvhQCSyw.c0wq9u', 'student', 1, '2025-12-25 16:34:04', '2025-12-25 16:51:53', 8192, '赵六', '22014082036');
-INSERT INTO `users` VALUES (8, '18250636871', '$2b$12$HEqQ8pj0rTTBVi97d5wi2.juSlBWJnQ0AZaov6tlgvoxsf79j5j8m', 'student', 1, '2025-12-26 16:02:05', '2026-01-04 16:01:07', 8193, '张二', '22014082033');
-INSERT INTO `users` VALUES (9, '18250636872', '$2b$12$ahylOLX4IYYfxTXg5xF72.D0V32UfPDd2WDs9B.gLUON2w0cDqw6q', 'student', 1, '2025-12-29 17:59:50', NULL, NULL, '张七', '22014082037');
+INSERT INTO `users` VALUES (8, '18250636871', '$2b$12$HEqQ8pj0rTTBVi97d5wi2.juSlBWJnQ0AZaov6tlgvoxsf79j5j8m', 'student', 1, '2025-12-26 16:02:05', '2026-01-09 16:21:18', 8193, '张二', '22014082033');
+INSERT INTO `users` VALUES (9, '18250636872', '$2b$12$ahylOLX4IYYfxTXg5xF72.D0V32UfPDd2WDs9B.gLUON2w0cDqw6q', 'student', 1, '2025-12-29 17:59:50', '2026-01-07 17:52:13', NULL, '张七', '22014082037');
 INSERT INTO `users` VALUES (10, '18250636873', '$2b$12$oT0OqX4bUys/2obDlQtKCOxCvpB09s.AyOS83YbvQDq6GCXey5iWK', 'student', 1, '2025-12-30 14:20:52', NULL, NULL, '张四', '22014082021');
 INSERT INTO `users` VALUES (11, '18250636874', '$2b$12$KXKRsdVENh0EmciRYox5K.OtcLcNoeR/26duy4z24TPhpj75uPe5.', 'student', 1, '2025-12-30 16:38:48', '2025-12-31 17:11:28', NULL, '张五', '22014082022');
 INSERT INTO `users` VALUES (12, '18250636875', '$2b$12$pq9nEyWa41m4WKR/v.PON.artWlJPlEFgOB0sw5w.SrK0NsIfBEYG', 'student', 1, '2025-12-31 16:11:05', '2025-12-31 17:12:02', NULL, '张八', '22014082023');
 INSERT INTO `users` VALUES (13, '18250636876', '$2b$12$NRSQIoCDK7ZW.1HqSy3C8uecojj7O2aFa1YX0ZMWMQ95sbbZ9u28K', 'student', 1, '2025-12-31 16:14:41', NULL, NULL, '张九', '22014082024');
 INSERT INTO `users` VALUES (14, '18250636877', '$2b$12$4tZqq/x/k4LNU3hXUckHHeCkbCCIU7sN1Tab07dRj127smk8Q0a96', 'student', 1, '2025-12-31 16:15:10', NULL, NULL, '张十', '22014082025');
-INSERT INTO `users` VALUES (15, '13800000001', '$2b$12$iCtsBwN3Pr72doOlHKNShuyQSHuCvsBn6mgY3Pl4dfTgu0vuHDVo2', 'student', 1, '2026-01-04 16:34:15', '2026-01-04 16:58:48', NULL, '贾一', '22014083001');
+INSERT INTO `users` VALUES (15, '13800000001', '$2b$12$iCtsBwN3Pr72doOlHKNShuyQSHuCvsBn6mgY3Pl4dfTgu0vuHDVo2', 'student', 1, '2026-01-04 16:34:15', '2026-01-09 16:47:45', NULL, '贾一', '22014083001');
 INSERT INTO `users` VALUES (16, '13800000002', '$2b$12$7iPzfP81cDM/najRnW3exeLSnlRO9pWmZSk8cYsJDU/4f1L8kWqH.', 'student', 1, '2026-01-04 16:34:15', NULL, NULL, '贾二', '22014083002');
 INSERT INTO `users` VALUES (17, '13800000003', '$2b$12$cj/Apjf6zd33ysXSYJB0weIhjYhQ25xRVLPzI67ImihSnhAFJPEF2', 'student', 1, '2026-01-04 16:34:15', NULL, NULL, '贾三', '22014083003');
 INSERT INTO `users` VALUES (18, '13800000004', '$2b$12$pqg9oMG/yOPa2j0mY.RJ4ub3THykA9jCF7czA6aUte4cYHfLL4Kom', 'student', 1, '2026-01-04 16:34:16', '2026-01-04 17:56:56', NULL, '贾四', '22014083004');
@@ -403,7 +528,7 @@ INSERT INTO `users` VALUES (28, '13800000014', '$2b$12$Pjt5OyUJNCKptgKNcgD01OtmM
 INSERT INTO `users` VALUES (29, '13800000015', '$2b$12$H3Lf13vrCHGsFvi8zv/U2eMgUu1B/atrI37HAfHJKv.HXZ9V7pzg.', 'student', 1, '2026-01-04 17:27:30', NULL, NULL, '林六', '22014081006');
 INSERT INTO `users` VALUES (30, '13800000016', '$2b$12$aZSlMSN7kfe3Wn48JZeQIOyDiJl.Xf.ZWAq9j6sBV7imlBRcfkUZS', 'student', 1, '2026-01-04 17:27:30', NULL, NULL, '林七', '22014081007');
 INSERT INTO `users` VALUES (31, '13800000017', '$2b$12$DxaQwZaHqCW9Aw5E.J0yxueDN.LLtoDnnsVKgrRZd8ZQ4GESu289i', 'student', 1, '2026-01-04 17:27:30', NULL, NULL, '林八', '22014081008');
-INSERT INTO `users` VALUES (32, '13800000018', '$2b$12$FE/5oNww5N9VysAy1LDlJuzCK2e6oRkCNugw8zl3YjRI.hD.8vtE2', 'student', 1, '2026-01-04 17:27:30', NULL, NULL, '林九', '22014081009');
+INSERT INTO `users` VALUES (32, '13800000018', '$2b$12$FE/5oNww5N9VysAy1LDlJuzCK2e6oRkCNugw8zl3YjRI.hD.8vtE2', 'student', 1, '2026-01-04 17:27:30', '2026-01-07 17:51:59', NULL, '林九', '22014081009');
 INSERT INTO `users` VALUES (33, '13800000019', '$2b$12$Agwl04gvXuv8BRw19YuRUO3EyWHmwr7dRv.5Duc62WlQKbWA7jo3G', 'student', 1, '2026-01-04 17:31:26', NULL, NULL, '林十', '22014081010');
 INSERT INTO `users` VALUES (34, '13800000020', '$2b$12$RpF0w9w7S.zodMghFyfERuyl9jXqe4spjfInfqFdTHyUd87TEhuoS', 'student', 1, '2026-01-04 17:31:26', NULL, NULL, '林十一', '22014081011');
 INSERT INTO `users` VALUES (35, '13800000021', '$2b$12$IqnnLclMHEiPNVTH69segesRMRTBrcncraySJ14Adbk.iX9ivRvlq', 'student', 1, '2026-01-04 17:31:26', NULL, NULL, '林十二', '22014081012');
