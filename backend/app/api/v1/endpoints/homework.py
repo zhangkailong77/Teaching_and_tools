@@ -112,32 +112,65 @@ def get_my_homework_todos(
 
 
 # 3. [学生] 获取我的历史成绩趋势
-@router.get("/my-scores")
-def get_my_homework_scores(
+@router.get("/dashboard-stats")
+def get_student_dashboard_stats(
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user),
 ):
-    # 查询已批改(status=2)的提交记录，按批改时间排序，取最近 7 次
+
+    # --- 1. 计算待完成作业数 (pending_count) ---
+    # 逻辑: 班级发布总数 - 我提交的总数
+    enrollments = current_user.enrollments
+    class_ids = [e.class_id for e in enrollments]
+    
+    total_assigned = db.query(ClassAssignment).filter(
+        ClassAssignment.class_id.in_(class_ids),
+        ClassAssignment.status == 1 # 1:进行中
+    ).count()
+    
+    # 只要交了就算完成 (status > 0)
+    submitted_total = db.query(StudentSubmission).filter(
+        StudentSubmission.student_id == current_user.id
+    ).count()
+    
+    pending_count = total_assigned - submitted_total
+    if pending_count < 0: pending_count = 0
+
+    # --- 2. 计算本周已提交数 (week_submitted_count) ---
+    now = datetime.now()
+    # 计算本周一的日期
+    week_start = now - timedelta(days=now.weekday())
+    week_start = week_start.replace(hour=0, minute=0, second=0, microsecond=0)
+    
+    week_submitted_count = db.query(StudentSubmission).filter(
+        StudentSubmission.student_id == current_user.id,
+        StudentSubmission.submitted_at >= week_start
+    ).count()
+
+    # --- 3. 获取成绩趋势 (原有逻辑优化) ---
     submissions = db.query(StudentSubmission).join(ClassAssignment)\
         .filter(
             StudentSubmission.student_id == current_user.id,
-            StudentSubmission.status == 1 # 1代表已批改(注意：我们在Schema里定义的是1是已批改，之前写错了？请确认一下你的数据库定义，假设1是已批改，或者status=2)
-            # 修正：根据之前的建表语句，status: 0:未交, 1:已交, 2:已批改。所以这里应该是 status == 2
-        ).filter(StudentSubmission.status == 2)\
+            StudentSubmission.status == 2 # 必须是已批改
+        )\
         .order_by(StudentSubmission.graded_at.asc())\
         .limit(7)\
         .all()
 
-    # 构造返回数据
-    data = []
+    score_trend = []
     for sub in submissions:
-        data.append({
-            "title": sub.assignment.title, # 作业标题
-            "score": sub.score,            # 分数
-            "date": sub.graded_at.strftime("%m-%d") if sub.graded_at else "" # 批改日期
+        score_trend.append({
+            "title": sub.assignment.title,
+            "score": sub.score,
+            # 格式化日期为 "10-25"
+            "date": sub.graded_at.strftime("%m-%d") if sub.graded_at else ""
         })
     
-    return data
+    return {
+        "pending_count": pending_count,
+        "week_submitted_count": week_submitted_count,
+        "score_trend": score_trend
+    }
 
 
 # ------------------------------------------------------------------

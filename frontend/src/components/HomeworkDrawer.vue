@@ -3,7 +3,7 @@
     v-model="visible"
     :title="isReadOnly ? '作业详情' : '作业提交'"
     direction="rtl"
-    size="600px"
+    size="900px"
     class="hw-drawer"
   >
     <div class="homework-body" v-loading="loading">
@@ -22,12 +22,6 @@
         <div class="rich-text" v-html="taskInfo.content || '暂无详细描述'"></div>
       </div>
 
-      <!-- 3. 老师评语 (仅已批改显示) -->
-      <div v-if="taskInfo.status === 2" class="feedback-box">
-        <h4>👨‍🏫 老师评分：<span class="score">{{ taskInfo.score }}分</span></h4>
-        <div class="comment">评语：{{ taskInfo.feedback || '暂无评语' }}</div>
-      </div>
-
       <!-- 4. 答题区域 -->
       <div class="hw-answer-area">
         <h4>{{ isReadOnly ? '我的提交：' : '填写答案：' }}</h4>
@@ -35,39 +29,47 @@
         <!-- 只读模式 (已提交/已批改) -->
         <div v-if="isReadOnly" class="read-only-wrapper">
           
-          <!-- A. 成绩单 (仅已批改显示) -->
-          <div v-if="taskInfo.status === 2" class="score-report">
-            <div class="score-circle">{{ taskInfo.score }}</div>
-            <div class="report-info">
-              <h4>老师评语：</h4>
-              <p>{{ taskInfo.feedback || '暂无评语' }}</p>
+          <!-- 顶部：成绩单 (横跨全宽) -->
+          <div v-if="taskInfo.status === 2" class="score-report-banner">
+             <div class="score">{{ taskInfo.score }}<small>分</small></div>
+             <div class="feedback">
+               <h4>👨‍🏫 老师总评：</h4>
+               <p>{{ taskInfo.feedback || '暂无评语' }}</p>
+             </div>
+          </div>
+
+          <!-- 主体：左右分栏 -->
+          <div class="review-body">
+            
+            <!-- 左侧：作业内容 -->
+            <div class="review-left">
+               <div class="section-title">我的提交</div>
+               <div 
+                 class="rich-content"
+                 ref="contentRef"
+                 v-html="formatContent(resultData.content || submissionContent)"
+                 @click="handleHighlightClick"
+               ></div>
+            </div>
+
+            <!-- 右侧：批注列表 -->
+            <div class="review-right" v-if="resultData.annotations && resultData.annotations.length > 0">
+               <div class="section-title">批注详情 ({{ resultData.annotations.length }})</div>
+               <div class="anno-list">
+                 <div 
+                   v-for="(note, index) in resultData.annotations" 
+                   :key="note.id" 
+                   class="anno-card"
+                   :class="{ active: activeAnnotationId === note.id }"
+                   :id="`card-${note.id}`"
+                   @click="focusHighlight(note.id)" 
+                 >
+                   <div class="card-head"><span class="badge">#{{ index + 1 }}</span></div>
+                   <p>{{ note.text }}</p>
+                 </div>
+               </div>
             </div>
           </div>
-
-          <div class="divider"></div>
-
-          <!-- B. 作业内容 (支持高亮) -->
-          <div class="submission-viewer">
-            <div 
-               class="rich-content" 
-               v-html="formatContent(resultData.content || submissionContent)"
-             ></div>
-          </div>
-
-          <!-- C. 批注列表 (仅当有批注时显示) -->
-          <div v-if="resultData.annotations && resultData.annotations.length > 0" class="annotations-box">
-            <h4>老师批注：</h4>
-            <div 
-              v-for="note in resultData.annotations" 
-              :key="note.id" 
-              class="note-item"
-              :class="{ active: activeAnnotationId === note.id }"
-            >
-              <span class="marker-dot"></span>
-              <p>{{ note.text }}</p>
-            </div>
-          </div>
-
         </div>
 
         <!-- 编辑模式 (未提交) -->
@@ -104,6 +106,7 @@ import { getSubmissionResult, type SubmissionResult } from '@/api/homework';
 import { getImgUrl } from '@/utils/index';
 import { marked } from 'marked';
 
+const contentRef = ref<HTMLElement | null>(null);
 const resultData = ref<Partial<SubmissionResult>>({});
 const activeAnnotationId = ref<string | null>(null); // 当前点击的高亮ID
 
@@ -181,7 +184,8 @@ const handleSubmit = async () => {
   if (!submissionContent.value) return alert('内容不能为空');
   submitting.value = true;
   try {
-    await submitHomework(taskInfo.id, { content: submissionContent.value });
+    const cleanContent = submissionContent.value.replace(/http(s)?:\/\/[^\/]+\/static\//g, '/static/');
+    await submitHomework(taskInfo.id, { content: cleanContent });
     alert('提交成功！');
     visible.value = false;
     emit('success'); // 通知父组件刷新列表
@@ -211,12 +215,37 @@ defineExpose({ open });
 // 增加一个格式化函数
 const formatContent = (content?: string) => {
   if (!content) return '';
-  const processedContent = content.replace(/\]\((.*?)\)/g, (match, url) => {
-    return `](${getImgUrl(url)})`;
-  });
+  
+  // 1. 获取 Base URL
+  const baseUrl = import.meta.env.VITE_IMG_BASE_URL;
 
-  // 然后再解析成 HTML
-  return marked.parse(processedContent);
+  // 2. 替换 Markdown 里的图片路径
+  // 将 ](/static/ 替换为 ](http://.../static/
+  const processed = content.replace(/\]\(\/static\//g, `](${baseUrl}/static/`);
+
+  // 3. 替换 HTML 里的图片路径 (兼容老师批改后的内容)
+  // 将 src="/static/ 替换为 src="http://.../static/
+  const finalContent = processed.replace(/src="\/static\//g, `src="${baseUrl}/static/`);
+
+  return marked.parse(finalContent);
+}
+
+// 2. ✅ 新增：点击卡片 -> 聚焦正文高亮
+const focusHighlight = (id: string) => {
+  // 设置当前激活 ID (让卡片变色)
+  activeAnnotationId.value = id;
+
+  // 找到正文里的 span
+  const marker = contentRef.value?.querySelector(`span[data-id="${id}"]`);
+  
+  if (marker) {
+    // 滚动到正文位置
+    marker.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    
+    // 添加闪烁动画类
+    marker.classList.add('flash-highlight');
+    setTimeout(() => marker.classList.remove('flash-highlight'), 1500);
+  }
 };
 </script>
 
@@ -294,5 +323,56 @@ $primary-color: #00c9a7;
     /* 激活状态 (点击高亮时) */
     &.active { background: #fffbe6; transform: translateX(5px); border-left: 3px solid #fadb14; }
   }
+}
+
+/* 成绩单横幅 */
+.score-report-banner {
+  background: linear-gradient(135deg, #f6ffed 0%, #e6f7ff 100%);
+  border: 1px solid #b7eb8f; border-radius: 12px; padding: 20px;
+  display: flex; align-items: center; gap: 30px; margin-bottom: 25px;
+  
+  .score { font-size: 48px; font-weight: 800; color: #52c41a; line-height: 1; small { font-size: 16px; font-weight: normal; color: #888; } }
+  .feedback { h4 { margin: 0 0 5px; font-size: 14px; color: #555; } p { margin: 0; color: #333; font-weight: 500; } }
+}
+
+/* 分栏布局 */
+.review-body {
+  display: flex; gap: 30px; height: calc(100vh - 200px); /* 让它撑满高度 */
+  
+  .review-left {
+    flex: 1; overflow-y: auto; padding-right: 10px;
+    .section-title { font-size: 14px; font-weight: bold; color: #999; margin-bottom: 10px; }
+  }
+  
+  .review-right {
+    width: 300px; flex-shrink: 0; overflow-y: auto; padding-left: 10px; border-left: 1px solid #eee;
+    .section-title { font-size: 14px; font-weight: bold; color: #999; margin-bottom: 10px; padding-left: 10px; }
+    
+    .anno-list { display: flex; flex-direction: column; gap: 15px; padding: 5px; }
+    
+    .anno-card {
+      background: #fffbef; border: 1px solid #f0e6ce; border-radius: 8px; padding: 12px;
+      transition: all 0.3s; cursor: pointer;
+      
+      .card-head { margin-bottom: 5px; .badge { background: #e8dcb9; color: #8c7e58; font-size: 10px; padding: 1px 5px; border-radius: 4px; } }
+      p { margin: 0; font-size: 13px; color: #555; line-height: 1.5; }
+      
+      /* 激活状态 */
+      &.active {
+        background: #fff; border-color: #fadb14; box-shadow: 0 4px 12px rgba(250, 219, 20, 0.4); transform: scale(1.02);
+      }
+    }
+  }
+}
+
+@keyframes flashText {
+  0% { background-color: #ffeb3b; }
+  50% { background-color: #ff9800; color: white; padding: 2px 4px; border-radius: 4px; }
+  100% { background-color: #ffeb3b; color: inherit; padding: 0 2px; }
+}
+
+/* 必须加上 :deep 才能影响 v-html 里的内容 */
+:deep(.flash-highlight) {
+  animation: flashText 1s ease;
 }
 </style>

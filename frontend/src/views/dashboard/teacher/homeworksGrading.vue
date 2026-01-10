@@ -231,7 +231,8 @@ const handleGrade = async () => {
     userStore.pendingHomeworkCount--;
   }
 
-  const currentHtml = contentRef.value?.innerHTML;
+  let currentHtml = contentRef.value?.innerHTML || '';
+  currentHtml = currentHtml.replace(/http(s)?:\/\/[^\/]+\/static\//g, '/static/');
   
   await submitGrade(currentStudent.value.submission_id, {
     score: form.score,
@@ -274,11 +275,18 @@ const formatDate = (d?: string) => d ? new Date(d).toLocaleString() : '';
 // 简单的 Markdown 解析器
 const formatContent = (content?: string) => {
   if (!content) return '';
-  // 把图片的相对路径转成绝对路径
-  // 假设内容里是 ![img](/static/...)
-  // 我们先用 getImgUrl 处理一下路径，再用 marked 解析
-  // 这里简化处理，直接用 marked
-  return marked(content.replace(/\]\((.*?)\)/g, (match, url) => `](${getImgUrl(url)})`));
+  const processed = content.replace(/\]\((.*?)\)/g, (match, url) => {
+    return `](${getImgUrl(url)})`;
+  });
+
+  const finalContent = processed.replace(/src="(\/static\/[^"]*)"/g, (match, url) => {
+    return `src="${getImgUrl(url)}"`;
+  });
+  if (content.includes('highlight-marker')) {
+      return finalContent; // 直接返回处理过路径的 HTML
+  }
+
+  return marked.parse(finalContent);
 };
 
 const addFeedback = (text: string) => {

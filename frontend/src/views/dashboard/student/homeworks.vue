@@ -13,11 +13,11 @@
           <!-- 简单的顶部数据条 -->
           <div class="stat-pill">
             <span class="label">本周已提交</span>
-            <span class="val">虚拟数据0</span>
+            <span class="val">{{ stats.week_submitted_count }}</span>
           </div>
           <div class="stat-pill highlight">
             <span class="label">待完成</span>
-            <span class="val">{{ pendingCount }}</span>
+            <span class="val">{{ stats.pending_count }}</span>
           </div>
         </div>
       </div>
@@ -167,7 +167,7 @@
 import { ref, computed, onMounted, watch, nextTick } from 'vue';
 import StudentSidebar from '@/components/StudentSidebar.vue';
 import HomeworkDrawer from '@/components/HomeworkDrawer.vue';
-import { getMyHomeworkTodos, getMyHomeworkScores, type AssignmentCard } from '@/api/homework';
+import { getMyHomeworkTodos, getStudentDashboardStats, type AssignmentCard } from '@/api/homework';
 import * as echarts from 'echarts'; // 引入 ECharts
 import { getImgUrl } from '@/utils/index';
 
@@ -176,19 +176,35 @@ const currentTab = ref(0);
 const allTasks = ref<AssignmentCard[]>([]);
 const drawerRef = ref();
 const chartRef = ref<HTMLElement | null>(null);
+// ✅ 新增状态
+const stats = ref({
+  pending_count: 0,
+  week_submitted_count: 0,
+  score_trend: [] as any[]
+});
 
 // --- 初始化 ---
 onMounted(async () => {
   await fetchData();
   initChart();
-  initLineChart();
 });
 
 const fetchData = async () => {
   try {
-    const res = await getMyHomeworkTodos();
-    allTasks.value = res;
-    updateChart(); // 数据更新后刷新图表
+    // 1. 并行请求：获取列表 + 获取统计
+    const [listRes, statsRes] = await Promise.all([
+      getMyHomeworkTodos(),
+      getStudentDashboardStats()
+    ]);
+
+    // 2. 更新列表
+    allTasks.value = listRes;
+    updateChart(); // 更新饼图
+
+    // 3. 更新统计和折线图
+    stats.value = statsRes;
+    initLineChart(statsRes.score_trend); // 把数据传给图表函数
+
   } catch (error) {
     console.error(error);
   }
@@ -294,26 +310,18 @@ const lineChartRef = ref<HTMLElement | null>(null);
 let lineChart: echarts.ECharts | null = null;
 
 // 3. 初始化折线图函数
-const initLineChart = async () => {
+const initLineChart = (trendData: any[]) => {
   if (!lineChartRef.value) return;
   
-  // 获取数据
-  let data = [];
-  try {
-    data = await getMyHomeworkScores();
-  } catch (e) { console.error(e); }
-
-  // 如果没有数据，搞点假数据演示一下效果 (开发阶段)
-  if (data.length === 0) {
-    data = [
-      { date: '10-01', score: 85 },
-      { date: '10-05', score: 88 },
-      { date: '10-10', score: 92 },
-      { date: '10-15', score: 90 },
-      { date: '10-20', score: 95 }
-    ];
+  // 处理空数据
+  if (!trendData || trendData.length === 0) {
+    trendData = []; // 或者给个空数组，ECharts 会显示空白
   }
 
+  // 防止重复初始化
+  if (lineChart) {
+    lineChart.dispose();
+  }
   lineChart = echarts.init(lineChartRef.value);
   
   const option = {
@@ -321,25 +329,25 @@ const initLineChart = async () => {
     tooltip: { trigger: 'axis' },
     xAxis: {
       type: 'category',
-      data: data.map(i => i.date),
+      data: trendData.map(i => i.date),
       axisLine: { show: false },
       axisTick: { show: false },
       axisLabel: { color: '#999', fontSize: 10 }
     },
     yAxis: {
       type: 'value',
-      min: 60, // 或者是 0，看你需求
+      min: 0,
       max: 100,
       splitLine: { lineStyle: { type: 'dashed', color: '#eee' } }
     },
     series: [
       {
-        data: data.map(i => i.score),
+        data: trendData.map(i => i.score),
         type: 'line',
-        smooth: true, // 波浪线
+        smooth: true,
         symbol: 'circle',
         symbolSize: 6,
-        itemStyle: { color: '#00c9a7' }, // 你的主色
+        itemStyle: { color: '#00c9a7' },
         areaStyle: {
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
             { offset: 0, color: 'rgba(0, 201, 167, 0.4)' },

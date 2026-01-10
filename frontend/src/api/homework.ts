@@ -28,9 +28,13 @@ export function getMyHomeworkTodos() {
   return request.get<any, AssignmentCard[]>('/homeworks/my-todos');
 }
 
-// 获取成绩趋势
-export function getMyHomeworkScores() {
-  return request.get<any, { title: string; score: number; date: string }[]>('/homeworks/my-scores');
+// ✅ 新增：获取仪表盘聚合统计数据
+export function getStudentDashboardStats() {
+  return request.get<any, {
+    pending_count: number;
+    week_submitted_count: number;
+    score_trend: { title: string; score: number; date: string }[];
+  }>('/homeworks/dashboard-stats'); // 确保这里的路径和后端一致
 }
 
 

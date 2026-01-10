@@ -69,10 +69,21 @@
                   </div>
                 </div>
 
-                <!-- 操作 -->
+                <!-- 操作栏 -->
                 <div class="hw-action">
+                  <!-- ✅ 新增：查看成绩按钮 -->
+                  <button class="btn-text stats-btn" @click="toggleStats(item.id)">
+                    {{ expandedTaskId === item.id ? '收起' : '成绩概览' }}
+                  </button>
+                  
                   <button class="btn-grade" @click="handleGrade(item.id)">进入批改</button>
                 </div>
+
+                <!-- ✅ 新增：内嵌分析组件 (独占一行) -->
+                <!-- 使用 v-if 确保只有展开时才渲染组件和发请求 -->
+                <div class="stats-row-full" v-if="expandedTaskId === item.id">
+                  <AssignmentStats :assignmentId="item.id" />
+                </div>               
               </div>
             </div>
           </div>
@@ -106,6 +117,7 @@ import { getTeacherHomeworkStats, getTeacherHomeworkList, type HomeworkStatsV2, 
 import * as echarts from 'echarts';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/modules/user';
+import AssignmentStats from '@/components/AssignmentStats.vue';
 
 const userStore = useUserStore();
 const router = useRouter();
@@ -118,6 +130,18 @@ const searchText = ref('');
 // 图表 Ref
 const pieChartRef = ref<HTMLElement | null>(null);
 const barChartRef = ref<HTMLElement | null>(null);
+
+// 2. 定义状态：当前展开的作业ID (默认 null)
+const expandedTaskId = ref<number | null>(null);
+
+  // 3. 切换展开函数
+const toggleStats = (id: number) => {
+  if (expandedTaskId.value === id) {
+    expandedTaskId.value = null; // 收起
+  } else {
+    expandedTaskId.value = id;   // 展开
+  }
+};
 
 // 初始化
 onMounted(async () => {
@@ -235,7 +259,27 @@ $text-dark: #2d3436;
   }
 
   .group-body { padding: 10px; 
-    .hw-item { display: flex; align-items: center; padding: 15px; border-bottom: 1px solid #f5f5f5; gap: 20px; &:last-child { border-bottom: none; }
+    .hw-item { 
+      display: flex; 
+      align-items: center; 
+      padding: 15px; 
+      border-bottom: 1px solid #f5f5f5; 
+      gap: 20px; 
+      flex-wrap: wrap; 
+      &:last-child { border-bottom: none; }
+
+      .stats-row-full {
+        width: 100%;       /* 占满整行宽度 */
+        margin-top: 5px;   /* 与上面内容隔开一点 */
+        flex-basis: 100%;  /* 强制换行 */
+        animation: fadeIn 0.3s ease;
+      }
+
+      .stats-btn {
+        background: none; border: none; cursor: pointer; color: #999; font-size: 13px; margin-right: 15px;
+        &:hover { color: $primary; text-decoration: underline; }
+      }
+
       .hw-info { width: 250px; 
         h4 { margin: 5px 0; font-size: 15px; } 
         .meta { font-size: 12px; color: #999; }
