@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import Any, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy import func, distinct
@@ -258,18 +258,35 @@ def add_student_to_class(
 # ------------------------------------------------------------------
 # 4. 获取老师名下的所有学生 (用于学生名单表格)
 # ------------------------------------------------------------------
-@router.get("/my-students", response_model=List[class_schemas.StudentListOut])
+@router.get("/my-students", response_model=dict)
 def read_my_students(
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user),
+    class_id: Optional[int] = None,
+    keyword: Optional[str] = None,
+    page: int = 1,
+    limit: int = 10
 ):
-    # 逻辑：查询 Enrollments 表
-    # 条件 1: 关联的 Class 的 teacher_id 必须是当前用户
-    # 联表: Enrollment -> Class, Enrollment -> Student(User)
     
-    results = db.query(Enrollment).join(Class).join(User, Enrollment.student_id == User.id)\
-        .filter(Class.teacher_id == current_user.id)\
-        .all()
+    # 1. 构建基础查询 (保持原本的联表逻辑)
+    query = db.query(Enrollment).join(Class).join(User, Enrollment.student_id == User.id)\
+        .filter(Class.teacher_id == current_user.id)
+
+    if class_id:
+        query = query.filter(Enrollment.class_id == class_id)
+
+    if keyword:
+        # 模糊搜索：姓名、学号、手机号
+        query = query.filter(
+            (User.full_name.like(f"%{keyword}%")) | 
+            (User.student_number.like(f"%{keyword}%")) |
+            (User.username.like(f"%{keyword}%"))
+        )
+
+    total = query.count()
+
+    offset = (page - 1) * limit
+    results = query.order_by(Enrollment.joined_at.desc()).offset(offset).limit(limit).all()
     
     # 组装数据返回
     students_data = []
@@ -280,12 +297,9 @@ def read_my_students(
         s_avatar = None
         if student.student_profile:
             s_avatar = student.student_profile.avatar
-        # 如果 profile 没头像，也可以查 users 表的 avatar (看你具体存哪了，通常是 profile)
 
         # --- B. ✅ 核心新增：计算该学生在当前班级的总进度 ---
         progress_percent = 0
-        
-        # 1. 找出该班级绑定的所有课程 ID
         bindings = db.query(ClassCourseBinding).filter(ClassCourseBinding.class_id == classroom.id).all()
         bound_course_ids = [b.course_id for b in bindings]
         
@@ -323,7 +337,10 @@ def read_my_students(
             "avatar": s_avatar 
         })
         
-    return students_data
+    return {
+        "total": total,
+        "items": students_data
+    }
 
 # ------------------------------------------------------------------
 # 新增: 获取教师工作台统计数据

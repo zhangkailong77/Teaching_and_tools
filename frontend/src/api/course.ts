@@ -77,8 +77,22 @@ export function addStudentToClass(classId: number, data: { username: string, ful
 }
 
 // 4. ✅ 新增：获取我的所有学生
-export function getMyStudents() {
-  return request.get<any, StudentItem[]>('/classes/my-students');
+export interface StudentPageResult {
+  total: number;
+  items: StudentItem[];
+}
+
+export function getMyStudents(params?: { 
+  class_id?: number | string; 
+  keyword?: string; 
+  page?: number; 
+  limit?: number; 
+}) {
+  return request<any, StudentPageResult>({
+    url: '/classes/my-students',
+    method: 'get',
+    params
+  });
 }
 
 // ✅ 新增：将学生移出班级

@@ -9,7 +9,7 @@ from app.api import deps
 from app.models import exam as models
 from app.schemas import exam as schemas
 from app.models.user import User
-from sqlalchemy import func
+from sqlalchemy import func, cast, String
 from app.schemas.exam import QuestionPagination
 
 router = APIRouter()

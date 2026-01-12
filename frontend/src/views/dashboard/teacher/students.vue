@@ -54,7 +54,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="student in paginatedStudents" :key="student.id">
+            <tr v-for="student in students" :key="student.id">
               <td>
                 <div class="user-info">
                   <img 
@@ -97,28 +97,18 @@
         </table>
       </div>
       <!-- 分页 -->
-      <div class="pagination">
-        <span>共 {{ filteredStudents.length }} 条数据</span>
-        <div class="pages">
-          <!-- 上一页 -->
-          <button 
-            :disabled="currentPage === 1" 
-            @click="changePage(currentPage - 1)"
-          >
-            &lt;
-          </button>
-
-          <!-- 页码显示逻辑 (简单版：显示当前页) -->
-          <button class="active">{{ currentPage }}</button>
-          
-          <!-- 下一页 -->
-          <button 
-            :disabled="currentPage === totalPages || totalPages === 0" 
-            @click="changePage(currentPage + 1)"
-          >
-            &gt;
-          </button>
-        </div>
+      <div class="pagination-bar">
+        <el-config-provider :locale="zhCn">
+          <el-pagination
+            v-model:current-page="pagination.page"
+            v-model:page-size="pagination.limit"
+            :total="pagination.total"
+            :page-sizes="[10, 20, 50, 100]"
+            layout="total, sizes, prev, pager, next, jumper"
+            @size-change="handleSizeChange"
+            @current-change="handlePageChange"
+          />
+        </el-config-provider>
       </div>
       </div>
     </main>
@@ -318,13 +308,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, reactive, onMounted } from 'vue';
+import { ref, computed, reactive, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/modules/user';
 import { getMyCourses, type CourseItem } from '@/api/content';
 import { getMyClasses, createClass, addStudentToClass, getMyStudents, batchImportStudents, updateStudent, removeStudentFromClass, type ClassItem, type StudentItem, type ImportResult } from '@/api/course';
 import TeacherSidebar from '@/components/TeacherSidebar.vue';
 import { getImgUrl } from '@/utils/index'; 
+import { ElConfigProvider } from 'element-plus'
+import zhCn from 'element-plus/es/locale/lang/zh-cn'
 
 const router = useRouter();
 const userStore = useUserStore();
@@ -494,10 +486,6 @@ const formatDate = (val: any) => {
 
 const students = ref<StudentItem[]>([]);
 
-
-
-const currentPage = ref(1);
-const pageSize = ref(10); // 每页显示 10 条
 const filteredStudents = computed(() => {
   let data = students.value;
 
@@ -521,47 +509,75 @@ const filteredStudents = computed(() => {
       s.username.includes(searchText.value)
     );
   }
+
+  pagination.total = data.length;
   
   return data;
 });
 
 // 2. ✅ 新增：paginatedStudents (这是当前页实际显示的人)
 const paginatedStudents = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value;
-  const end = start + pageSize.value;
+  const start = (pagination.page - 1) * pagination.limit;
+  const end = start + pagination.limit;
   return filteredStudents.value.slice(start, end);
 });
 
-// 3. ✅ 新增：总页数计算
-const totalPages = computed(() => {
-  return Math.ceil(filteredStudents.value.length / pageSize.value);
-});
-
-// 4. ✅ 新增：切换页码函数
-const changePage = (page: number) => {
-  if (page < 1 || page > totalPages.value) return;
-  currentPage.value = page;
+// ✅ 新增：处理分页事件的函数
+const handleSizeChange = (val: number) => {
+  pagination.limit = val;
+  pagination.page = 1; // 切换每页条数后重置到第一页
+  fetchStudentList();
 };
 
+const handlePageChange = (val: number) => {
+  pagination.page = val;
+  fetchStudentList();
+};
+
+// ✅ 新增：定义分页状态对象
+const pagination = reactive({
+  page: 1,
+  limit: 10,
+  total: 0
+});
+
 const fetchStudentList = async () => {
+  isLoading.value = true;
   try {
-    const res = await getMyStudents();
-    students.value = res.map(s => ({
+    const res = await getMyStudents({
+      page: pagination.page,
+      limit: pagination.limit,
+      class_id: selectedClassId.value || undefined, // 班级筛选
+      keyword: searchText.value || undefined        // 搜索关键词
+    });
+    
+    // 后端已经分页好了，直接赋值
+    students.value = res.items.map(s => ({
       ...s,
       name: s.full_name || s.username, 
       code: s.student_number || '无学号',
       avatar: s.avatar,
       className: s.class_name,
-      joinDate: new Date(s.joined_at).toLocaleDateString(), // 格式化时间
+      joinDate: new Date(s.joined_at).toLocaleDateString(),
       status: s.is_active ? 'active' : 'inactive',
-      // 给班级标签随机配个色，或者固定色
       classColor: '#00c9a7',
       classBg: '#e0f2f1'
     }));
+    
+    // 更新总数
+    pagination.total = res.total;
+    
   } catch (error) {
     console.error("获取学生列表失败", error);
+  } finally {
+    isLoading.value = false;
   }
 };
+
+watch([selectedClassId, searchText], () => {
+  pagination.page = 1;
+  fetchStudentList();
+});
 
 const getFirstChar = (name?: string) => {
   return name ? name.charAt(0).toUpperCase() : '?';
@@ -738,13 +754,13 @@ $text-gray: #a4b0be;
   }
 
   /* 分页 */
-  .pagination {
-    display: flex; justify-content: space-between; align-items: center; color: $text-gray; font-size: 13px;
-    .pages button {
-      width: 30px; height: 30px; border: 1px solid #eee; background: white; margin-left: 5px; border-radius: 6px; cursor: pointer;
-      &.active { background: $primary-purple; color: white; border-color: $primary-purple; }
-      &:disabled { opacity: 0.5; cursor: not-allowed; }
-    }
+  .pagination-bar {
+    display: flex;
+    justify-content: center;
+    padding: 20px 0;
+    background: white;
+    border-top: 1px solid #eee;
+    margin-top: auto; /* 核心：利用 Flex 布局将分页栏推到底部 */
   }
 }
 
