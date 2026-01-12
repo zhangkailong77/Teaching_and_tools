@@ -51,11 +51,14 @@ class ClassAssignment(Base):
     
     title = Column(String(255), nullable=False)
     content = Column(Text, nullable=True)
+    attachments = Column(JSON, nullable=True) 
     deadline = Column(DateTime, nullable=True)
     
     # 0:待发布, 1:进行中, 2:已截止
     status = Column(Integer, default=0) 
     created_at = Column(DateTime, default=func.now())
+
+    max_score = Column(Integer, default=100)
 
     # 关联
     classroom = relationship("Class", back_populates="assignments")

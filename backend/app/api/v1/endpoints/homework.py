@@ -28,10 +28,9 @@ def submit_homework(
     if not assignment:
         raise HTTPException(status_code=404, detail="作业不存在")
         
-    # 检查是否截止 (可选)
+    # 检查是否截止
     if assignment.deadline and datetime.now() > assignment.deadline:
-        # 这里演示允许补交，但在前端提示逾期
-        pass 
+        raise HTTPException(status_code=400, detail="作业已截止，无法提交")
 
     # 查找是否已提交过 (支持多次提交覆盖)
     submission = db.query(StudentSubmission).filter(
@@ -69,10 +68,11 @@ def get_my_homework_todos(
     
     # 2. 找到这些班级发布的所有作业
     # 联表 CourseTask 获取课程名和课时名
-    assignments = db.query(ClassAssignment).join(CourseTask).join(Course)\
+    assignments = db.query(ClassAssignment)\
         .filter(ClassAssignment.class_id.in_(class_ids))\
         .filter(ClassAssignment.status == 1)\
-        .all() # 1: 进行中
+        .order_by(ClassAssignment.created_at.desc())\
+        .all() 
         
     results = []
     for assign in assignments:
@@ -96,16 +96,29 @@ def get_my_homework_todos(
             
             score = sub.score
 
+        # ✅ 修改点：增加对 origin_task 为空的判断处理
+        course_name = "自定义作业"
+        lesson_title = "班级任务"
+        course_cover = None
+
+        # 如果有关联课程任务，则读取课程信息
+        if assign.origin_task:
+            if assign.origin_task.course:
+                course_name = assign.origin_task.course.name
+                course_cover = assign.origin_task.course.cover
+            if assign.origin_task.lesson:
+                lesson_title = assign.origin_task.lesson.title
+
         # 构造返回
         results.append({
             "id": assign.id,
             "title": assign.title,
-            "course_name": assign.origin_task.course.name if assign.origin_task else "自定义",
-            "lesson_title": assign.origin_task.lesson.title if assign.origin_task and assign.origin_task.lesson else "单元作业",
+            "course_name": course_name,
+            "lesson_title": lesson_title,
             "deadline": assign.deadline,
             "status": status,
             "score": score,
-            "course_cover": assign.origin_task.course.cover if assign.origin_task and assign.origin_task.course else None
+            "course_cover": course_cover
         })
         
     return results
@@ -394,6 +407,52 @@ def grade_submission(
     return {"message": "评分与批注已保存"}
 
 
+
+# =========================================================
+# ✅ 新增：教师发布自定义作业
+# =========================================================
+@router.post("/custom", response_model=Any)
+def create_custom_homework(
+    *,
+    db: Session = Depends(deps.get_db),
+    homework_in: schemas.CustomHomeworkCreate,
+    current_user: User = Depends(deps.get_current_user),
+):
+    """
+    教师发布自定义作业（支持多班级群发）
+    """
+    if current_user.role != "teacher" and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="权限不足")
+
+    created_ids = []
+
+    # 遍历班级ID列表，为每个班级创建一条记录
+    for class_id in homework_in.class_ids:
+        # (可选) 可以在这里校验 current_user 是否管理该 class_id
+        
+        db_obj = ClassAssignment(
+            class_id=class_id,
+            origin_task_id=None,           # ✅ 关键：自定义作业无关联 CourseTask
+            title=homework_in.title,
+            content=homework_in.content,
+            attachments=homework_in.attachments, # ✅ 存入附件列表
+            deadline=homework_in.deadline,
+            max_score=homework_in.max_score,
+            status=1,                      # 1:进行中
+        )
+        db.add(db_obj)
+        db.flush() # 获取ID
+        created_ids.append(db_obj.id)
+
+    db.commit()
+    
+    return {
+        "code": 200, 
+        "message": "发布成功", 
+        "data": created_ids
+    }
+
+
 # ------------------------------------------------------------------
 # 8. [学生] 获取作业批改详情 (含批注)
 # ------------------------------------------------------------------
@@ -412,27 +471,22 @@ def get_submission_result(
         StudentSubmission.student_id == current_user.id
     ).first()
 
-    if not sub:
-        raise HTTPException(status_code=404, detail="未找到提交记录")
-
     # 2. 查找作业题目信息 (用于回显题目)
     assignment = db.query(ClassAssignment).filter(ClassAssignment.id == assignment_id).first()
     
     # 3. 构造返回数据
     return {
-        "submission_id": sub.id,
-        "status": sub.status,
-        "score": sub.score,
-        "feedback": sub.feedback,
-        "submitted_at": sub.submitted_at,
-        "graded_at": sub.graded_at,
-        
-        # ✅ 核心：返回批改后的内容
-        # 如果老师没做划词批注，annotated_content 是空的，那就退化显示原始 content
-        "content": sub.annotated_content if sub.annotated_content else sub.content,
-        "annotations": sub.annotations if sub.annotations else [],
+        "submission_id": sub.id if sub else None,
+        "status": sub.status if sub else 0,
+        "score": sub.score if sub else None,
+        "feedback": sub.feedback if sub else None,
+        "submitted_at": sub.submitted_at if sub else None,
+        "graded_at": sub.graded_at if sub else None,
+        "content": sub.annotated_content if (sub and sub.annotated_content) else (sub.content if sub else ""),
+        "annotations": sub.annotations if (sub and sub.annotations) else [],
         
         # 题目信息
         "assignment_title": assignment.title,
-        "assignment_requirement": assignment.content
+        "assignment_requirement": assignment.content,
+        "assignment_attachments": assignment.attachments 
     }

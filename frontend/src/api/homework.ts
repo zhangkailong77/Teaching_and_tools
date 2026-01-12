@@ -126,3 +126,23 @@ export interface SubmissionResult {
 export function getSubmissionResult(assignmentId: number) {
   return request.get<any, SubmissionResult>(`/homeworks/${assignmentId}/result`);
 }
+
+
+// 定义发布自定义作业的参数类型
+export interface CustomHomeworkData {
+  title: string;
+  content: string;
+  class_ids: number[];
+  deadline: string | null; // 后端接收 datetime 字符串
+  attachments: string[];   // 附件 URL 列表
+  max_score: number;
+}
+
+// ✅ 新增：发布自定义作业
+export const createCustomHomework = (data: CustomHomeworkData) => {
+  return request({
+    url: '/homeworks/custom', // 对应后端路由
+    method: 'post',
+    data
+  })
+}

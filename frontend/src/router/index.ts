@@ -77,6 +77,13 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/dashboard/teacher/homeworksGrading.vue'), // 稍后创建
         meta: { requiresAuth: true, role: 'teacher' }
       },
+      {
+        path: 'teacher/exams', 
+        name: 'TeacherExamCenter',
+        // 对应你刚刚创建的主入口文件
+        component: () => import('@/views/dashboard/teacher/exams/index.vue'), 
+        meta: { requiresAuth: true, role: 'teacher' }
+      },
     ]
   }
 ];

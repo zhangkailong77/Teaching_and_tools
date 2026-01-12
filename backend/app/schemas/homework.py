@@ -65,3 +65,16 @@ class GradeSubmission(BaseModel):
     # --- 新增字段 ---
     annotated_content: Optional[str] = None # 存带有 <span> 的 HTML
     annotations: Optional[List[Dict[str, Any]]] = [] # 存 [{id:.., text:..}]
+
+
+# =======================
+# ✅ 新增：自定义作业发布
+# =======================
+
+class CustomHomeworkCreate(BaseModel):
+    title: str
+    content: Optional[str] = None         # 作业要求（富文本）
+    class_ids: List[int]                  # 接收作业的班级ID列表（支持群发）
+    deadline: Optional[datetime] = None   # 截止时间
+    attachments: List[str] = []           # 附件 URL 列表
+    max_score: int = 100                  # 满分值

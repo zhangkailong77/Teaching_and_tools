@@ -20,6 +20,23 @@
       <div class="hw-requirement">
         <h4>📝 作业要求：</h4>
         <div class="rich-text" v-html="taskInfo.content || '暂无详细描述'"></div>
+
+        <!-- ✅ 新增：附件展示区域 -->
+        <div v-if="taskInfo.attachments && taskInfo.attachments.length > 0" class="hw-attachments">
+           <h5>📎 参考资料：</h5>
+           <div class="file-list">
+             <a 
+               v-for="(url, index) in taskInfo.attachments" 
+               :key="index"
+               :href="getFileUrl(url)" 
+               target="_blank"
+               class="file-item"
+             >
+               <span class="icon">📄</span>
+               <span class="name">附件 {{ index + 1 }}</span>
+             </a>
+           </div>
+        </div>
       </div>
 
       <!-- 4. 答题区域 -->
@@ -127,7 +144,8 @@ const taskInfo = reactive({
   deadline: '',
   status: 0, // 0:未交, 1:已交, 2:已批
   score: null as number | null,
-  feedback: ''
+  feedback: '',
+  attachments: [] as string[]
 });
 const submissionContent = ref('');
 
@@ -142,33 +160,51 @@ const open = async (task: any) => {
   loading.value = true;
 
   try {
-    taskInfo.id = task.assignment_id || task.id; // 兼容不同接口字段
+    taskInfo.id = task.assignment_id || task.id; 
     taskInfo.title = task.title || task.lessonTitle;
+    
+    // 先设置默认值，稍后用接口数据覆盖
     taskInfo.content = task.content || task.contentRequirement || '请完成本节课实训任务。';
     taskInfo.deadline = task.deadline;
     taskInfo.status = task.status === 'pending' || task.status === 0 ? 0 : (task.status === 'graded' || task.status === 2 ? 2 : 1);
     taskInfo.score = task.score;
-    taskInfo.feedback = task.feedback; // 如果接口有返回的话
-  
-    if (task.status !== 0) {
-      const res = await getSubmissionResult(taskInfo.id);
-      
-      // 回显提交内容
+    taskInfo.feedback = task.feedback; 
+    
+    // ✅ 修改点 1：先清空附件列表
+    taskInfo.attachments = []; 
+
+    // ✅ 修改点 2：无论什么状态，都调用接口获取【题目详情】和【附件】
+    // 后端接口已经改过，支持返回 assignment_attachments 和 assignment_requirement
+    const res = await getSubmissionResult(taskInfo.id);
+    
+    // 填充附件
+    if (res.assignment_attachments) {
+      taskInfo.attachments = res.assignment_attachments;
+    }
+    // 填充最新的作业要求 (覆盖默认文本)
+    if (res.assignment_requirement) {
+      taskInfo.content = res.assignment_requirement;
+    }
+
+    // ✅ 修改点 3：根据状态处理【提交内容】
+    if (taskInfo.status !== 0) {
+      // 如果已提交/已批改，回显学生的答案和分数
       submissionContent.value = res.content;
-      
-      // 回显批改结果
       taskInfo.score = res.score;
       taskInfo.feedback = res.feedback;
-      resultData.value = res; // 存入完整数据以供高亮显示
+      resultData.value = res; 
     } else {
+      // 如果未提交，清空输入框
       submissionContent.value = '';
     }
+
   } catch (e) {
     console.error(e);
   } finally {
     loading.value = false;
   }
 };
+
 const handleHighlightClick = (e: MouseEvent) => {
   const target = e.target as HTMLElement;
   if (target.classList.contains('highlight-marker')) {
@@ -247,6 +283,27 @@ const focusHighlight = (id: string) => {
     setTimeout(() => marker.classList.remove('flash-highlight'), 1500);
   }
 };
+
+// ✅ 新增：获取完整文件路径的辅助函数
+const getFileUrl = (url: string) => {
+  if (!url) return '';
+  // 1. 如果已经是完整的网络地址，直接返回
+  if (url.startsWith('http') || url.startsWith('https')) {
+    return url;
+  }
+  
+  // 2. 获取后端基础地址
+  let baseUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+  baseUrl = baseUrl.replace('/api/v1', '');
+  
+  // 去掉末尾可能多余的斜杠
+  if (baseUrl.endsWith('/')) {
+    baseUrl = baseUrl.slice(0, -1);
+  }
+  
+  // 3. 拼接地址
+  return `${baseUrl}${url}`;
+};
 </script>
 
 <style scoped lang="scss">
@@ -264,10 +321,48 @@ $primary-color: #00c9a7;
 }
 .hw-requirement, .feedback-box { background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 20px;
   h4 { margin: 0 0 10px; font-size: 14px; color: #333; }
-  .rich-text, .comment { font-size: 14px; color: #555; line-height: 1.6; }
+  .rich-text { 
+    font-size: 14px; 
+    color: #555; 
+    line-height: 1.6;
+    
+    /* ✅ 新增：强制换行属性 */
+    word-break: break-all;       /* 强制打断长单词 */
+    overflow-wrap: break-word;   /* 标准换行属性 */
+    white-space: pre-wrap;       /* 保留用户输入的换行符，同时允许自动换行 */
+    
+    /* 防止图片过大撑开 */
+    :deep(img) {
+      max-width: 100%;
+      height: auto;
+      border-radius: 4px;
+    }
+  }
   .score { color: $primary-color; font-size: 18px; font-weight: bold; }
 }
 .feedback-box { background: #f6ffed; border: 1px solid #b7eb8f; }
+
+.hw-attachments {
+  margin-top: 15px; border-top: 1px dashed #ddd; padding-top: 10px;
+  h5 { margin: 0 0 8px; font-size: 13px; color: #666; font-weight: 600; }
+  
+  .file-list {
+    display: flex; flex-wrap: wrap; gap: 10px;
+  }
+  
+  .file-item {
+    display: flex; align-items: center; gap: 6px;
+    background: #fff; border: 1px solid #ddd;
+    padding: 8px 12px; border-radius: 6px;
+    text-decoration: none; color: #555; font-size: 13px;
+    transition: all 0.2s;
+    
+    &:hover {
+      border-color: $primary-color; color: $primary-color; background: #f0fdfa;
+    }
+    .icon { font-size: 16px; }
+  }
+}
 
 .hw-answer-area {
   h4 { margin: 0 0 10px; font-size: 14px; }

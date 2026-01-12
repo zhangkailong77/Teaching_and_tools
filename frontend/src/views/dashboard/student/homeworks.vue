@@ -74,8 +74,12 @@
 
               <div class="card-content" style="position: relative; z-index: 2; width: 100%;">
                 <div class="meta-row">
-                  <span class="course-tag">{{ task.course_name }}</span>
-                  <span class="lesson-tag">{{ task.lesson_title }}</span>
+                  <span class="course-tag" :class="{'is-custom': !task.course_cover}">
+                    {{ task.course_name || '班级任务' }}
+                  </span>
+                  <span class="lesson-tag" v-if="task.lesson_title">
+                    {{ task.lesson_title }}
+                  </span>
                   <span class="deadline-tag" v-if="task.deadline" style="background: rgba(255,255,255,0.8); padding: 2px 6px; border-radius: 4px;">
                     📅 {{ formatDate(task.deadline) }} 截止
                   </span>
@@ -94,8 +98,13 @@
                     <span v-else class="text-gray">普通优先级</span>
                   </div>
                   
-                  <button class="action-btn" @click="handleOpenDrawer(task)">
-                    {{ getActionText(task.status) }}
+                  <button 
+                    class="action-btn" 
+                    :class="{ 'disabled': task.status === 0 && isExpired(task.deadline) }"
+                    :disabled="task.status === 0 && isExpired(task.deadline)"
+                    @click="handleOpenDrawer(task)"
+                  >
+                    {{ task.status === 0 && isExpired(task.deadline) ? '已截止' : getActionText(task.status) }}
                   </button>
                 </div>
               </div>
@@ -359,6 +368,29 @@ const initLineChart = (trendData: any[]) => {
   };
   lineChart.setOption(option);
 };
+
+
+//----自定义作业----
+const getCardStyle = (task: AssignmentCard) => {
+  if (task.course_cover) {
+    return {
+      backgroundImage: `linear-gradient(to right, #fff 50%, rgba(255,255,255,0) 100%), url(${getImgUrl(task.course_cover)})`
+    };
+  } else {
+    // 自定义作业没有封面，使用纯色或默认图案
+    return {
+      background: 'white',
+      borderLeft: '4px solid #00c9a7' // 这里其实被 status-bar 覆盖了，主要是 fallback
+    };
+  }
+};
+
+
+// 检查作业是否已过期
+const isExpired = (d: string) => {
+  if (!d) return false; // 无截止日期
+  return new Date(d).getTime() < new Date().getTime();
+};
 </script>
 
 <style scoped lang="scss">
@@ -511,5 +543,30 @@ $text-light: #999;
 .line-chart-container {
   width: 100%;
   height: 200px; /* 或者 180px */
+}
+
+/* 在 .earth-card 样式块附近添加 */
+.earth-card.custom-task {
+  /* 自定义作业的特殊样式，比如加个底纹 */
+  background-image: radial-gradient(#f1f1f1 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.course-tag.is-custom {
+  background: #e6fffb; /* 浅青色背景 */
+  color: #00c9a7;
+  border: 1px solid #b5f5ec;
+}
+
+.action-btn.disabled {
+  background: #eee;
+  color: #999;
+  border-color: #ddd;
+  cursor: not-allowed;
+  &:hover {
+    background: #eee;
+    color: #999;
+    border-color: #ddd;
+  }
 }
 </style>

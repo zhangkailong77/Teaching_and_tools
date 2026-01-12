@@ -32,9 +32,9 @@
         </span>
       </router-link>
       
-      <a href="#" class="menu-item">
+      <router-link to="/dashboard/teacher/exams" class="menu-item">
         <span class="icon">📊</span> 考试中心
-      </a>
+      </router-link>
     </div>
 
     <div class="menu-group bottom">

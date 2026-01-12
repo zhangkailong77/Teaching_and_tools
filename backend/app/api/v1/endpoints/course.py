@@ -7,7 +7,7 @@ from app.utils.hash import encode_id
 from app.api import deps
 from app.core import security
 from app.models.user import User
-from app.models.course import Class, Enrollment
+from app.models.course import Class, Enrollment, ClassAssignment, StudentSubmission
 from app.models.content import Course, ClassCourseBinding, CourseChapter, CourseLesson, StudentLearningProgress
 from app.schemas import classroom as class_schemas
 import logging
@@ -346,8 +346,23 @@ def read_dashboard_stats(
         .filter(Class.teacher_id == current_user.id)\
         .scalar()
 
-    # 3. 待批改作业 (暂未开发，返回 0 或假数据)
-    pending_homeworks = 12 # Mock 数据
+    # 3. 待批改作业
+    my_assignment_ids = db.query(ClassAssignment.id)\
+        .join(Class, ClassAssignment.class_id == Class.id)\
+        .filter(Class.teacher_id == current_user.id)\
+        .all()
+    
+    # 提取为列表 [1, 2, 3]
+    assign_id_list = [i[0] for i in my_assignment_ids]
+    
+    pending_homeworks = 0
+    if assign_id_list:
+        # 步骤 B: 查待批改数
+        # status: 1 = 已提交(待批改), 2 = 已批改
+        pending_homeworks = db.query(StudentSubmission).filter(
+            StudentSubmission.assignment_id.in_(assign_id_list),
+            StudentSubmission.status == 1 
+        ).count()
 
     return {
         "total_students": student_count or 0,

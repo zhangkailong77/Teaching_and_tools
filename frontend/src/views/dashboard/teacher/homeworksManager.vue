@@ -106,6 +106,11 @@
 
         </div>
       </div>
+
+      <CustomHomeworkDrawer 
+        v-model="showCreateDrawer" 
+        @success="handleCreateSuccess"
+      />
     </main>
   </div>
 </template>
@@ -118,6 +123,7 @@ import * as echarts from 'echarts';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/modules/user';
 import AssignmentStats from '@/components/AssignmentStats.vue';
+import CustomHomeworkDrawer from '@/components/CustomHomeworkDrawer.vue'; 
 
 const userStore = useUserStore();
 const router = useRouter();
@@ -126,6 +132,8 @@ const router = useRouter();
 const stats = ref<HomeworkStatsV2>({ pending_count: 0, pie_data: { submitted:0, graded:0, unsubmitted:0 }, rank_data: [] });
 const classGroups = ref<ClassHomeworkGroup[]>([]);
 const searchText = ref('');
+// ✅ 2. 定义控制抽屉显示的状态
+const showCreateDrawer = ref(false);
 
 // 图表 Ref
 const pieChartRef = ref<HTMLElement | null>(null);
@@ -183,7 +191,14 @@ const toggleGroup = (group: ClassHomeworkGroup) => {
 const handleGrade = (id: number) => {
   router.push(`/dashboard/teacher/homeworks/${id}`);
 };
-const handleCreate = () => alert('新建功能开发中');
+const handleCreate = () => {
+  showCreateDrawer.value = true;
+};
+
+const handleCreateSuccess = () => {
+  // 重新加载列表，这样刚发布的作业就会显示出来
+  loadData(); 
+};
 
 // 工具函数
 const formatDate = (d: string) => d ? new Date(d).toLocaleDateString() : '无限制';
