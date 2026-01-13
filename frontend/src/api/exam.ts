@@ -120,3 +120,102 @@ export function batchDeleteQuestions(ids: number[]) {
     data: ids
   })
 }
+
+
+// ===========================
+// 试卷相关
+// ===========================
+
+export interface ExamItem {
+  id: number;
+  title: string;
+  status: number; // 0草稿 1已发布 2已结束
+  total_score: number;
+  duration: number;
+  question_count: number;
+  created_at: string;
+  class_names: string[];
+}
+
+// 1. 获取试卷列表
+export function getExams() {
+  return request<any, ExamItem[]>({
+    url: '/exam/exams',
+    method: 'get'
+  })
+}
+
+// 2. 创建试卷 (手动/随机)
+// mode: 1手动, 2随机
+export function createExam(data: {
+  title: string;
+  mode: number;
+  questions?: Array<{ question_id: number; score: number }>;
+  random_config?: Array<{ type: string; difficulty: number; tag?: string; count: number; score: number }>;
+}) {
+  return request({
+    url: '/exam/exams',
+    method: 'post',
+    data
+  })
+}
+
+// ✅ 3. 删除试卷
+export function deleteExam(id: number) {
+  return request({
+    url: `/exam/exams/${id}`,
+    method: 'delete'
+  })
+}
+
+// ✅ 获取试卷详情
+export function getExamDetail(id: number) {
+  return request({
+    url: `/exam/exams/${id}`,
+    method: 'get'
+  })
+}
+
+// ✅ 更新试卷
+export function updateExam(id: number, data: any) {
+  return request({
+    url: `/exam/exams/${id}`,
+    method: 'put',
+    data
+  })
+}
+
+
+// ----- 学生端考试相关------
+// 1. 获取学生可见的考试列表
+export function getStudentExams() {
+  return request<any, any[]>({
+    url: '/exam/student/list',
+    method: 'get'
+  })
+}
+
+// 2. 开始/进入考试
+export function enterExam(examId: number) {
+  return request({
+    url: `/exam/student/enter/${examId}`,
+    method: 'post'
+  })
+}
+
+// 3. 获取试卷内容 (题目)
+export function getExamPaper(examId: number) {
+  return request<any, any[]>({
+    url: `/exam/student/paper/${examId}`,
+    method: 'get'
+  })
+}
+
+// 4. 提交试卷
+export function submitExam(examId: number, data: { answers: any[], cheat_count: number }) {
+  return request({
+    url: `/exam/student/submit/${examId}`,
+    method: 'post',
+    data
+  })
+}

@@ -37,3 +37,103 @@ class QuestionFilter(BaseModel):
 class QuestionPagination(BaseModel):
     total: int
     items: List[QuestionOut]
+
+
+# =======================
+# 试卷相关 Schema
+# =======================
+
+# 1. 题目项 (用于手动组卷提交)
+class ExamQuestionItem(BaseModel):
+    question_id: int
+    score: int = 2
+
+# 2. 随机策略项
+class RandomStrategyItem(BaseModel):
+    type: str       # single/multiple...
+    difficulty: int # 1/2/3
+    tag: Optional[str] = None
+    count: int      # 题数
+    score: int      # 每题分值
+
+# 3. 创建/更新试卷 Request
+class ExamCreate(BaseModel):
+    title: str
+    mode: int = 1 # 1=手动, 2=随机
+    
+    # 手动模式必填：题目列表
+    questions: List[ExamQuestionItem] = []
+    
+    # 随机模式必填：策略配置
+    random_config: List[RandomStrategyItem] = []
+    
+    # 基础配置 (可选，也可以后续单独配置)
+    duration: int = 60
+    pass_score: int = 60
+    total_score: int = 100
+
+    start_time: Optional[datetime] = None
+    end_time: Optional[datetime] = None
+    class_ids: List[int] = []
+
+# 4. 发布配置 Request
+class ExamPublish(BaseModel):
+    class_ids: List[int]
+    start_time: datetime
+    end_time: datetime
+
+# 5. 试卷列表 Response
+class ExamListOut(BaseModel):
+    id: int
+    title: str
+    status: int
+    total_score: int
+    duration: int
+    question_count: int = 0 # 题目数量
+    created_at: datetime
+    class_names: List[str] = [] 
+    
+    class Config:
+        from_attributes = True
+
+
+# 6. 试卷详情返回 (包含题目)
+class ExamDetailOut(ExamListOut):
+    mode: int
+    duration: int
+    pass_score: int
+    total_score: int
+    start_time: Optional[datetime]
+    end_time: Optional[datetime]
+    class_ids: List[int] = []
+    # 这里的题目需要包含原始题目信息，方便前端展示
+    questions: List[Any] = [] 
+    random_config: Optional[List[Any]] = []
+
+
+# 7. 学生单题作答提交
+class AnswerSubmit(BaseModel):
+    question_id: int
+    answer_content: Any # 可以是字符串或列表
+
+# 8. 整卷提交 Request
+class ExamSubmit(BaseModel):
+    answers: List[AnswerSubmit]
+    cheat_count: int = 0
+
+# 9. 学生端考试列表项 Response
+class StudentExamOut(BaseModel):
+    id: int
+    title: str
+    start_time: Optional[datetime]
+    end_time: Optional[datetime]
+    duration: int
+    total_score: int
+    pass_score: int
+    
+    # 学生特有状态
+    my_status: int = -1 # -1:未开始, 0:进行中, 1:已提交, 2:已批改
+    my_score: Optional[int] = None
+    
+    class Config:
+        from_attributes = True

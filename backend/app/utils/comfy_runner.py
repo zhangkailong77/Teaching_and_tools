@@ -5,7 +5,7 @@ import time
 import socket # 引入 socket 用于捕获底层网络错误
 
 # ... (配置部分保持不变) ...
-GPU_HOST = "192.168.150.2"
+GPU_HOST = "192.168.110.2"
 GPU_PORT = 22
 GPU_USER = "yzcube"
 GPU_PASSWORD = "Yanzhi2025."

@@ -17,9 +17,9 @@
       <a href="#" class="menu-item">
         <span class="icon">🔔</span> 消息通知
       </a>
-      <a href="#" class="menu-item">
-        <span class="icon">💻</span> 我的实训
-      </a>
+      <router-link to="/dashboard/student/exams" class="menu-item" active-class="active">
+        <span class="icon">💻</span> 考试大厅
+      </router-link>
       <router-link to="/dashboard/student/homeworks" class="menu-item" active-class="active">
         <span class="icon">📝</span> 作业任务
       </router-link>

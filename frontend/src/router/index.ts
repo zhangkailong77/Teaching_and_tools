@@ -36,6 +36,18 @@ const routes: RouteRecordRaw[] = [
         meta: { requiresAuth: true, role: 'student' }
       },
       {
+        path: 'student/exams',
+        name: 'StudentExamLobby',
+        component: () => import('@/views/dashboard/student/exams/index.vue'),
+        meta: { requiresAuth: true, role: 'student' }
+      },
+      {
+        path: 'student/exams/take/:id',
+        name: 'TakeExam',
+        component: () => import('@/views/dashboard/student/exams/take.vue'),
+        meta: { requiresAuth: true, role: 'student', hideSidebar: true } // 标记隐藏侧边栏
+      },
+      {
         path: 'teacher', // 访问地址: /dashboard/teacher
         name: 'TeacherDashboard',
         component: () => import('@/views/dashboard/teacher/index.vue'),
@@ -80,7 +92,6 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'teacher/exams', 
         name: 'TeacherExamCenter',
-        // 对应你刚刚创建的主入口文件
         component: () => import('@/views/dashboard/teacher/exams/index.vue'), 
         meta: { requiresAuth: true, role: 'teacher' }
       },

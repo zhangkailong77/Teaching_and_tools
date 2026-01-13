@@ -1,6 +1,8 @@
 import pandas as pd
 import io
 from fastapi import UploadFile, File
+import random
+from datetime import datetime, timedelta
 
 from typing import Any, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -11,6 +13,7 @@ from app.schemas import exam as schemas
 from app.models.user import User
 from sqlalchemy import func, cast, String
 from app.schemas.exam import QuestionPagination
+from app.models.course import Class, Enrollment
 
 router = APIRouter()
 
@@ -336,3 +339,469 @@ def batch_import_questions(
     }
 
 
+# -----------------------------------------------------------
+# 创建试卷 (核心接口)
+# -----------------------------------------------------------
+@router.post("/exams", response_model=schemas.ExamListOut)
+def create_exam(
+    *,
+    db: Session = Depends(deps.get_db),
+    exam_in: schemas.ExamCreate,
+    current_user: User = Depends(deps.get_current_user),
+):
+    # 1. 创建试卷主体
+    exam = models.Exam(
+        title=exam_in.title,
+        teacher_id=current_user.id,
+        mode=exam_in.mode,
+        duration=exam_in.duration,
+        pass_score=exam_in.pass_score,
+        start_time=exam_in.start_time,
+        end_time=exam_in.end_time,
+        class_ids=exam_in.class_ids,
+        status=1 # 默认为草稿
+    )
+    db.add(exam)
+    db.flush() #以此获得 exam.id
+
+    real_total_score = 0
+    question_count = 0
+
+    # 2. 处理手动组卷
+    if exam_in.mode == 1:
+        for index, item in enumerate(exam_in.questions):
+            link = models.ExamQuestion(
+                exam_id=exam.id,
+                question_id=item.question_id,
+                score=item.score,
+                sort_order=index
+            )
+            db.add(link)
+            real_total_score += item.score
+            question_count += 1
+
+    # 3. 处理随机组卷
+    elif exam_in.mode == 2:
+        # 保存策略配置
+        # 注意：这里需要把 Pydantic list 转为 dict list 存入 JSON
+        exam.random_config = [c.dict() for c in exam_in.random_config]
+        
+        for strategy in exam_in.random_config:
+            # 根据策略查询符合条件的题目 ID
+            query = db.query(models.Question.id).filter(
+                models.Question.teacher_id == current_user.id,
+                models.Question.type == strategy.type,
+                models.Question.difficulty == strategy.difficulty
+            )
+            if strategy.tag:
+                query = query.filter(cast(models.Question.tags, String).like(f'%{strategy.tag}%'))
+            
+            candidate_ids = [q[0] for q in query.all()]
+            
+            # 随机抽取
+            if len(candidate_ids) < strategy.count:
+                # 题目不够，直接抛错或者取最大值？建议抛错让老师知道
+                raise HTTPException(status_code=400, detail=f"题库不足：{strategy.type} 难度{strategy.difficulty} 只有 {len(candidate_ids)} 题，无法抽取 {strategy.count} 题")
+            
+            selected_ids = random.sample(candidate_ids, strategy.count)
+            
+            # 写入关联表
+            for q_id in selected_ids:
+                link = models.ExamQuestion(
+                    exam_id=exam.id,
+                    question_id=q_id,
+                    score=strategy.score,
+                    sort_order=question_count # 简单累加排序
+                )
+                db.add(link)
+                real_total_score += strategy.score
+                question_count += 1
+
+    # 更新总分
+    exam.total_score = real_total_score
+    db.commit()
+    db.refresh(exam)
+    
+    # 构造返回 (手动补充 question_count)
+    result = schemas.ExamListOut.from_orm(exam)
+    result.question_count = question_count
+    return result
+
+# -----------------------------------------------------------
+# 获取试卷列表
+# -----------------------------------------------------------
+@router.get("/exams", response_model=List[schemas.ExamListOut])
+def read_exams(
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    exams = db.query(models.Exam).filter(models.Exam.teacher_id == current_user.id).order_by(models.Exam.created_at.desc()).all()
+    
+    results = []
+    for e in exams:
+        # 统计题目数
+        q_count = db.query(models.ExamQuestion).filter(models.ExamQuestion.exam_id == e.id).count()
+
+        c_names = []
+        if e.class_ids:
+            # 查询对应的班级名
+            class_objs = db.query(Class.name).filter(Class.id.in_(e.class_ids)).all()
+            c_names = [c[0] for c in class_objs]
+        
+        # Pydantic 转换
+        item = schemas.ExamListOut.from_orm(e)
+        item.question_count = q_count
+        item.class_names = c_names
+        results.append(item)
+        
+    return results
+
+
+# -----------------------------------------------------------
+# 删除试卷
+# -----------------------------------------------------------
+@router.delete("/exams/{exam_id}")
+def delete_exam(
+    exam_id: int,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    exam = db.query(models.Exam).filter(
+        models.Exam.id == exam_id, 
+        models.Exam.teacher_id == current_user.id
+    ).first()
+    
+    if not exam:
+        raise HTTPException(status_code=404, detail="试卷不存在或无权操作")
+        
+    db.delete(exam)
+    db.commit()
+    return {"message": "试卷已删除"}
+
+
+# 获取试卷详情 (用于编辑回显)
+@router.get("/exams/{exam_id}", response_model=schemas.ExamDetailOut)
+def read_exam_detail(
+    exam_id: int,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    exam = db.query(models.Exam).filter(models.Exam.id == exam_id).first()
+    if not exam:
+        raise HTTPException(status_code=404, detail="试卷不存在")
+    
+    # 1. 查找关联题目
+    q_links = db.query(models.ExamQuestion).filter(models.ExamQuestion.exam_id == exam.id).order_by(models.ExamQuestion.sort_order).all()
+    
+    # 2. 组装题目数据，手动将 Model 转为 Dict 以免序列化报错
+    question_list = []
+    for link in q_links:
+        q = link.question
+        question_list.append({
+            "id": q.id,
+            "question_id": q.id,
+            "score": link.score,
+            "title": q.content,
+            "raw": {
+                "id": q.id,
+                "type": q.type,
+                "content": q.content,
+                "options": q.options, # JSON 字段直接赋值
+                "answer": q.answer,
+                "analysis": q.analysis,
+                "difficulty": q.difficulty,
+                "tags": q.tags
+            }
+        })
+    
+    # 3. 获取班级名称 (详情页也需要显示)
+    c_names = []
+    if exam.class_ids:
+        class_objs = db.query(Class.name).filter(Class.id.in_(exam.class_ids)).all()
+        c_names = [c[0] for c in class_objs]
+    
+    # 4. 构造并返回
+    return {
+        "id": exam.id,
+        "title": exam.title,
+        "status": exam.status,
+        "mode": exam.mode,
+        "duration": exam.duration,
+        "pass_score": exam.pass_score,
+        "total_score": exam.total_score,
+        "start_time": exam.start_time,
+        "end_time": exam.end_time,
+        "class_ids": exam.class_ids or [],
+        "class_names": c_names,
+        "questions": question_list,
+        "random_config": exam.random_config or [],
+        "created_at": exam.created_at
+    }
+
+# 更新试卷 (PUT)
+@router.put("/exams/{exam_id}")
+def update_exam(
+    exam_id: int,
+    exam_in: schemas.ExamCreate,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    exam_obj = db.query(models.Exam).filter(models.Exam.id == exam_id).first()
+    if not exam_obj:
+        raise HTTPException(status_code=404, detail="试卷不存在")
+        
+    # 1. 更新主表基本信息
+    exam_obj.title = exam_in.title
+    exam_obj.duration = exam_in.duration
+    exam_obj.pass_score = exam_in.pass_score
+    exam_obj.total_score = exam_in.total_score
+    exam_obj.start_time = exam_in.start_time
+    exam_obj.end_time = exam_in.end_time
+    exam_obj.class_ids = exam_in.class_ids
+    
+    # 2. 更新题目关联（先删后增最简单）
+    db.query(models.ExamQuestion).filter(models.ExamQuestion.exam_id == exam_id).delete()
+    
+    if exam_in.mode == 1:
+        for index, item in enumerate(exam_in.questions):
+            link = models.ExamQuestion(
+                exam_id=exam_id,
+                question_id=item.question_id,
+                score=item.score,
+                sort_order=index
+            )
+            db.add(link)
+    
+    db.commit()
+    return {"message": "更新成功"}
+
+
+
+# -----------------------------------------------------------
+# [学生端]
+# -----------------------------------------------------------
+# -----------------------------------------------------------
+# [学生端] 获取我的考试列表
+# -----------------------------------------------------------
+@router.get("/student/list", response_model=List[schemas.StudentExamOut])
+def get_student_exams(
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    if current_user.role != "student":
+        raise HTTPException(status_code=403, detail="仅学生可访问")
+
+    # 1. 找到学生所在的班级 ID
+    enrollments = db.query(Enrollment).filter(Enrollment.student_id == current_user.id).all()
+    class_ids = [e.class_id for e in enrollments]
+
+    if not class_ids:
+        return []
+
+    # 2. 查询发布给这些班级的考试
+    # 使用 SQLAlchemy 的 JSON 包含逻辑，或者简单遍历（这里采用兼容性好的过滤逻辑）
+    # 注意：这里假设 exams 表的 class_ids 存储的是 ID 列表
+    all_exams = db.query(models.Exam).filter(models.Exam.status >= 1).all()
+    
+    results = []
+    for exam in all_exams:
+        # 检查考试是否发布给该学生的班级
+        if not exam.class_ids or not any(cid in exam.class_ids for cid in class_ids):
+            continue
+            
+        # 3. 查找该学生对该考试的参与记录
+        record = db.query(models.ExamRecord).filter(
+            models.ExamRecord.exam_id == exam.id,
+            models.ExamRecord.student_id == current_user.id
+        ).first()
+
+        item = schemas.StudentExamOut.from_orm(exam)
+        if record:
+            item.my_status = record.status
+            item.my_score = record.total_score if record.status == 2 else None
+        else:
+            item.my_status = -1 # 未开始
+            
+        results.append(item)
+    
+    return results
+
+# -----------------------------------------------------------
+# [学生端] 开始/进入考试 (创建或获取记录)
+# -----------------------------------------------------------
+@router.post("/student/enter/{exam_id}")
+def enter_exam(
+    exam_id: int,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    exam = db.query(models.Exam).filter(models.Exam.id == exam_id).first()
+    if not exam:
+        raise HTTPException(status_code=404, detail="考试不存在")
+    
+    # 时间校验
+    now = datetime.now()
+    if exam.start_time and now < exam.start_time:
+        raise HTTPException(status_code=400, detail="考试尚未开始")
+    if exam.end_time and now > exam.end_time:
+        raise HTTPException(status_code=400, detail="考试已结束入口")
+
+    # 查找是否有进行中或已完成的记录
+    record = db.query(models.ExamRecord).filter(
+        models.ExamRecord.exam_id == exam_id,
+        models.ExamRecord.student_id == current_user.id
+    ).first()
+
+    if not record:
+        # 创建新记录
+        record = models.ExamRecord(
+            exam_id=exam_id,
+            student_id=current_user.id,
+            status=0 # 进行中
+        )
+        db.add(record)
+        db.commit()
+        db.refresh(record)
+    
+    return {"record_id": record.id, "status": record.status}
+
+# -----------------------------------------------------------
+# [学生端] 获取试卷题目内容 (不含正确答案！)
+# -----------------------------------------------------------
+@router.get("/student/paper/{exam_id}")
+def get_exam_paper(
+    exam_id: int,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    # 逻辑：获取该考试关联的所有题目，但过滤掉答案和解析字段
+    q_links = db.query(models.ExamQuestion).filter(
+        models.ExamQuestion.exam_id == exam_id
+    ).order_by(models.ExamQuestion.sort_order).all()
+    
+    paper_questions = []
+    for link in q_links:
+        q = link.question
+        paper_questions.append({
+            "id": q.id,
+            "type": q.type,
+            "content": q.content,
+            "options": q.options, # 选项是公开的
+            "score": link.score,
+            "sort_order": link.sort_order
+        })
+        
+    return paper_questions
+
+# -----------------------------------------------------------
+# [学生端] 提交试卷并自动判分 (核心逻辑)
+# -----------------------------------------------------------
+@router.post("/student/submit/{exam_id}")
+def submit_exam(
+    exam_id: int,
+    submit_in: schemas.ExamSubmit,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    # 1. 找到考试记录
+    record = db.query(models.ExamRecord).filter(
+        models.ExamRecord.exam_id == exam_id,
+        models.ExamRecord.student_id == current_user.id,
+        models.ExamRecord.status == 0
+    ).first()
+    
+    if not record:
+        raise HTTPException(status_code=400, detail="未找到进行中的考试记录")
+
+    objective_score = 0
+    
+    # 2. 遍历学生提交的答案
+    for ans in submit_in.answers:
+        # 获取题目详情（包含正确答案）
+        question = db.query(models.Question).filter(models.Question.id == ans.question_id).first()
+        # 获取该题在试卷中的分值
+        q_link = db.query(models.ExamQuestion).filter(
+            models.ExamQuestion.exam_id == exam_id,
+            models.ExamQuestion.question_id == ans.question_id
+        ).first()
+        
+        if not question or not q_link: continue
+
+        is_correct = False
+        earned_score = 0
+
+        # --- 自动判分逻辑 ---
+        if question.type in ["single", "judge"]:
+            # 单选和判断：完全匹配
+            if str(ans.answer_content) == str(question.answer):
+                is_correct = True
+                earned_score = q_link.score
+                
+        elif question.type == "multiple":
+            # 多选：集合对比 (必须完全一致)
+            if set(ans.answer_content) == set(question.answer):
+                is_correct = True
+                earned_score = q_link.score
+
+        # 3. 记录到答题明细表
+        db_ans = models.ExamAnswer(
+            record_id=record.id,
+            question_id=ans.question_id,
+            answer_content=ans.answer_content,
+            is_correct=is_correct,
+            score=earned_score
+        )
+        db.add(db_ans)
+        
+        if question.type in ["single", "multiple", "judge"]:
+            objective_score += earned_score
+
+    # 4. 更新记录状态
+    record.status = 1 # 已提交
+    record.submit_time = datetime.now()
+    record.objective_score = objective_score
+    record.total_score = objective_score # 初始总分为客观题分，主观题批改后再加
+    record.cheat_count = submit_in.cheat_count
+    
+    db.commit()
+    return {"message": "交卷成功", "score": objective_score}
+
+
+# [学生端] 暂存答案 (断电保护/每30秒触发)
+@router.post("/student/save-progress/{exam_id}")
+def save_exam_progress(
+    exam_id: int,
+    answers: List[schemas.AnswerSubmit],
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    # 找到记录
+    record = db.query(models.ExamRecord).filter(
+        models.ExamRecord.exam_id == exam_id,
+        models.ExamRecord.student_id == current_user.id,
+        models.ExamRecord.status == 0
+    ).first()
+    
+    if not record:
+        return {"msg": "无正在进行的考试记录"}
+
+    # 批量更新或插入答案
+    for ans in answers:
+        # 查找是否已存在该题作答
+        db_ans = db.query(models.ExamAnswer).filter(
+            models.ExamAnswer.record_id == record.id,
+            models.ExamAnswer.question_id == ans.question_id
+        ).first()
+        
+        if db_ans:
+            db_ans.answer_content = ans.answer_content
+        else:
+            new_ans = models.ExamAnswer(
+                record_id=record.id,
+                question_id=ans.question_id,
+                answer_content=ans.answer_content
+            )
+            db.add(new_ans)
+    
+    db.commit()
+    return {"status": "success", "saved_at": datetime.now()}

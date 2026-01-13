@@ -11,7 +11,7 @@
  Target Server Version : 80042 (8.0.42)
  File Encoding         : 65001
 
- Date: 12/01/2026 18:06:26
+ Date: 13/01/2026 17:14:11
 */
 
 SET NAMES utf8mb4;
@@ -351,6 +351,147 @@ INSERT INTO `enrollments` VALUES (60, 1, 53, '2026-01-04 17:31:30');
 INSERT INTO `enrollments` VALUES (61, 1, 54, '2026-01-04 17:31:30');
 
 -- ----------------------------
+-- Table structure for exam_answers
+-- ----------------------------
+DROP TABLE IF EXISTS `exam_answers`;
+CREATE TABLE `exam_answers`  (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `record_id` int NOT NULL,
+  `question_id` int NOT NULL,
+  `answer_content` json NULL,
+  `is_correct` tinyint(1) NULL DEFAULT NULL,
+  `score` int NULL DEFAULT NULL,
+  `teacher_feedback` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `record_id`(`record_id` ASC) USING BTREE,
+  INDEX `question_id`(`question_id` ASC) USING BTREE,
+  INDEX `ix_exam_answers_id`(`id` ASC) USING BTREE,
+  CONSTRAINT `exam_answers_ibfk_1` FOREIGN KEY (`record_id`) REFERENCES `exam_records` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
+  CONSTRAINT `exam_answers_ibfk_2` FOREIGN KEY (`question_id`) REFERENCES `questions` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
+) ENGINE = InnoDB AUTO_INCREMENT = 25 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of exam_answers
+-- ----------------------------
+INSERT INTO `exam_answers` VALUES (1, 1, 2, '\"A\"', 1, 2, NULL);
+INSERT INTO `exam_answers` VALUES (2, 1, 3, '\"B\"', 1, 2, NULL);
+INSERT INTO `exam_answers` VALUES (3, 1, 8, '\"\"', 0, 0, NULL);
+INSERT INTO `exam_answers` VALUES (4, 1, 9, '\"2,3\"', 0, 0, NULL);
+INSERT INTO `exam_answers` VALUES (5, 1, 10, '\"11,12\"', 0, 0, NULL);
+INSERT INTO `exam_answers` VALUES (6, 1, 11, '\"我不知道\"', 0, 0, NULL);
+INSERT INTO `exam_answers` VALUES (7, 1, 2, '\"C\"', 0, 0, NULL);
+INSERT INTO `exam_answers` VALUES (8, 1, 3, '\"B\"', 1, 2, NULL);
+INSERT INTO `exam_answers` VALUES (9, 1, 8, '\"A\"', 0, 0, NULL);
+INSERT INTO `exam_answers` VALUES (10, 1, 9, '\"2, 3\"', 0, 0, NULL);
+INSERT INTO `exam_answers` VALUES (11, 1, 10, '\"11, 12\"', 0, 0, NULL);
+INSERT INTO `exam_answers` VALUES (12, 1, 11, '\"1213123\"', 0, 0, NULL);
+INSERT INTO `exam_answers` VALUES (13, 1, 2, '\"B\"', 0, 0, NULL);
+INSERT INTO `exam_answers` VALUES (14, 1, 3, '\"B\"', 1, 2, NULL);
+INSERT INTO `exam_answers` VALUES (15, 1, 8, '\"A\"', 0, 0, NULL);
+INSERT INTO `exam_answers` VALUES (16, 1, 9, '\"\\\"2, 3\\\"\"', 0, 0, NULL);
+INSERT INTO `exam_answers` VALUES (17, 1, 10, '\"\\\"2, 3\\\"\"', 0, 0, NULL);
+INSERT INTO `exam_answers` VALUES (18, 1, 11, '\"\\\"2, 3\\\"\"', 0, 0, NULL);
+INSERT INTO `exam_answers` VALUES (19, 1, 2, '\"A\"', 1, 2, NULL);
+INSERT INTO `exam_answers` VALUES (20, 1, 3, '\"B\"', 1, 2, NULL);
+INSERT INTO `exam_answers` VALUES (21, 1, 8, '\"A\"', 0, 0, NULL);
+INSERT INTO `exam_answers` VALUES (22, 1, 9, '\"\\\"2, 3\\\"\"', 0, 0, NULL);
+INSERT INTO `exam_answers` VALUES (23, 1, 10, '\"\\\"2, 3\\\"\"', 0, 0, NULL);
+INSERT INTO `exam_answers` VALUES (24, 1, 11, '\"\\\"2, 3\\\"\"', 0, 0, NULL);
+
+-- ----------------------------
+-- Table structure for exam_questions
+-- ----------------------------
+DROP TABLE IF EXISTS `exam_questions`;
+CREATE TABLE `exam_questions`  (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `exam_id` int NOT NULL,
+  `question_id` int NOT NULL,
+  `score` int NULL DEFAULT NULL,
+  `sort_order` int NULL DEFAULT NULL,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `exam_id`(`exam_id` ASC) USING BTREE,
+  INDEX `question_id`(`question_id` ASC) USING BTREE,
+  INDEX `ix_exam_questions_id`(`id` ASC) USING BTREE,
+  CONSTRAINT `exam_questions_ibfk_1` FOREIGN KEY (`exam_id`) REFERENCES `exams` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
+  CONSTRAINT `exam_questions_ibfk_2` FOREIGN KEY (`question_id`) REFERENCES `questions` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
+) ENGINE = InnoDB AUTO_INCREMENT = 19 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of exam_questions
+-- ----------------------------
+INSERT INTO `exam_questions` VALUES (9, 2, 2, 2, 0);
+INSERT INTO `exam_questions` VALUES (10, 2, 3, 2, 1);
+INSERT INTO `exam_questions` VALUES (11, 2, 10, 2, 2);
+INSERT INTO `exam_questions` VALUES (12, 2, 9, 2, 3);
+INSERT INTO `exam_questions` VALUES (13, 2, 8, 2, 4);
+INSERT INTO `exam_questions` VALUES (14, 2, 11, 2, 5);
+INSERT INTO `exam_questions` VALUES (15, 5, 3, 5, 0);
+INSERT INTO `exam_questions` VALUES (16, 5, 6, 5, 1);
+INSERT INTO `exam_questions` VALUES (17, 5, 10, 5, 2);
+INSERT INTO `exam_questions` VALUES (18, 5, 11, 5, 3);
+
+-- ----------------------------
+-- Table structure for exam_records
+-- ----------------------------
+DROP TABLE IF EXISTS `exam_records`;
+CREATE TABLE `exam_records`  (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `exam_id` int NOT NULL,
+  `student_id` int NOT NULL,
+  `start_time` datetime NULL DEFAULT NULL,
+  `submit_time` datetime NULL DEFAULT NULL,
+  `status` int NULL DEFAULT NULL,
+  `objective_score` int NULL DEFAULT NULL,
+  `subjective_score` int NULL DEFAULT NULL,
+  `total_score` int NULL DEFAULT NULL,
+  `cheat_count` int NULL DEFAULT NULL,
+  `created_at` datetime NULL DEFAULT NULL,
+  `updated_at` datetime NULL DEFAULT NULL,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `exam_id`(`exam_id` ASC) USING BTREE,
+  INDEX `student_id`(`student_id` ASC) USING BTREE,
+  INDEX `ix_exam_records_id`(`id` ASC) USING BTREE,
+  CONSTRAINT `exam_records_ibfk_1` FOREIGN KEY (`exam_id`) REFERENCES `exams` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
+  CONSTRAINT `exam_records_ibfk_2` FOREIGN KEY (`student_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
+) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of exam_records
+-- ----------------------------
+INSERT INTO `exam_records` VALUES (1, 2, 1, '2026-01-13 16:28:32', '2026-01-13 16:49:13', 1, 4, 0, 4, 1, '2026-01-13 16:28:32', '2026-01-13 16:49:12');
+
+-- ----------------------------
+-- Table structure for exams
+-- ----------------------------
+DROP TABLE IF EXISTS `exams`;
+CREATE TABLE `exams`  (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `title` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `teacher_id` int NOT NULL,
+  `start_time` datetime NULL DEFAULT NULL,
+  `end_time` datetime NULL DEFAULT NULL,
+  `duration` int NULL DEFAULT NULL,
+  `pass_score` int NULL DEFAULT NULL,
+  `total_score` int NULL DEFAULT NULL,
+  `status` int NULL DEFAULT NULL,
+  `class_ids` json NULL,
+  `mode` int NULL DEFAULT NULL,
+  `random_config` json NULL,
+  `created_at` datetime NULL DEFAULT NULL,
+  `updated_at` datetime NULL DEFAULT NULL,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `teacher_id`(`teacher_id` ASC) USING BTREE,
+  INDEX `ix_exams_id`(`id` ASC) USING BTREE,
+  CONSTRAINT `exams_ibfk_1` FOREIGN KEY (`teacher_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
+) ENGINE = InnoDB AUTO_INCREMENT = 6 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of exams
+-- ----------------------------
+INSERT INTO `exams` VALUES (2, '2025期中考', 2, '2026-01-13 00:00:00', '2026-01-21 00:00:00', 120, 60, 12, 1, '[1]', 1, NULL, '2026-01-13 14:25:46', '2026-01-13 14:25:46');
+INSERT INTO `exams` VALUES (5, '随机组卷', 2, '2026-01-13 00:00:00', '2026-01-22 00:00:00', 60, 60, 20, 1, '[2]', 2, '[{\"tag\": null, \"type\": \"single\", \"count\": 1, \"score\": 5, \"difficulty\": 2}, {\"tag\": \"\", \"type\": \"multiple\", \"count\": 1, \"score\": 5, \"difficulty\": 1}, {\"tag\": \"\", \"type\": \"blank\", \"count\": 1, \"score\": 5, \"difficulty\": 1}, {\"tag\": \"\", \"type\": \"essay\", \"count\": 1, \"score\": 5, \"difficulty\": 2}]', '2026-01-13 15:47:47', '2026-01-13 15:47:47');
+
+-- ----------------------------
 -- Table structure for questions
 -- ----------------------------
 DROP TABLE IF EXISTS `questions`;
@@ -564,8 +705,8 @@ CREATE TABLE `users`  (
 -- ----------------------------
 -- Records of users
 -- ----------------------------
-INSERT INTO `users` VALUES (1, '18250636865', '$2b$12$jwxhQX9peRLmh0wxVq7xreuheYZDiDAIAIIzokZOnMsMr/R/RbVMS', 'student', 1, '2025-12-24 11:26:48', '2026-01-12 13:54:15', 8189, '张十一', '22014082032');
-INSERT INTO `users` VALUES (2, '18250636866', '$2b$12$OFGjgw52J9TWeZzKeG6gPOHUKKhi7EM3YYfUh2R1n7e43azYclPWy', 'teacher', 1, '2025-12-24 11:27:14', '2026-01-12 17:27:43', NULL, NULL, NULL);
+INSERT INTO `users` VALUES (1, '18250636865', '$2b$12$jwxhQX9peRLmh0wxVq7xreuheYZDiDAIAIIzokZOnMsMr/R/RbVMS', 'student', 1, '2025-12-24 11:26:48', '2026-01-13 17:03:54', 8189, '张十一', '22014082032');
+INSERT INTO `users` VALUES (2, '18250636866', '$2b$12$OFGjgw52J9TWeZzKeG6gPOHUKKhi7EM3YYfUh2R1n7e43azYclPWy', 'teacher', 1, '2025-12-24 11:27:14', '2026-01-13 16:02:16', NULL, NULL, NULL);
 INSERT INTO `users` VALUES (4, '18250636867', '$2b$12$mVae3WIBNklVoxfL7qkLQ.ymZ9vRDq6vbwB2Za0cTStB1FO1DeYoa', 'teacher', 1, '2025-12-24 15:04:05', '2026-01-04 17:57:41', NULL, NULL, NULL);
 INSERT INTO `users` VALUES (5, '18250636868', '$2b$12$LExgic9UmvpwwLtG5Gufs.08MAc8wx7EfZdv9CjYzn3QiLJnOUZdq', 'student', 1, '2025-12-24 17:26:36', '2026-01-07 17:52:32', 8190, '李四', '22014082034');
 INSERT INTO `users` VALUES (6, '18250636969', '$2b$12$2bR.Xy.PQzAQDApnmWxdSeC.bIEs0C1kklBR751IoX4/tNFuUCyt2', 'student', 1, '2025-12-25 16:30:01', '2025-12-25 16:47:31', 8191, '王五', '22014082035');
