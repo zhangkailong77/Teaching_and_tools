@@ -135,6 +135,8 @@ export interface ExamItem {
   question_count: number;
   created_at: string;
   class_names: string[];
+  start_time?: string;
+  end_time?: string;
 }
 
 // 1. 获取试卷列表
@@ -217,5 +219,45 @@ export function submitExam(examId: number, data: { answers: any[], cheat_count: 
     url: `/exam/student/submit/${examId}`,
     method: 'post',
     data
+  })
+}
+
+
+
+// ===========================
+// 阅卷相关
+// ===========================
+
+// 1. 获取某场考试的学生成绩列表
+export function getExamRecords(examId: number) {
+  return request<any, any[]>({
+    url: `/exam/exams/${examId}/records`,
+    method: 'get'
+  })
+}
+
+// 2. 获取单份试卷详情 (阅卷用)
+export function getRecordDetail(recordId: number) {
+  return request<any, any>({
+    url: `/exam/records/${recordId}/detail`,
+    method: 'get'
+  })
+}
+
+// 3. 提交评分
+export function submitGrade(recordId: number, items: Array<{ question_id: number; score: number; feedback?: string }>) {
+  return request({
+    url: `/exam/records/${recordId}/grade`,
+    method: 'post',
+    data: { items }
+  })
+}
+
+// 导出成绩单
+export function exportExamGrades(examId: number) {
+  return request({
+    url: `/exam/exams/${examId}/export`,
+    method: 'get',
+    responseType: 'blob' // ✅ 关键：必须指定响应类型为二进制流
   })
 }

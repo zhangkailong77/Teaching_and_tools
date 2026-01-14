@@ -92,6 +92,8 @@ class ExamListOut(BaseModel):
     question_count: int = 0 # 题目数量
     created_at: datetime
     class_names: List[str] = [] 
+    start_time: Optional[datetime] = None
+    end_time: Optional[datetime] = None
     
     class Config:
         from_attributes = True
@@ -137,3 +139,61 @@ class StudentExamOut(BaseModel):
     
     class Config:
         from_attributes = True
+
+
+# =======================
+# 阅卷/成绩相关 Schemas
+# =======================
+
+# 10. 成绩看板-学生列表项
+class ExamRecordListItem(BaseModel):
+    id: int # record_id
+    student_id: int
+    student_name: str
+    student_number: str
+    class_name: str
+    avatar: Optional[str] = None
+    
+    status: int          # 0进行中 1待批改 2已完成
+    submit_time: Optional[datetime]
+    
+    objective_score: int # 客观题分
+    subjective_score: int # 主观题分
+    total_score: int     # 总分
+    
+    class Config:
+        from_attributes = True
+
+# 11. 阅卷详情-单题结构
+class GradingQuestionDetail(BaseModel):
+    question_id: int
+    type: str
+    content: str
+    options: Optional[Any] = None
+    
+    # 关键数据
+    student_answer: Any  # 学生填的
+    standard_answer: Any # 标准答案 (给老师对照)
+    full_score: int      # 该题满分 (来自试卷设置)
+    
+    # 批改状态
+    earned_score: int    # 学生得分
+    is_correct: Optional[bool] = None
+    teacher_feedback: Optional[str] = None
+
+# 12. 阅卷详情-完整试卷
+class ExamRecordDetail(BaseModel):
+    record_id: int
+    student_name: str
+    total_score: int
+    objective_score: int
+    questions: List[GradingQuestionDetail]
+
+# 13. 提交评分 Request
+class GradeItem(BaseModel):
+    question_id: int
+    score: int
+    feedback: Optional[str] = None
+
+class GradeSubmitRequest(BaseModel):
+    items: List[GradeItem]

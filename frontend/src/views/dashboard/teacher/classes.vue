@@ -405,13 +405,30 @@ const handleEnterClass = async (cls: ClassItem) => {
 
 // 2. 刷新抽屉里的学生列表
 const refreshDrawerStudents = async () => {
+  if (!currentClassId.value) return;
+  
   drawerLoading.value = true;
   try {
-    const allStudents = await getMyStudents();
-    // 过滤出当前班级的学生
-    currentClassStudents.value = allStudents.filter(s => s.class_name === activeClassName.value);
+    // ✅ 核心修改：直接传 class_id 给后端，后端去查，不用前端 filter
+    // 另外，我们希望在抽屉里显示所有学生，所以把 limit 设大一点（比如 100）
+    const res = await getMyStudents({
+      class_id: currentClassId.value,
+      page: 1,
+      limit: 100 
+    });
+    
+    // ✅ 核心修改：适配新的返回结构 { total, items }
+    // 如果 getMyStudents 返回的是 { total, items }
+    if (res.items) {
+      currentClassStudents.value = res.items;
+    } else {
+      // 兼容旧接口（虽然应该已经改了）
+      currentClassStudents.value = Array.isArray(res) ? res : [];
+    }
+    
   } catch (error) {
-    console.error(error);
+    console.error("获取班级学生失败", error);
+    currentClassStudents.value = [];
   } finally {
     drawerLoading.value = false;
   }

@@ -33,8 +33,17 @@
         <PaperEditor :initial-data="currentExamData" @back="handleBack" @success="handleBack" />
       </div>
 
-      <div v-else-if="isResultMode" class="result-container">
-        <ExamResultView :exam-id="currentExamId" @back="handleBack" />
+      <div v-else-if="isResultMode && !isGradingMode" class="result-container">
+        <ExamResultView :exam-id="currentExamId" @back="handleBack" @go-grade="handleGoGrade" />
+      </div>
+
+      <div v-else-if="isGradingMode" class="grading-wrapper">
+        <GradingPaper 
+          :record-id="currentRecordId" 
+          :exam-id="currentExamId" 
+          @back="handleBackFromGrading(false)" 
+          @success="handleBackFromGrading(true)"
+        />
       </div>
     </main>
   </div>
@@ -47,6 +56,7 @@ import QuestionBank from './components/QuestionBank.vue'
 import PaperList from './components/PaperList.vue'
 import PaperEditor from './components/PaperEditor.vue' 
 import ExamResultView from './components/ExamResultView.vue'
+import GradingPaper from './components/GradingPaper.vue'
 
 // 默认先展示题库，方便调试
 const activeTab = ref('paper')
@@ -56,6 +66,27 @@ const currentEditExam = ref<any>(null)
 const currentExamData = ref<any>(null)
 const isResultMode = ref(false)
 const currentExamId = ref<number | null>(null)
+
+
+const isGradingMode = ref(false) // ✅ 新增状态
+const currentRecordId = ref<number | null>(null) // ✅ 新增记录ID
+
+// 处理进入批阅
+const handleGoGrade = (recordId: number) => {
+  currentRecordId.value = recordId
+  isGradingMode.value = true
+}
+
+// 处理批阅完成/返回
+const handleBackFromGrading = (refresh = false) => {
+  isGradingMode.value = false
+  currentRecordId.value = null
+  // 如果提交了成绩，需要刷新 ExamResultView 的数据
+  // 这里可以通过 provide/inject 或者 ref 调用子组件方法，
+  // 或者简单点：ExamResultView 本身就有 mounted fetch，切回去时会自动刷新吗？不会。
+  // 所以我们可以在 handleBack 时触发刷新。
+}
+
 
 const handleViewResults = (id: number) => {
   console.log('父组件收到查看成绩请求，ID:', id)
@@ -166,5 +197,13 @@ $bg-color: #f5f6fa;
   margin: -30px -40px;       /* 负 margin 抵消 padding */
   position: relative;
   z-index: 10;
+}
+
+.grading-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  position: relative; /* 确保 z-index 生效 */
 }
 </style>

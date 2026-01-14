@@ -3,6 +3,8 @@ import io
 from fastapi import UploadFile, File
 import random
 from datetime import datetime, timedelta
+from fastapi.responses import StreamingResponse
+from urllib.parse import quote
 
 from typing import Any, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -576,6 +578,86 @@ def update_exam(
     return {"message": "更新成功"}
 
 
+# -----------------------------------------------------------
+# [教师端] 导出考试成绩单
+# -----------------------------------------------------------
+@router.get("/exams/{exam_id}/export")
+def export_exam_grades(
+    exam_id: int,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    # 1. 校验权限
+    exam = db.query(models.Exam).filter(models.Exam.id == exam_id).first()
+    if not exam:
+        raise HTTPException(status_code=404, detail="试卷不存在")
+    if exam.teacher_id != current_user.id:
+        raise HTTPException(status_code=403, detail="无权操作")
+
+    # 2. 获取所有应考学生
+    if not exam.class_ids:
+        raise HTTPException(status_code=400, detail="该考试未绑定任何班级")
+
+    all_enrollments = db.query(Enrollment).filter(
+        Enrollment.class_id.in_(exam.class_ids)
+    ).all()
+
+    # 3. 获取已有记录
+    existing_records = db.query(models.ExamRecord).filter(
+        models.ExamRecord.exam_id == exam_id
+    ).all()
+    record_map = {r.student_id: r for r in existing_records}
+
+    # 4. 组装数据列表
+    data_list = []
+    for enroll in all_enrollments:
+        student = enroll.student
+        record = record_map.get(student.id)
+        
+        # 状态文本转换
+        status_text = "未开始"
+        if record:
+            if record.status == 0: status_text = "进行中"
+            elif record.status == 1: status_text = "待批改"
+            elif record.status == 2: status_text = "已完成"
+        
+        row = {
+            "姓名": student.full_name or student.username,
+            "学号": student.student_number or "--",
+            "班级": enroll.classroom.name,
+            "状态": status_text,
+            "提交时间": record.submit_time.strftime('%Y-%m-%d %H:%M:%S') if record and record.submit_time else "-",
+            "客观题得分": record.objective_score if record else 0,
+            "主观题得分": record.subjective_score if record else 0,
+            "总分": record.total_score if record else 0
+        }
+        data_list.append(row)
+
+    # 5. 生成 Excel
+    df = pd.DataFrame(data_list)
+    output = io.BytesIO()
+    # 使用 xlsxwriter 引擎 (或者默认 openpyxl)
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df.to_excel(writer, index=False, sheet_name='成绩单')
+        # 简单调整列宽
+        worksheet = writer.sheets['成绩单']
+        worksheet.set_column('A:H', 15) 
+
+    output.seek(0)
+    
+    # 6. 返回文件流
+    # 使用 quote 处理中文文件名防止乱码
+    filename = quote(f"{exam.title}_成绩单.xlsx")
+    
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": f"attachment; filename*=utf-8''{filename}"
+        }
+    )
+
+
 
 # -----------------------------------------------------------
 # [学生端]
@@ -743,6 +825,11 @@ def submit_exam(
                 is_correct = True
                 earned_score = q_link.score
 
+        elif question.type == "blank":
+            if str(ans.answer_content).strip() == str(question.answer).strip():
+                is_correct = True
+                earned_score = q_link.score
+
         # 3. 记录到答题明细表
         db_ans = models.ExamAnswer(
             record_id=record.id,
@@ -753,18 +840,29 @@ def submit_exam(
         )
         db.add(db_ans)
         
-        if question.type in ["single", "multiple", "judge"]:
+        if question.type in ["single", "multiple", "judge", "blank"]:
             objective_score += earned_score
 
     # 4. 更新记录状态
-    record.status = 1 # 已提交
+    has_subjective = db.query(models.ExamQuestion).join(models.Question).filter(
+        models.ExamQuestion.exam_id == exam_id,
+        models.Question.type == 'essay'
+    ).count() > 0
+
+    if has_subjective:
+        record.status = 1 # 包含主观题 -> 状态设为 1 (待批改)
+    else:
+        record.status = 2 # 全是客观题 -> 状态设为 2 (已完成/已出分)
+
     record.submit_time = datetime.now()
     record.objective_score = objective_score
-    record.total_score = objective_score # 初始总分为客观题分，主观题批改后再加
+    record.total_score = objective_score # 初始总分先等于客观分，如果有主观题，后续老师批改时会更新这个字段
     record.cheat_count = submit_in.cheat_count
     
     db.commit()
-    return {"message": "交卷成功", "score": objective_score}
+    
+    # ✅ 建议把 status 也返回给前端，方便前端判断显示什么文字
+    return {"message": "交卷成功", "score": objective_score, "status": record.status}
 
 
 # [学生端] 暂存答案 (断电保护/每30秒触发)
@@ -805,3 +903,166 @@ def save_exam_progress(
     
     db.commit()
     return {"status": "success", "saved_at": datetime.now()}
+
+
+
+# -----------------------------------------------------------
+# 17. [教师端] 获取某场考试的所有学生成绩列表 (成绩看板)
+# -----------------------------------------------------------
+@router.get("/exams/{exam_id}/records", response_model=List[schemas.ExamRecordListItem])
+def get_exam_records_list(
+    exam_id: int,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    # 1. 校验权限 & 获取考试信息
+    exam = db.query(models.Exam).filter(models.Exam.id == exam_id).first()
+    if not exam:
+        raise HTTPException(status_code=404, detail="试卷不存在")
+    if exam.teacher_id != current_user.id:
+        raise HTTPException(status_code=403, detail="无权查看此考试")
+
+    # 2. 获取该考试发布的所有班级的学生
+    # exam.class_ids 是 [1, 2] 这种列表
+    if not exam.class_ids:
+        return []
+
+    # 查出所有应考学生 (关联 User 和 Class)
+    all_enrollments = db.query(Enrollment).filter(
+        Enrollment.class_id.in_(exam.class_ids)
+    ).all()
+
+    # 3. 获取已存在的考试记录 (建立映射 map: student_id -> record)
+    existing_records = db.query(models.ExamRecord).filter(
+        models.ExamRecord.exam_id == exam_id
+    ).all()
+    
+    record_map = {r.student_id: r for r in existing_records}
+
+    results = []
+    for enroll in all_enrollments:
+        student = enroll.student
+        record = record_map.get(student.id)
+        
+        # 构造返回数据
+        item = {
+            "id": record.id if record else 0, # 没有记录给个0
+            "student_id": student.id,
+            "student_name": student.full_name or student.username,
+            "student_number": student.student_number or "--",
+            "class_name": enroll.classroom.name,
+            "avatar": student.student_profile.avatar if student.student_profile else None,
+            
+            # 关键状态处理：
+            # 如果有记录，用记录的状态 (0进行中, 1待批改, 2已完成)
+            # 如果没记录，给一个特殊状态 -1 (未开始)
+            "status": record.status if record else -1,
+            
+            "submit_time": record.submit_time if record else None,
+            "objective_score": record.objective_score if record else 0,
+            "subjective_score": record.subjective_score if record else 0,
+            "total_score": record.total_score if record else 0
+        }
+        results.append(item)
+        
+    return results
+
+# -----------------------------------------------------------
+# 18. [教师端] 获取单份试卷的详细答题情况 (进入批阅)
+# -----------------------------------------------------------
+@router.get("/records/{record_id}/detail", response_model=schemas.ExamRecordDetail)
+def get_record_grading_detail(
+    record_id: int,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    record = db.query(models.ExamRecord).filter(models.ExamRecord.id == record_id).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="记录不存在")
+        
+    # 权限校验：确保是该老师的课
+    if record.exam.teacher_id != current_user.id:
+        raise HTTPException(status_code=403, detail="无权批阅此试卷")
+
+    # 获取所有题目关联信息（为了拿满分值 sort_order）
+    # 这里要按照试卷的题目顺序排序
+    exam_questions = db.query(models.ExamQuestion).filter(
+        models.ExamQuestion.exam_id == record.exam_id
+    ).order_by(models.ExamQuestion.sort_order).all()
+    
+    question_details = []
+    
+    for eq in exam_questions:
+        q = eq.question
+        
+        # 查找学生的回答
+        student_ans = db.query(models.ExamAnswer).filter(
+            models.ExamAnswer.record_id == record.id,
+            models.ExamAnswer.question_id == q.id
+        ).first()
+        
+        question_details.append({
+            "question_id": q.id,
+            "type": q.type,
+            "content": q.content,
+            "options": q.options,
+            "standard_answer": q.answer, # 老师看，必须返回标准答案
+            "full_score": eq.score,      # 该题满分
+            
+            # 学生数据
+            "student_answer": student_ans.answer_content if student_ans else None,
+            "earned_score": student_ans.score if student_ans else 0,
+            "is_correct": student_ans.is_correct if student_ans else False,
+            "teacher_feedback": student_ans.teacher_feedback if student_ans else ""
+        })
+
+    return {
+        "record_id": record.id,
+        "student_name": record.student.full_name or record.student.username,
+        "total_score": record.total_score,
+        "objective_score": record.objective_score,
+        "questions": question_details
+    }
+
+# -----------------------------------------------------------
+# 19. [教师端] 提交评分结果
+# -----------------------------------------------------------
+@router.post("/records/{record_id}/grade")
+def submit_grading(
+    record_id: int,
+    grade_in: schemas.GradeSubmitRequest,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    record = db.query(models.ExamRecord).filter(models.ExamRecord.id == record_id).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="记录不存在")
+    
+    # 重新计算主观题总分
+    new_subjective_score = 0
+    
+    for item in grade_in.items:
+        # 找到对应的答题记录
+        ans = db.query(models.ExamAnswer).filter(
+            models.ExamAnswer.record_id == record.id,
+            models.ExamAnswer.question_id == item.question_id
+        ).first()
+        
+        if ans:
+            ans.score = item.score
+            ans.teacher_feedback = item.feedback
+            # 简单逻辑：如果得分等于满分(需查ExamQuestion)或者是大部分，可视作正确
+            # 这里简化：只要得分>0就算部分正确，前端展示不纠结这个 True/False
+            # ans.is_correct = True if item.score > 0 else False 
+            
+            # 累加
+            new_subjective_score += item.score
+    
+    # 更新记录
+    record.subjective_score = new_subjective_score
+    record.total_score = record.objective_score + new_subjective_score
+    record.status = 2 # 标记为已批改/已完成
+    
+    db.commit()
+    
+    return {"message": "批阅完成", "total_score": record.total_score}

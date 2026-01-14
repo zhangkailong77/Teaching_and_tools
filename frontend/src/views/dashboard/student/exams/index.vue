@@ -69,22 +69,55 @@
                 
                 <div class="bottom-row">
                   <div class="status-text">
-                    <span v-if="exam.my_status === 2" class="text-score">
+  
+                    <!-- ✅ 修改点 1：只有当 (状态是2) 且 (时间已结束) 时，才显示分数 -->
+                    <span v-if="exam.my_status === 2 && isTimeEnded(exam)" class="text-score">
                       最终得分: <strong>{{ exam.my_score }}</strong>
                     </span>
-                    <span v-else-if="isTimeUrgent(exam.end_time)" class="text-brown">
+
+                    <!-- ✅ 修改点 2：如果 (状态是2) 但 (时间没结束)，显示占位文字 -->
+                    <span v-else-if="exam.my_status === 2 && !isTimeEnded(exam)" class="text-wait">
+                      ⏳ 成绩待公布
+                    </span>
+
+                    <!-- 其他逻辑保持不变 -->
+                    <span v-else-if="isTimeUrgent(exam.end_time) && exam.my_status <= 0" class="text-brown">
                       🚨 即将截止入场
                     </span>
+                    
                     <span v-else class="text-gray">时长: {{ exam.duration }} 分钟</span>
                   </div>
                   
-                  <button 
-                    class="action-btn" 
-                    :class="{'disabled': !canEnter(exam) && exam.my_status <= 0}"
-                    @click="handleEnterExam(exam)"
-                  >
-                    {{ getBtnText(exam) }}
-                  </button>
+                  <div class="btn-group">
+                    <!-- 情况 A: 可以进入考试 (未开始或进行中) -->
+                    <button 
+                      v-if="canEnter(exam)" 
+                      class="action-btn primary" 
+                      @click="handleEnterExam(exam)"
+                    >
+                      {{ exam.my_status === 0 ? '继续考试' : '进入考试' }}
+                    </button>
+
+                    <!-- 情况 B: 已交卷 (待批改 或 已出分) -->
+                    <button 
+                      v-else-if="exam.my_status === 1 || exam.my_status === 2" 
+                      class="action-btn outline" 
+                      :class="{ 'disabled': exam.my_status === 2 && !isTimeEnded(exam) }"
+                      :disabled="exam.my_status === 2 && !isTimeEnded(exam)"
+                      @click="handleViewResult(exam)"
+                    >
+                      {{ getBtnText(exam) }}
+                    </button>
+
+                    <!-- 情况 C: 其他情况 (如已过期且未参加) -->
+                    <button 
+                      v-else 
+                      class="action-btn disabled" 
+                      disabled
+                    >
+                      入口关闭
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -247,14 +280,34 @@ const getStatusClass = (exam: any) => {
 };
 
 const getStatusText = (exam: any) => {
-  const map: any = { graded: '已出分', submitted: '已提交', ongoing: '进行中', ended: '已结束' };
+  const isEnded = new Date().getTime() > new Date(exam.end_time).getTime();
+  
+  const map: any = { 
+    graded: isEnded ? '已出分' : '待公布', // ✅ 优化文案
+    submitted: '待批改', 
+    ongoing: '进行中', 
+    pending: '未开始', 
+    ended: '已结束' 
+  };
   return map[getStatusClass(exam)];
 };
 
 const getBtnText = (e: any) => {
-  if (e.my_status === 2) return '查看解析';
-  if (e.my_status === 1) return '已交卷';
+  const isEnded = new Date().getTime() > new Date(e.end_time).getTime();
+
+  // 状态 2 = 已批改/系统自动批完
+  if (e.my_status === 2) {
+    if (isEnded) {
+      return '查看成绩'; // ✅ 只有时间到了才显示这个
+    } else {
+      return '等待出分'; // ✅ 时间没到，显示等待
+    }
+  }
+  
+  if (e.my_status === 1) return '待批改'; // 含主观题，老师还没批
+  
   if (canEnter(e)) return e.my_status === 0 ? '继续考试' : '进入考试';
+  
   return '入口关闭';
 };
 
@@ -286,6 +339,24 @@ const updateCharts = () => {
     });
   }
   // 折线图逻辑同作业中心...
+};
+
+const handleViewResult = (exam: any) => {
+  const isEnded = new Date().getTime() > new Date(exam.end_time).getTime();
+  
+  if (!isEnded) {
+    ElMessage.warning('考试尚未结束，成绩将在截止时间后统一公布。');
+    return;
+  }
+  
+  // 这里写跳转到成绩详情页的逻辑 (目前是提示开发中)
+  ElMessage.success('正在进入成绩分析页...'); 
+  // router.push(...) 
+};
+
+const isTimeEnded = (exam: any) => {
+  if (!exam.end_time) return false;
+  return new Date().getTime() > new Date(exam.end_time).getTime();
 };
 </script>
 
@@ -356,11 +427,58 @@ $text-light: #999;
   
   .bottom-row {
     display: flex; justify-content: space-between; align-items: center;
-    .status-text { font-size: 13px; font-weight: 500; .text-score { color: $primary; font-size: 15px; } }
+    .status-text { font-size: 13px; font-weight: 500; .text-score { color: $primary; font-size: 15px; } 
+    .text-wait {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      
+      /* 极淡的灰背景 */
+      background-color: #f2f3f5;
+      /* 深灰文字，清晰但不刺眼 */
+      color: #606266;
+      /* 细微的边框 */
+      border: 1px solid #e4e7ed;
+      
+      padding: 3px 10px;
+      border-radius: 12px; /* 胶囊圆角 */
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+    }
+    }
     .action-btn { 
-      padding: 6px 20px; border-radius: 20px; border: 1px solid $primary; background: white; color: $primary; cursor: pointer;
-      &:hover:not(.disabled) { background: $primary; color: white; }
-      &.disabled { border-color: #ddd; color: #ccc; cursor: not-allowed; }
+      padding: 6px 20px; 
+      border-radius: 20px; 
+      font-size: 13px; 
+      font-weight: 600; 
+      cursor: pointer; 
+      transition: all 0.2s;
+
+      /* 实心风格 (进入考试) */
+      &.primary {
+        background: $primary; 
+        color: white; 
+        border: 1px solid $primary;
+        &:hover { opacity: 0.9; transform: translateY(-1px); }
+      }
+
+      /* 描边风格 (查看成绩) */
+      &.outline {
+        background: white; 
+        color: $primary; 
+        border: 1px solid $primary;
+        &:hover:not(.disabled) { background: #f0fdfa; }
+      }
+
+      /* 禁用风格 */
+      &.disabled {
+        border-color: #ddd; 
+        background: #f5f5f5;
+        color: #ccc; 
+        cursor: not-allowed;
+        &:hover { transform: none; background: #f5f5f5; }
+      }
     }
   }
 }

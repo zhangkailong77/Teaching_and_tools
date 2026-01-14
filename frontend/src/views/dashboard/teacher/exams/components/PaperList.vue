@@ -35,7 +35,9 @@
 
       <!-- 数据卡片 -->
       <div class="paper-card" v-for="item in list" :key="item.id">
-        <div class="status-dot" :class="getStatusClass(item.status)"></div>
+        <div class="status-badge" :class="getExamState(item).class">
+          {{ getExamState(item).text }}
+        </div>
         <div class="card-body">
           <h3 class="title" :title="item.title">{{ item.title }}</h3>
           <div class="class-tags">
@@ -50,13 +52,16 @@
             <span v-if="!item.class_names || item.class_names.length === 0" class="no-class">未设置班级</span>
           </div>
           <div class="meta">
-            <span>📝 {{ item.question_count }} 题</span>
+            <span>题目数量： {{ item.question_count }} 题</span>
             <span class="divider">|</span>
-            <span>⏱ {{ item.duration }} 分钟</span>
+            <span>答题时长： {{ item.duration }} 分钟</span>
             <span class="divider">|</span>
-            <span>💯 {{ item.total_score }} 分</span>
+            <span>满分： {{ item.total_score }} </span>
           </div>
-          <div class="time">创建于 {{ formatDate(item.created_at) }}</div>
+          <div class="time-range">
+            <el-icon><Calendar /></el-icon>
+            <span>{{ formatExamTime(item.start_time, item.end_time) }}</span>
+          </div>
         </div>
 
         <div class="card-footer">
@@ -80,7 +85,7 @@
 import { ref, onMounted } from 'vue'
 import { getExams, deleteExam, type ExamItem } from '@/api/exam'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Plus } from '@element-plus/icons-vue'
+import { Search, Plus, Calendar } from '@element-plus/icons-vue'
 
 const loading = ref(false)
 const list = ref<ExamItem[]>([])
@@ -138,6 +143,41 @@ const getStatusClass = (s: number) => ['draft', 'published', 'ended'][s] || 'dra
 const formatDate = (s: string) => s.split('T')[0]
 
 defineExpose({ fetchData })
+
+// ✅ 新增：格式化起止时间
+const formatExamTime = (start?: string, end?: string) => {
+  if (!start || !end) return '时间待定'; // 如果是草稿可能没填时间
+  
+  // 截取为 MM-DD HH:mm 格式 (去掉年份，显示更简洁)
+  const s = start.substring(5, 16); 
+  const e = end.substring(5, 16);
+  return `${s} 至 ${e}`;
+}
+
+// 计算考试的具体状态（文案 + 样式类名）
+const getExamState = (item: any) => {
+  // 1. 如果是草稿状态
+  if (item.status === 0) {
+    return { text: '草稿箱', class: 'draft' }
+  }
+
+  // 2. 如果是已发布，需判断时间
+  if (!item.start_time || !item.end_time) {
+    return { text: '时间待定', class: 'draft' } // 容错处理
+  }
+
+  const now = new Date().getTime()
+  const start = new Date(item.start_time).getTime()
+  const end = new Date(item.end_time).getTime()
+
+  if (now < start) {
+    return { text: '未开始', class: 'pending' }
+  } else if (now > end) {
+    return { text: '已结束', class: 'ended' }
+  } else {
+    return { text: '进行中', class: 'ongoing' }
+  }
+}
 </script>
 
 <style scoped lang="scss">
@@ -149,7 +189,7 @@ $primary: #00c9a7;
 
 .grid-list {
   display: grid; 
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); 
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); 
   gap: 20px;
 }
 
@@ -164,18 +204,62 @@ $primary: #00c9a7;
     border-color: $primary;
   }
 
-  .status-dot {
-    position: absolute; top: 15px; right: 15px; width: 8px; height: 8px; border-radius: 50%;
-    &.draft { background: #ccc; box-shadow: 0 0 0 4px rgba(200,200,200,0.2); }
-    &.published { background: $primary; box-shadow: 0 0 0 4px rgba(0,201,167,0.2); }
-    &.ended { background: #ff4d4f; }
+  .status-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: white;
+  border-bottom-left-radius: 12px; /* 只圆左下角，贴合右上角 */
+  box-shadow: -2px 2px 5px rgba(0,0,0,0.05);
+  z-index: 1;
+
+  /* 状态配色 */
+  &.draft {
+    background-color: #dcdfe6; /* 灰色 */
+    color: #909399;
   }
+  
+  &.pending {
+    background-color: #fa8c16; /* 橙色 - 待开始 */
+  }
+  
+  &.ongoing {
+    background-color: #00c9a7; /* 主题绿 - 进行中 */
+    animation: pulse 2s infinite; /* 可选：加个呼吸灯效果 */
+  }
+  
+  &.ended {
+    background-color: #f56c6c; /* 红色 - 已结束 */
+    opacity: 0.8;
+  }
+}
+
+/* (可选) 呼吸灯动画，让进行中更显眼 */
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.8; }
+  100% { opacity: 1; }
+}
 
   .card-body {
     flex: 1; padding: 20px;
     .title { font-size: 16px; margin: 0 0 10px; color: #333; line-height: 1.4; height: 44px; overflow: hidden; }
     .meta { font-size: 12px; color: #666; margin-bottom: 15px; .divider { margin: 0 5px; color: #ddd; } }
-    .time { font-size: 12px; color: #999; }
+    .time-range {
+      font-size: 12px;
+      color: #999;
+      display: flex;
+      align-items: center;
+      gap: 6px; /* 图标和文字间距 */
+      margin-top: auto; /* 把时间推到卡片内容区的最底部 */
+      
+      .el-icon {
+        font-size: 14px;
+      }
+    }
   }
 
   .card-footer {
