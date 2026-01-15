@@ -309,7 +309,7 @@
 
 <script setup lang="ts">
 import { ref, computed, reactive, onMounted, watch } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { useUserStore } from '@/stores/modules/user';
 import { getMyCourses, type CourseItem } from '@/api/content';
 import { getMyClasses, createClass, addStudentToClass, getMyStudents, batchImportStudents, updateStudent, removeStudentFromClass, type ClassItem, type StudentItem, type ImportResult } from '@/api/course';
@@ -318,6 +318,7 @@ import { getImgUrl } from '@/utils/index';
 import { ElConfigProvider } from 'element-plus'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 
+const route = useRoute();
 const router = useRouter();
 const userStore = useUserStore();
 
@@ -486,42 +487,6 @@ const formatDate = (val: any) => {
 
 const students = ref<StudentItem[]>([]);
 
-const filteredStudents = computed(() => {
-  let data = students.value;
-
-  // 1. 先按班级筛选
-  if (selectedClassId.value !== '') {
-    // 找到当前选中的班级对象
-    const targetClass = classList.value.find(c => c.id === Number(selectedClassId.value));
-    if (targetClass) {
-      // 对比班级名称 (因为 fetchStudentList 里把后端 class_name 映射为了 className)
-      data = data.filter(s => s.className === targetClass.name);
-    }
-  }
-
-  // 2. 再按关键字搜索
-  if (searchText.value) {
-    const lowerText = searchText.value.toLowerCase(); // 建议转小写比较
-    data = data.filter(s => 
-      s.name.includes(searchText.value) || 
-      s.code.includes(searchText.value) ||
-      // 建议顺便把手机号(username)也加入搜索
-      s.username.includes(searchText.value)
-    );
-  }
-
-  pagination.total = data.length;
-  
-  return data;
-});
-
-// 2. ✅ 新增：paginatedStudents (这是当前页实际显示的人)
-const paginatedStudents = computed(() => {
-  const start = (pagination.page - 1) * pagination.limit;
-  const end = start + pagination.limit;
-  return filteredStudents.value.slice(start, end);
-});
-
 // ✅ 新增：处理分页事件的函数
 const handleSizeChange = (val: number) => {
   pagination.limit = val;
@@ -583,11 +548,26 @@ const getFirstChar = (name?: string) => {
   return name ? name.charAt(0).toUpperCase() : '?';
 };
 
-onMounted(() => {
-  // 拉取班级列表 (给弹窗用)
-  getMyClasses().then(res => classList.value = res);
-  // 拉取学生列表 (给表格用)
-  fetchStudentList();
+onMounted(async () => {
+  // 1. 先获取班级下拉列表（为了让下拉框能显示出班级名字）
+  try {
+    const res = await getMyClasses();
+    classList.value = res;
+  } catch (e) {
+    console.error(e);
+  }
+
+  // 2. 检查 URL 是否带了 class_id 参数
+  const queryClassId = route.query.class_id;
+  
+  if (queryClassId) {
+    // 如果有参数，设置选中项
+    // 💡 注意：这一步赋值会触发下面的 watch([selectedClassId], ...)，从而自动调用 fetchStudentList()
+    selectedClassId.value = Number(queryClassId);
+  } else {
+    // 如果没有参数，手动加载一次全部列表
+    fetchStudentList();
+  }
 });
 
 // 1. 打开“添加学生”弹窗前，先去拉取最新的班级列表
@@ -595,7 +575,6 @@ const openAddStudentModal = async () => {
   try {
     const res = await getMyClasses();
     classList.value = res;
-    // 如果只有一个班，自动选中
     if (res.length > 0) studentForm.classId = res[0].id;
     showStudentModal.value = true;
   } catch (error) {

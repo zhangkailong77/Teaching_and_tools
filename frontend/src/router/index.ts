@@ -26,8 +26,8 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'student/course/:id',
         name: 'StudentCourseDetail',
-        component: () => import('@/views/dashboard/student/course-detail.vue'), // 稍后创建
-        meta: { requiresAuth: true, role: 'student' }
+        component: () => import('@/views/dashboard/student/course-detail.vue'), 
+        meta: { requiresAuth: true, role: 'student', activeMenu: '/dashboard/student' }
       },
       {
         path: 'student/homeworks', 
@@ -46,6 +46,12 @@ const routes: RouteRecordRaw[] = [
         name: 'TakeExam',
         component: () => import('@/views/dashboard/student/exams/take.vue'),
         meta: { requiresAuth: true, role: 'student', hideSidebar: true } // 标记隐藏侧边栏
+      },
+      {
+        path: 'student/exams/result/:id',
+        name: 'StudentExamResult',
+        component: () => import('@/views/dashboard/student/exams/analysis.vue'),
+        meta: { requiresAuth: true, role: 'student' }
       },
       {
         path: 'teacher', // 访问地址: /dashboard/teacher
@@ -68,8 +74,8 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'teacher/courses/:id', 
         name: 'TeacherCourseDetail',
-        component: () => import('@/views/dashboard/teacher/detail.vue'), // 稍后创建这个文件
-        meta: { requiresAuth: true, role: 'teacher' }
+        component: () => import('@/views/dashboard/teacher/detail.vue'), 
+        meta: { requiresAuth: true, role: 'teacher', activeMenu: '/dashboard/teacher/courses' }
       },
       {
         path: 'teacher/classes', 
@@ -80,14 +86,14 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'teacher/homeworks', 
         name: 'TeacherHomeworks',
-        component: () => import('@/views/dashboard/teacher/homeworksManager.vue'), // 稍后创建
+        component: () => import('@/views/dashboard/teacher/homeworksManager.vue'), 
         meta: { requiresAuth: true, role: 'teacher' }
       },
       {
         path: 'teacher/homeworks/:id', 
         name: 'TeacherGrading',
-        component: () => import('@/views/dashboard/teacher/homeworksGrading.vue'), // 稍后创建
-        meta: { requiresAuth: true, role: 'teacher' }
+        component: () => import('@/views/dashboard/teacher/homeworksGrading.vue'), 
+        meta: { requiresAuth: true, role: 'teacher', activeMenu: '/dashboard/teacher/homeworks' }
       },
       {
         path: 'teacher/exams', 

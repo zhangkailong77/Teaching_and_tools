@@ -42,6 +42,7 @@ class ClassOut(ClassBase):
     teacher_intro: Optional[str] = None
     teacher_school: Optional[str] = None
     teacher_college: Optional[str] = None
+    pending_count: int = 0
 
     class Config:
         from_attributes = True
@@ -94,6 +95,19 @@ class StudentUpdateFromTeacher(BaseModel):
 class ClassmateOut(BaseModel):
     name: str    # 显示真实姓名或昵称
     avatar: Optional[str] = None # 头像
+
+    class Config:
+        from_attributes = True
+
+
+# ✅ 新增：日程表项
+class ScheduleItem(BaseModel):
+    id: int
+    type: str       # 'exam' | 'homework'
+    title: str
+    time: datetime
+    class_name: str
+    status: str     # '进行中' | '即将截止'
 
     class Config:
         from_attributes = True

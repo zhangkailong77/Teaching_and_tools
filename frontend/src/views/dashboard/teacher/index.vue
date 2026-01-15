@@ -46,14 +46,14 @@
       <div class="section-title">
         <h3>我管理的班级</h3>
         <div class="filter-tabs">
-          <span class="active">进行中</span>
-          <span>已结课</span>
+          <span :class="{ active: currentFilter === 'ongoing' }" @click="currentFilter = 'ongoing'">进行中</span>
+          <span :class="{ active: currentFilter === 'finished' }" @click="currentFilter = 'finished'">已结课</span>
         </div>
       </div>
 
       <div class="course-list">
         <!-- ✅ 遍历 classList -->
-        <div class="course-item" v-for="(item, index) in classList" :key="`${item.id}-${index}`">
+        <div class="course-item" v-for="(item, index) in displayList" :key="`${item.id}-${index}`">
           
           <!-- 封面图 (如果没有图，显示首字母) -->
           <div class="course-img" :style="{ backgroundImage: `url(${item.cover_image || ''})`, backgroundColor: item.styleColor }">
@@ -81,12 +81,12 @@
 
 
           <div class="course-actions">
-            <!-- 这些按钮现在对应的是具体的“一门课” -->
-            <button class="btn-outline">课件</button>
-            <button class="btn-outline">作业</button>
-            <button class="btn-primary" @click="router.push(`/dashboard/teacher/students?class_id=${item.id}`)">
-              进入班级
+            <button class="btn-outline" @click="goCourseware(item)">课件</button>
+            <button class="btn-outline btn-badge-wrapper" @click="goHomework(item)">
+              作业
+              <span v-if="item.pending_count > 0" class="badge-dot">{{ item.pending_count }}</span>
             </button>
+            <button class="btn-primary" @click="goStudents(item)">进入班级</button>
           </div>
         </div>
 
@@ -124,11 +124,34 @@
       </div>
 
       <div class="schedule-section">
-        <div class="rec-header"><h4>近期日程</h4></div>
+        <div class="rec-header">
+          <h4>近期日程</h4>
+          <!-- 可选：加个查看全部 -->
+          <!-- <span class="view-all">全部</span> -->
+        </div>
+        
         <div class="schedule-list">
-          <div class="schedule-item">
-            <div class="date-box"><span class="day">25</span><span class="month">Dec</span></div>
-            <div class="s-info"><div class="title">ComfyUI 直播课</div><div class="time">19:30 - 21:00</div></div>
+          <!-- 空状态 -->
+          <div v-if="scheduleList.length === 0" class="empty-schedule">
+             🎉 近期无紧急事项
+          </div>
+
+          <!-- 遍历日程 -->
+          <div class="schedule-item" v-for="s in scheduleList" :key="s.id">
+            <!-- 左侧日期块 -->
+            <div class="date-box" :class="s.type">
+              <span class="day">{{ formatScheduleDate(s.time).day }}</span>
+              <span class="month">{{ formatScheduleDate(s.time).month }}</span>
+            </div>
+            <!-- 右侧信息 -->
+            <div class="s-info">
+              <div class="tag-row">
+                <span class="tag" :class="s.type">{{ s.type === 'exam' ? '考试' : '作业' }}</span>
+                <span class="time">{{ formatTimeOnly(s.time) }}</span>
+              </div>
+              <div class="title" :title="s.title">{{ s.title }}</div>
+              <div class="class-name">{{ s.class_name }}</div>
+            </div>
           </div>
         </div>
       </div>
@@ -371,13 +394,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, reactive } from 'vue';
+import { ref, onMounted, reactive, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/modules/user';
 import { getMyTeacherProfile, updateMyTeacherProfile, type TeacherProfile } from '@/api/profile';
 import { uploadImage } from '@/api/common';
 import TeacherSidebar from '@/components/TeacherSidebar.vue';
-import { getMyClasses, createClass, getDashboardStats, type ClassItem, type DashboardStats } from '@/api/course';
+import { getMyClasses, createClass, getDashboardStats, getTeacherSchedule, type ClassItem, type DashboardStats, type ScheduleItem } from '@/api/course';
 import { getMyCourses, type CourseItem } from '@/api/content';
 import { getImgUrl } from '@/utils/index'; 
 
@@ -402,16 +425,12 @@ const coverOptions = [
   'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=300&auto=format&fit=crop',
   'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=300&auto=format&fit=crop'
 ];
-// 模拟教师管理的课程数据
-// const courses = ref([
-//   { id: 1, name: 'ComfyUI 基础入门 (2025春)', category: 'AI绘图', students: 45, date: 'Created Dec 01', color: '#6c5ce7' },
-//   { id: 2, name: 'Python 全栈开发', category: 'Backend', students: 83, date: 'Created Nov 20', color: '#0984e3' },
-// ]);
-const stats = ref<DashboardStats>({ total_students: 0, total_classes: 0, pending_homeworks: 0 });
-const classList = ref<ClassItem[]>([]); // 班级列表
-const courseLibrary = ref<CourseItem[]>([]); // 课程包列表(用于下拉框)
 
-const showClassModal = ref(false); // 控制新建班级弹窗
+const stats = ref<DashboardStats>({ total_students: 0, total_classes: 0, pending_homeworks: 0 });
+const classList = ref<ClassItem[]>([]); 
+const courseLibrary = ref<CourseItem[]>([]); 
+
+const showClassModal = ref(false); 
 
 // ✅ 【新增】新建班级的表单数据
 const classForm = reactive({ 
@@ -433,6 +452,8 @@ const getTodayString = () => {
   const min = String(date.getMinutes()).padStart(2, '0');
   return `${year}-${month}-${day} ${hour}:${min}`;
 };
+
+const scheduleList = ref<ScheduleItem[]>([]);
 
 onMounted(async () => {
   userStore.fetchUserInfo();
@@ -460,32 +481,30 @@ interface TeachingCard extends ClassItem {
 // 修改 loadDashboardData
 const loadDashboardData = async () => {
   try {
-    // 1. 获取统计
-    const statsRes = await getDashboardStats();
+    const [statsRes, classesRes, scheduleRes] = await Promise.all([
+      getDashboardStats(),
+      getMyClasses(),
+      getTeacherSchedule() 
+    ]);
+
     stats.value = statsRes;
+    scheduleList.value = scheduleRes;
     
-    // 2. 获取班级列表
-    const classesRes = await getMyClasses();
-    
-    // 🌟【核心修改】：数据扁平化拆分逻辑 🌟
-    // 将一个班级绑定的多门课，拆分成多个卡片显示
-    const tempDisplayList: any[] = []; // 用 any 简单处理，或者用 TeachingCard
+    const tempDisplayList: any[] = []; 
 
     classesRes.forEach(cls => {
-      // A. 如果班级绑定了课程，就拆分成多个卡片
       if (cls.bound_course_names && cls.bound_course_names.length > 0) {
         cls.bound_course_names.forEach((cName, index) => {
-          // 获取对应的 courseId (假设后端返回的 names 和 ids 顺序是一致的)
-          // 注意：需要在后端接口 ClassOut 里返回 bound_course_ids，之前加过
           const cId = cls.bound_course_ids ? cls.bound_course_ids[index] : undefined;
+          const cPublicId = cls.bound_course_public_ids ? cls.bound_course_public_ids[index] : undefined;
 
           tempDisplayList.push({
             ...cls,
             styleColor: getRandomColor(),
-            // 标题逻辑：主标题是【课程名】，副标题是【班级名】
             displayTitle: cName,
             displaySubtitle: cls.name,
             bindingCourseId: cId,
+            bindingCoursePublicId: cPublicId,
             isSplit: true
           });
         });
@@ -495,7 +514,7 @@ const loadDashboardData = async () => {
         tempDisplayList.push({
           ...cls,
           styleColor: getRandomColor(),
-          displayTitle: cls.name,       // 主标题直接显示班级名
+          displayTitle: cls.name,       
           displaySubtitle: '未绑定课程', 
           isSplit: false
         });
@@ -640,10 +659,53 @@ const getRandomColor = () => {
   return colors[Math.floor(Math.random() * colors.length)];
 };
 
-const handleLogout = () => {
-  userStore.logout();
-  router.push('/login');
+// 1. 定义分类状态
+const currentFilter = ref('ongoing');
+
+// 2. 修改 filteredClassList (注意：由于你代码里有扁平化拆分逻辑，我们需要在这个基础上过滤)
+const displayList = computed(() => {
+  const now = new Date().getTime();
+  return classList.value.filter(item => {
+    const isEnded = item.end_date && new Date(item.end_date).getTime() < now;
+    return currentFilter.value === 'ongoing' ? !isEnded : isEnded;
+  });
+});
+
+// 3. 定义跳转函数
+const goCourseware = (item: any) => {
+  if (item.bindingCoursePublicId) {
+    router.push(`/dashboard/teacher/courses/${item.bindingCoursePublicId}`);
+  } 
+  else if (item.bindingCourseId) {
+    router.push(`/dashboard/teacher/courses/${item.bindingCourseId}`);
+  }
+  else {
+    router.push(`/dashboard/teacher/courses`);
+  }
 };
+
+const goHomework = (item: any) => {
+  // 跳转到作业管理，并带上班级 ID 参数
+  router.push(`/dashboard/teacher/homeworks?class_id=${item.id}`);
+};
+
+const goStudents = (item: any) => {
+  // 跳转到学生名单，并带上班级 ID 参数
+  router.push(`/dashboard/teacher/students?class_id=${item.id}`);
+};
+
+// ✅ 新增：格式化日程日期 (Dec 25)
+const formatScheduleDate = (dateStr: string) => {
+  const d = new Date(dateStr);
+  const month = d.toLocaleString('en-US', { month: 'short' }); 
+  const day = d.getDate();
+  return { month, day };
+}
+
+// ✅ 新增：格式化时间 (19:30)
+const formatTimeOnly = (dateStr: string) => {
+  return new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
 </script>
 
 <style scoped lang="scss">
@@ -1011,5 +1073,65 @@ $text-gray: #a4b0be;
   margin-top: 8px;
   font-size: 12px;
   color: #a4b0be;
+}
+
+/* ✅ P3: 按钮微标样式 */
+.btn-badge-wrapper {
+  position: relative;
+  .badge-dot {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background-color: #ff4d4f;
+    color: white;
+    font-size: 10px;
+    height: 16px;
+    min-width: 16px;
+    padding: 0 4px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid white;
+    font-weight: bold;
+  }
+}
+
+/* ✅ P2: 日程表样式优化 */
+.schedule-list {
+  display: flex; flex-direction: column; gap: 15px;
+  
+  .empty-schedule {
+    text-align: center; color: #999; font-size: 13px; padding: 20px 0;
+  }
+
+  .schedule-item {
+    display: flex; gap: 12px; align-items: flex-start;
+    padding-bottom: 12px; border-bottom: 1px dashed #f5f5f5;
+    &:last-child { border-bottom: none; }
+
+    .date-box { 
+      background: #f5f6fa; padding: 6px 10px; border-radius: 8px; text-align: center; min-width: 48px;
+      /* 不同类型不同颜色 */
+      &.exam { background: #e3f2fd; color: #0984e3; }
+      &.homework { background: #fff3e0; color: #e67e22; }
+
+      .day { display: block; font-weight: bold; font-size: 16px; line-height: 1.2; }
+      .month { font-size: 10px; text-transform: uppercase; opacity: 0.8; }
+    }
+
+    .s-info { 
+      flex: 1; overflow: hidden;
+      .tag-row {
+        display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;
+        .tag { font-size: 10px; padding: 1px 4px; border-radius: 4px; font-weight: bold; }
+        .tag.exam { background: rgba(9, 132, 227, 0.1); color: #0984e3; }
+        .tag.homework { background: rgba(230, 126, 34, 0.1); color: #e67e22; }
+        .time { font-size: 11px; color: #999; }
+      }
+      .title { font-size: 13px; font-weight: 600; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; }
+      .class-name { font-size: 11px; color: #999; }
+    }
+  }
 }
 </style>

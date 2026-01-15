@@ -13,6 +13,8 @@ from app.schemas import classroom as class_schemas
 import logging
 import pandas as pd
 import io 
+from datetime import datetime, timedelta
+from app.models.exam import Exam
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -41,15 +43,21 @@ def read_my_classes(
         # 2. 再查具体的课程名
         c_names = []
         c_ids = []
+        c_public_ids = []
+
         for binding in bindings:
             course_obj = db.query(Course).filter(Course.id == binding.course_id).first()
             if course_obj:
                 c_names.append(course_obj.name)
                 c_ids.append(course_obj.id)
+                c_public_ids.append(encode_id(course_obj.id))
+
+        pending = db.query(StudentSubmission).join(ClassAssignment).filter(
+            ClassAssignment.class_id == cls.id,
+            StudentSubmission.status == 1
+        ).count()
         
         # --- C. 拼装返回数据 ---
-        # 我们不能直接返回 cls 对象了，因为 cls 对象里没有 student_count 属性
-        # 我们需要构造一个字典，包含所有字段
         results.append({
             "id": cls.id,
             "name": cls.name,
@@ -60,10 +68,11 @@ def read_my_classes(
             "end_date": cls.end_date,
             "created_at": cls.created_at,
             
-            # ✅ 这里填入我们刚算出来的数据
             "student_count": s_count, 
             "bound_course_names": c_names,
-            "bound_course_ids": c_ids
+            "bound_course_ids": c_ids,
+            "bound_course_public_ids": c_public_ids,
+            "pending_count": pending
         })
         
     return results
@@ -774,3 +783,64 @@ def read_classmates(
             results.append(item)
         
     return results
+
+
+# -----------------------------------------------------------
+# 获取教师日程 (未来7天的考试和作业截止)
+# -----------------------------------------------------------
+@router.get("/schedule", response_model=List[class_schemas.ScheduleItem])
+def read_teacher_schedule(
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    now = datetime.now()
+    future = now + timedelta(days=7) # 只看未来7天
+    
+    schedule_list = []
+
+    # 1. 查即将开始或结束的考试
+    exams = db.query(Exam).filter(
+        Exam.teacher_id == current_user.id,
+        Exam.start_time >= now, # 还没开始的
+        # 或者正在进行但还没结束的也可以查，这里简单处理查未来的开始时间
+        Exam.start_time <= future
+    ).all()
+    
+    for e in exams:
+        # 获取关联班级名(取第一个)
+        c_name = "多班级"
+        if e.class_ids:
+            cls = db.query(Class).filter(Class.id == e.class_ids[0]).first()
+            if cls: c_name = cls.name
+            
+        schedule_list.append({
+            "id": e.id,
+            "type": "exam",
+            "title": e.title,
+            "time": e.start_time,
+            "class_name": c_name,
+            "status": "即将开考"
+        })
+
+    # 2. 查即将截止的作业
+    # 查找该老师发布的所有作业，且截止时间在未来7天内
+    homeworks = db.query(ClassAssignment).join(Class).filter(
+        Class.teacher_id == current_user.id,
+        ClassAssignment.deadline >= now,
+        ClassAssignment.deadline <= future
+    ).all()
+
+    for hw in homeworks:
+        schedule_list.append({
+            "id": hw.id,
+            "type": "homework",
+            "title": hw.title,
+            "time": hw.deadline,
+            "class_name": hw.classroom.name, # ClassAssignment 关联了 classroom
+            "status": "即将截止"
+        })
+
+    # 3. 按时间排序 (最近的在前)
+    schedule_list.sort(key=lambda x: x["time"])
+    
+    return schedule_list[:5] # 只返回最近5条

@@ -658,6 +658,86 @@ def export_exam_grades(
     )
 
 
+# -----------------------------------------------------------
+# [教师端] 实时查询题目库存 (用于随机组卷)
+# -----------------------------------------------------------
+@router.post("/questions/check-stock")
+def check_question_stock(
+    criteria: schemas.QuestionCheckReq,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    # 1. 基础查询：该老师的题目
+    query = db.query(models.Question).filter(
+        models.Question.teacher_id == current_user.id
+    )
+
+    # 2. 拼接筛选条件
+    # 题型
+    if criteria.type:
+        query = query.filter(models.Question.type == criteria.type)
+    
+    # 难度
+    if criteria.difficulty:
+        query = query.filter(models.Question.difficulty == criteria.difficulty)
+    
+    # 标签 (知识点)
+    if criteria.tag:
+        # 将 JSON 字段转为字符串进行模糊匹配
+        query = query.filter(cast(models.Question.tags, String).like(f'%{criteria.tag}%'))
+
+    # 3. 直接获取数量 (比查所有数据快得多)
+    count = query.count()
+
+    return {"count": count}
+
+
+# -----------------------------------------------------------
+# [教师端] 随机组卷预览 (只生成，不保存)
+# -----------------------------------------------------------
+@router.post("/exams/preview-random")
+def preview_random_exam(
+    strategies: List[schemas.RandomStrategyItem],
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    selected_questions = []
+    
+    for strategy in strategies:
+        # 1. 查询符合条件的题目 ID
+        query = db.query(models.Question).filter(
+            models.Question.teacher_id == current_user.id,
+            models.Question.type == strategy.type,
+            models.Question.difficulty == strategy.difficulty
+        )
+        if strategy.tag:
+            query = query.filter(cast(models.Question.tags, String).like(f'%{strategy.tag}%'))
+        
+        candidates = query.all()
+        
+        # 2. 随机抽取
+        count = min(len(candidates), strategy.count) # 防止越界
+        picked = random.sample(candidates, count)
+        
+        # 3. 格式化返回 (包含分值，用于前端展示)
+        for q in picked:
+            selected_questions.append({
+                "id": q.id,
+                "question_id": q.id,
+                "title": q.content, # 完整题干
+                "type": q.type,
+                "score": strategy.score, # 使用策略里的分值
+                "raw": { # 包含选项，用于渲染
+                   "type": q.type,
+                   "content": q.content,
+                   "options": q.options,
+                   "answer": q.answer
+                }
+            })
+            
+    return selected_questions
+
+
 
 # -----------------------------------------------------------
 # [学生端]
@@ -1066,3 +1146,87 @@ def submit_grading(
     db.commit()
     
     return {"message": "批阅完成", "total_score": record.total_score}
+
+
+# -----------------------------------------------------------
+# [学生端] 获取考试结果详情 (含答案解析)
+# -----------------------------------------------------------
+@router.get("/student/result/{exam_id}")
+def get_student_exam_result(
+    exam_id: int,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    # 1. 查找记录
+    record = db.query(models.ExamRecord).filter(
+        models.ExamRecord.exam_id == exam_id,
+        models.ExamRecord.student_id == current_user.id
+    ).first()
+    
+    if not record:
+        raise HTTPException(status_code=404, detail="未找到考试记录")
+
+    exam = record.exam
+    
+    # 2. 安全校验：只有 (状态=2已批改) 或 (时间已截止) 才能看答案
+    is_ended = False
+    if exam.end_time and datetime.now() > exam.end_time:
+        is_ended = True
+        
+    if record.status != 2 and not is_ended:
+        raise HTTPException(status_code=403, detail="考试尚未结束或未出分，暂无法查看详情")
+
+    # 3. 获取题目和答题详情
+    # 按试卷顺序排序
+    q_links = db.query(models.ExamQuestion).filter(
+        models.ExamQuestion.exam_id == exam_id
+    ).order_by(models.ExamQuestion.sort_order).all()
+    
+    questions_data = []
+    # 用于雷达图统计
+    tag_stats = {} # { '物流': {total: 10, earned: 8} }
+
+    for link in q_links:
+        q = link.question
+        
+        # 查学生答案
+        ans = db.query(models.ExamAnswer).filter(
+            models.ExamAnswer.record_id == record.id,
+            models.ExamAnswer.question_id == q.id
+        ).first()
+        
+        earned = ans.score if ans else 0
+        
+        # 统计知识点得分情况
+        if q.tags:
+            for tag in q.tags:
+                if tag not in tag_stats: tag_stats[tag] = {'total': 0, 'earned': 0}
+                tag_stats[tag]['total'] += link.score
+                tag_stats[tag]['earned'] += earned
+
+        questions_data.append({
+            "id": q.id,
+            "type": q.type,
+            "content": q.content,
+            "options": q.options,
+            "full_score": link.score,
+            "tags": q.tags,
+            "analysis": q.analysis, # ✅ 下发解析
+            "standard_answer": q.answer, # ✅ 下发标准答案
+            
+            # 学生作答信息
+            "student_answer": ans.answer_content if ans else None,
+            "earned_score": earned,
+            "is_correct": ans.is_correct if ans else False,
+            "teacher_feedback": ans.teacher_feedback if ans else None
+        })
+
+    return {
+        "exam_title": exam.title,
+        "total_score": record.total_score,
+        "pass_score": exam.pass_score,
+        "start_time": record.start_time,
+        "submit_time": record.submit_time,
+        "questions": questions_data,
+        "tag_stats": tag_stats # 返回给前端画雷达图
+    }

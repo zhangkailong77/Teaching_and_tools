@@ -349,9 +349,7 @@ const handleViewResult = (exam: any) => {
     return;
   }
   
-  // 这里写跳转到成绩详情页的逻辑 (目前是提示开发中)
-  ElMessage.success('正在进入成绩分析页...'); 
-  // router.push(...) 
+  router.push(`/dashboard/student/exams/result/${exam.id}`);
 };
 
 const isTimeEnded = (exam: any) => {

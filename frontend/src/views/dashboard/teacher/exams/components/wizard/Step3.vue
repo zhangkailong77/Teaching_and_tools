@@ -23,11 +23,13 @@
           </el-col>
           <el-col :span="12">
             <el-form-item label="及格分数">
-              <div class="input-tip">当前试卷总分：<span class="highlight">{{ form.total_score }}</span> 分</div>
+              <div class="input-tip">
+                当前试卷总分：<span class="highlight">{{ realTotalScore }}</span> 分
+              </div>
               <el-input-number 
                 v-model="form.pass_score" 
                 :min="0" 
-                :max="form.total_score" 
+                :max="realTotalScore" 
                 style="width: 100%"
                 controls-position="right"
               />
@@ -108,7 +110,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { Setting, Calendar, Timer } from '@element-plus/icons-vue'
 import { getMyClasses } from '@/api/course'
 
@@ -119,6 +121,26 @@ const form = computed({
   get: () => props.modelValue,
   set: (val) => emit('update:modelValue', val)
 })
+
+const realTotalScore = computed(() => {
+  // 模式 1: 手动组卷 -> 累加所有题目分数
+  if (form.value.mode === 1) {
+    return form.value.questions.reduce((sum: number, q: any) => sum + (Number(q.score) || 0), 0)
+  } 
+  // 模式 2: 随机组卷 -> 累加 (抽取数量 * 每题分值)
+  else {
+    return form.value.random_config.reduce((sum: number, c: any) => sum + ((Number(c.count) || 0) * (Number(c.score) || 0)), 0)
+  }
+})
+
+watch(realTotalScore, (newScore) => {
+  form.value.total_score = newScore
+  
+  // 智能调整及格分：如果及格分还没填或者不合理(大于总分)，自动重置为 60%
+  if (form.value.pass_score === 0 || form.value.pass_score > newScore) {
+    form.value.pass_score = Math.floor(newScore * 0.6)
+  }
+}, { immediate: true })
 
 const classOptions = ref<any[]>([])
 

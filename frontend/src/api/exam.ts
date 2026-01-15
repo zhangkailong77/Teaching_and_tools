@@ -261,3 +261,29 @@ export function exportExamGrades(examId: number) {
     responseType: 'blob' // ✅ 关键：必须指定响应类型为二进制流
   })
 }
+
+// 实时查询库存
+export function checkQuestionStock(data: { type: string; difficulty: number; tag?: string }) {
+  return request<any, { count: number }>({
+    url: '/exam/questions/check-stock',
+    method: 'post',
+    data
+  })
+}
+
+// 预览随机组卷结果
+export function previewRandomGeneration(strategies: any[]) {
+  return request<any, any[]>({
+    url: '/exam/exams/preview-random',
+    method: 'post',
+    data: strategies
+  })
+}
+
+// 获取学生考试结果详情
+export function getStudentResultDetail(examId: number) {
+  return request<any, any>({
+    url: `/exam/student/result/${examId}`,
+    method: 'get'
+  })
+}

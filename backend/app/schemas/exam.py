@@ -197,3 +197,10 @@ class GradeItem(BaseModel):
 
 class GradeSubmitRequest(BaseModel):
     items: List[GradeItem]
+
+
+# 14. 题目库存查询请求
+class QuestionCheckReq(BaseModel):
+    type: str
+    difficulty: int
+    tag: Optional[str] = None # 知识点

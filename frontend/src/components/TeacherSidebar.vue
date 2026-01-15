@@ -9,54 +9,107 @@
       <div class="menu-title">教学管理</div>
       
       <!-- router-link 会自动给当前路由加上 active 类，非常方便 -->
-      <router-link to="/dashboard/teacher" class="menu-item" active-class="active" exact>
-        <span class="icon">📚</span> 工作台
+      <router-link 
+        to="/dashboard/teacher" 
+        class="menu-item"
+        :class="{ active: activePath === '/dashboard/teacher' }"
+      >
+        <el-icon><HomeFilled /></el-icon>
+        <span>工作台</span>
       </router-link>
 
-      <router-link to="/dashboard/teacher/classes" class="menu-item" active-class="active">
-        <span class="icon">🏫</span> 班级管理
+      <router-link 
+        to="/dashboard/teacher/classes" 
+        class="menu-item"
+        :class="{ active: activePath === '/dashboard/teacher/classes' }"
+      >
+        <el-icon><School /></el-icon>
+        <span>班级管理</span>
       </router-link>
 
-      <router-link to="/dashboard/teacher/students" class="menu-item" active-class="active">
-        <span class="icon">👥</span> 学生名单
+      <router-link 
+        to="/dashboard/teacher/students" 
+        class="menu-item"
+        :class="{ active: activePath === '/dashboard/teacher/students' }"
+      >
+        <el-icon><UserFilled /></el-icon>
+        <span>学生名单</span>
       </router-link>
 
-      <router-link to="/dashboard/teacher/courses" class="menu-item" active-class="active">
-        <span class="icon">📦</span> 课程资源
+      <router-link 
+        to="/dashboard/teacher/courses" 
+        class="menu-item"
+        :class="{ active: activePath === '/dashboard/teacher/courses' }"
+      >
+        <el-icon><Collection /></el-icon>
+        <span>课程资源</span>
       </router-link>
 
-      <router-link to="/dashboard/teacher/homeworks" class="menu-item" active-class="active">
-        <span class="icon">✍️</span> 作业管理
+      <router-link 
+        to="/dashboard/teacher/homeworks" 
+        class="menu-item"
+        :class="{ active: activePath === '/dashboard/teacher/homeworks' || activePath.includes('/homeworks/') }"
+      >
+        <el-icon><Notebook /></el-icon>
+        <span>作业管理</span>
         <span class="badge" v-if="userStore.pendingHomeworkCount > 0">
           {{ userStore.pendingHomeworkCount }}
         </span>
       </router-link>
       
-      <router-link to="/dashboard/teacher/exams" class="menu-item">
-        <span class="icon">📊</span> 考试中心
+      <router-link 
+        to="/dashboard/teacher/exams" 
+        class="menu-item"
+        :class="{ active: activePath === '/dashboard/teacher/exams' || activePath.includes('/exams/') }"
+      >
+        <el-icon><Monitor /></el-icon>
+        <span>考试中心</span>
       </router-link>
     </div>
 
     <div class="menu-group bottom">
       <div class="menu-title">系统设置</div>
-      <a href="#" class="menu-item"><span class="icon">⚙️</span> 设置</a>
+      <a href="#" class="menu-item">
+        <el-icon><Setting /></el-icon>
+        <span>设置</span>
+      </a>
       <a href="#" class="menu-item logout" @click.prevent="handleLogout">
-        <span class="icon">🚪</span> 退出登录
+        <el-icon><SwitchButton /></el-icon>
+        <span>退出登录</span>
       </a>
     </div>
   </aside>
 </template>
 
 <script setup lang="ts">
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/modules/user';
-import { onMounted, ref } from 'vue'; 
+import { onMounted, ref, computed } from 'vue'; 
+import { 
+  HomeFilled, 
+  School,      // 班级管理
+  UserFilled,  // 学生名单
+  Collection,  // 课程资源
+  Notebook,    // 作业管理
+  Monitor,     // 考试中心
+  Setting, 
+  SwitchButton 
+} from '@element-plus/icons-vue';
 
+const route = useRoute();
 const router = useRouter();
 const userStore = useUserStore();
 
 onMounted(() => {
   userStore.refreshPendingCount();
+});
+
+const activePath = computed(() => {
+  const { meta, path } = route;
+  if (meta.activeMenu) {
+    return meta.activeMenu;
+  }
+  return path;
 });
 
 const handleLogout = () => {

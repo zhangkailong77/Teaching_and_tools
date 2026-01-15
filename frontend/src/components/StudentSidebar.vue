@@ -9,32 +9,57 @@
       <div class="menu-title">工作台</div>
       
       <!-- 1. 课程中心 (主页) -->
-      <router-link to="/dashboard/student" class="menu-item" active-class="active" exact>
-        <span class="icon">🏠</span> 课程中心
+      <router-link 
+        to="/dashboard/student" 
+        class="menu-item"
+        :class="{ active: activePath === '/dashboard/student' }"
+      >
+        <el-icon><HomeFilled /></el-icon>
+        <span>课程中心</span>
       </router-link>
 
       <!-- 后续功能预留链接 -->
       <a href="#" class="menu-item">
-        <span class="icon">🔔</span> 消息通知
+        <el-icon><Bell /></el-icon>
+        <span>消息通知</span>
       </a>
-      <router-link to="/dashboard/student/exams" class="menu-item" active-class="active">
-        <span class="icon">💻</span> 考试大厅
+      <router-link 
+        to="/dashboard/student/exams" 
+        class="menu-item"
+        :class="{ active: activePath === '/dashboard/student/exams' }"
+      >
+        <el-icon><Monitor /></el-icon>
+        <span>考试大厅</span>
       </router-link>
-      <router-link to="/dashboard/student/homeworks" class="menu-item" active-class="active">
-        <span class="icon">📝</span> 作业任务
+      <router-link 
+        to="/dashboard/student/homeworks" 
+        class="menu-item"
+        :class="{ active: activePath === '/dashboard/student/homeworks' }"
+      >
+        <el-icon><Notebook /></el-icon>
+        <span>作业任务</span>
       </router-link>
-      <router-link to="/dashboard/student/my-class" class="menu-item" active-class="active">
-          <span class="icon">👥</span> 我的班级
+      <router-link 
+        to="/dashboard/student/my-class" 
+        class="menu-item"
+        :class="{ active: activePath === '/dashboard/student/my-class' }"
+      >
+        <el-icon><UserFilled /></el-icon>
+        <span>我的班级</span>
       </router-link>
     </div>
 
     <div class="menu-group bottom">
       <div class="menu-title">系统设置</div>
+      
       <a href="#" class="menu-item">
-        <span class="icon">⚙️</span> 设置
+        <el-icon><Setting /></el-icon>
+        <span>设置</span>
       </a>
+      
       <a href="#" class="menu-item logout" @click.prevent="handleLogout">
-        <span class="icon">🚪</span> 退出登录
+        <el-icon><SwitchButton /></el-icon>
+        <span>退出登录</span>
       </a>
     </div>
   </aside>
@@ -44,7 +69,19 @@
 import { useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/modules/user';
 import request from '@/utils/request';
+import { computed } from 'vue';
+import { useRoute } from 'vue-router';
+import { 
+  HomeFilled, 
+  Monitor, 
+  Notebook, 
+  Bell, 
+  UserFilled, 
+  Setting, 
+  SwitchButton 
+} from '@element-plus/icons-vue';
 
+const route = useRoute();
 const router = useRouter();
 const userStore = useUserStore();
 
@@ -59,6 +96,15 @@ const handleLogout = async () => {
   userStore.logout();
   router.push('/login');
 };
+
+const activePath = computed(() => {
+  const { meta, path } = route;
+  // 如果路由配置了 activeMenu，就用配置的，否则用当前的 path
+  if (meta.activeMenu) {
+    return meta.activeMenu;
+  }
+  return path;
+});
 </script>
 
 <style scoped lang="scss">

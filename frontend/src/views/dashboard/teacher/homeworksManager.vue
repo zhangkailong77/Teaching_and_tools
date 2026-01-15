@@ -120,11 +120,12 @@ import { ref, onMounted, computed, nextTick, onActivated } from 'vue';
 import TeacherSidebar from '@/components/TeacherSidebar.vue';
 import { getTeacherHomeworkStats, getTeacherHomeworkList, type HomeworkStatsV2, type ClassHomeworkGroup } from '@/api/homework';
 import * as echarts from 'echarts';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { useUserStore } from '@/stores/modules/user';
 import AssignmentStats from '@/components/AssignmentStats.vue';
 import CustomHomeworkDrawer from '@/components/CustomHomeworkDrawer.vue'; 
 
+const route = useRoute();
 const userStore = useUserStore();
 const router = useRouter();
 
@@ -154,6 +155,17 @@ const toggleStats = (id: number) => {
 // 初始化
 onMounted(async () => {
   await loadData();
+  
+  // ✅ 修改点：检查 URL 参数
+  const cid = route.query.class_id;
+  if (cid) {
+    // 逻辑：如果传了 class_id，我们可以把其他的班级都折叠，只展开这个
+    classGroups.value.forEach(group => {
+      group.isExpanded = (group.class_id === Number(cid));
+    });
+    
+    // 如果有平滑滚动需求，也可以滚动到对应位置
+  }
 });
 
 onActivated(() => {

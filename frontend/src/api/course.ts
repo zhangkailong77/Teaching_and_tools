@@ -18,6 +18,7 @@ export interface ClassItem {
   teacher_title?: string;
   teacher_avatar?: string;
   styleColor?: string;
+  pending_count: number;
 }
 
 // 统计数据结构 (对应后端 DashboardStats)
@@ -128,6 +129,25 @@ export function batchImportStudents(classId: number, file: File) {
     headers: { 'Content-Type': 'multipart/form-data' },
     timeout: 120000 
   });
+}
+
+
+// ✅ 新增：日程项类型
+export interface ScheduleItem {
+  id: number;
+  type: 'exam' | 'homework';
+  title: string;
+  time: string;
+  class_name: string;
+  status: string;
+}
+
+// ✅ 新增：获取日程接口
+export function getTeacherSchedule() {
+  return request<any, ScheduleItem[]>({
+    url: '/classes/schedule',
+    method: 'get'
+  })
 }
 
 

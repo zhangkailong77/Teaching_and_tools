@@ -165,21 +165,34 @@ const handleNext = () => {
 }
 
 const handleSubmit = async () => {
-  // 表单基础校验
   if (examForm.class_ids.length === 0) return ElMessage.warning('请选择发布班级')
   if (!examForm.start_time) return ElMessage.warning('请设置考试有效时间范围')
 
   submitting.value = true
   try {
+    let finalMode = examForm.mode
+    let finalQuestions = undefined
+
+    if (examForm.mode === 2 && examForm.questions.length > 0) {
+      finalMode = 1 
+      finalQuestions = examForm.questions.map((q: any) => ({ 
+        question_id: q.question_id || q.id, // 兼容字段名
+        score: q.score 
+      }))
+    } 
+
+    else if (examForm.mode === 1) {
+      finalQuestions = examForm.questions.map((q: any) => ({ 
+        question_id: q.question_id || q.id, 
+        score: q.score 
+      }))
+    }
+
     const payload = {
       title: examForm.title,
-      mode: examForm.mode,
-      // 组卷数据
-      questions: examForm.mode === 1 ? 
-        examForm.questions.map(q => ({ question_id: q.id, score: q.score })) : undefined,
-      random_config: examForm.mode === 2 ? examForm.random_config : undefined,
-      
-      // ✅ 确保添加了 Step3 里的新字段
+      mode: finalMode, 
+      questions: finalQuestions, 
+      random_config: finalMode === 2 ? examForm.random_config : undefined,
       duration: examForm.duration,
       pass_score: examForm.pass_score,
       total_score: examForm.total_score,
@@ -189,11 +202,9 @@ const handleSubmit = async () => {
     }
 
     if (props.initialData?.id) {
-      // ✅ 编辑模式：调用更新接口
       await updateExam(props.initialData.id, payload)
       ElMessage.success('试卷更新成功')
     } else {
-      // ✨ 新建模式：调用创建接口
       await createExam(payload)
       ElMessage.success('试卷发布成功')
     }
