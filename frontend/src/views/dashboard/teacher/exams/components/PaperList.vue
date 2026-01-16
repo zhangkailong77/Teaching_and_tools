@@ -4,15 +4,19 @@
     <!-- 1. 顶部操作 -->
     <div class="toolbar">
       <div class="left">
+        <!-- ✅ 绑定关键词 -->
         <el-input 
+          v-model="searchKeyword"
           placeholder="搜索试卷名称..." 
           prefix-icon="Search"
           style="width: 240px"
+          clearable
         />
-        <el-select placeholder="状态" style="width: 120px; margin-left: 10px;">
+        <!-- ✅ 绑定状态 -->
+        <el-select v-model="filterStatus" placeholder="状态" style="width: 120px; margin-left: 10px;" clearable>
           <el-option label="全部" value="" />
-          <el-option label="进行中" :value="1" />
-          <el-option label="已结束" :value="2" />
+          <el-option label="进行中" value="ongoing" />
+          <el-option label="已结束" value="ended" />
         </el-select>
       </div>
       <div class="right">
@@ -34,7 +38,7 @@
       </div>
 
       <!-- 数据卡片 -->
-      <div class="paper-card" v-for="item in list" :key="item.id">
+      <div class="paper-card" v-for="item in filteredList" :key="item.id">
         <div class="status-badge" :class="getExamState(item).class">
           {{ getExamState(item).text }}
         </div>
@@ -82,13 +86,38 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { getExams, deleteExam, type ExamItem } from '@/api/exam'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Plus, Calendar } from '@element-plus/icons-vue'
 
 const loading = ref(false)
 const list = ref<ExamItem[]>([])
+
+const searchKeyword = ref('') // 搜索关键词
+const filterStatus = ref('')  // 状态筛选值: ''(全部), 'ongoing'(进行中), 'ended'(已结束)
+
+// ✅ 新增：过滤后的列表逻辑
+const filteredList = computed(() => {
+  let res = list.value
+  const now = new Date().getTime()
+
+  // 1. 关键词筛选
+  if (searchKeyword.value) {
+    res = res.filter(item => item.title.includes(searchKeyword.value))
+  }
+
+  // 2. 状态筛选逻辑
+  if (filterStatus.value === 'ongoing') {
+    res = res.filter(item => {
+      return now >= new Date(item.start_time!).getTime() && now <= new Date(item.end_time!).getTime()
+    })
+  } else if (filterStatus.value === 'ended') {
+    res = res.filter(item => now > new Date(item.end_time!).getTime())
+  }
+
+  return res
+})
 
 const emit = defineEmits(['create', 'edit', 'view-results'])
 

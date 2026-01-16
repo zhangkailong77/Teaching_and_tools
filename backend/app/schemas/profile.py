@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional, List
+from datetime import datetime
 
 # 基础字段
 class TeacherProfileBase(BaseModel):
@@ -53,3 +54,25 @@ class StudentProfileOut(StudentProfileBase):
 
     class Config:
         from_attributes = True
+
+
+# 1. 活跃度数据项
+class ActivityData(BaseModel):
+    date: str  # "01-15"
+    count: int # 完成课时数
+
+# 2. 公告简报
+class NoticeSimple(BaseModel):
+    id: int
+    title: str
+    content: str
+    created_at: datetime
+
+# 3. 侧边栏聚合数据
+class StudentSidebarData(BaseModel):
+    # 学习力分析
+    activity_chart: List[ActivityData]
+    # 学习成就
+    total_completed_lessons: int
+    # 班级公告
+    latest_notices: List[NoticeSimple]

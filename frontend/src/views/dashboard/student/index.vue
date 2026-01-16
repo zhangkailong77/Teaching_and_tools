@@ -59,6 +59,10 @@
       <!-- 我的课程列表 (对应需求：展示已加入的班级列表，显示学习进度百分比) -->
       <div class="section-title">
         <h3>继续学习 (我的课程)</h3>
+        <div class="filter-tabs">
+          <span :class="{ active: currentTab === 0 }" @click="currentTab = 0">正在学</span>
+          <span :class="{ active: currentTab === 1 }" @click="currentTab = 1">已结课</span>
+        </div>
         <div class="nav-arrows">
           <button>&lt;</button>
           <button>&gt;</button>
@@ -67,7 +71,16 @@
 
       <div class="course-grid">
         <!-- 课程卡片 v-for -->
-        <div class="course-card" v-for="(course, index) in courseList" :key="index" @click="router.push(`/dashboard/student/course/${course.id}`)">
+        <div 
+          class="course-card" 
+          v-for="(course, index) in filteredCourseList" 
+          :key="index" 
+          :class="{ 'is-archived': course.status === 1 }"
+          @click="router.push(`/dashboard/student/course/${course.id}`)"
+        >
+          <div v-if="course.status === 1" class="status-badge archived">
+            已结课
+          </div>
           
           <!-- 封面区域 -->
           <div class="card-cover" :style="{ backgroundColor: course.color, backgroundImage: `url(${getImgUrl(course.cover)})`, backgroundSize: 'cover' }">
@@ -147,38 +160,41 @@
         </p>
 
         <p class="slogan">坚持学习，达成目标</p>
-        
-        <div class="action-buttons">
-          <button class="btn-circle">🔔</button>
-          <button class="btn-circle">📩</button>
-          <button class="btn-circle">📅</button>
-        </div>
       </div>
+      
 
-      <!-- 简单的活跃度图表装饰 -->
-      <div class="chart-placeholder">
-        <div class="bar" style="height: 40%"></div>
-        <div class="bar" style="height: 60%"></div>
-        <div class="bar" style="height: 80%"></div>
-        <div class="bar" style="height: 50%"></div>
-        <div class="bar" style="height: 70%"></div>
-      </div>
-
-      <div class="recommend-section">
-        <div class="rec-header">
-          <h4>推荐导师</h4>
-          <button class="add-btn">+</button>
+      <!-- ✅ 模块 2: 班级公告栏 (替换推荐导师) -->
+      <div class="sidebar-card notice-section">
+        <div class="card-header">
+          <h4>班级公告</h4>
+          <el-icon class="more-icon"><Bell /></el-icon>
         </div>
-        <div class="mentor-list">
-          <div class="mentor-item">
-            <div class="m-avatar">P</div>
-            <div class="m-info">
-              <div class="name">Prashant Kumar</div>
-              <div class="job">Software Developer</div>
-            </div>
-            <button class="follow-btn">Follow</button>
+        <div class="notice-list">
+          <div v-if="sidebarData.latest_notices.length === 0" class="empty-notices">
+              暂无班级公告
           </div>
-          <!-- 更多导师... -->
+          <div 
+            v-for="notice in sidebarData.latest_notices" 
+            :key="notice.id" 
+            class="notice-item"
+          >
+            <div class="dot"></div>
+            <div class="n-content">
+              <div class="n-title">{{ notice.title }}</div>
+              <div class="n-time">{{ new Date(notice.created_at).toLocaleDateString() }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ✅ 模块 3: 学习成就 -->
+      <div class="sidebar-card achievement-section">
+        <div class="achievement-box">
+          <div class="ach-icon">🏆</div>
+          <div class="ach-info">
+            <div class="label">已学课时总数</div>
+            <div class="num">{{ sidebarData.total_completed_lessons }} <small>节</small></div>
+          </div>
         </div>
       </div>
     </aside>
@@ -278,7 +294,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, reactive } from 'vue';
+import { ref, onMounted, reactive, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/modules/user';
 import request from '@/utils/request';
@@ -287,11 +303,12 @@ import { getImgUrl } from '@/utils/index';
 import { getMyEnrolledClasses, type ClassItem } from '@/api/course';
 import { uploadImage } from '@/api/common';
 // ✅ 引入新写的 API
-import { getMyStudentProfile, updateMyStudentProfile, type StudentProfile } from '@/api/profile';
+import { getMyStudentProfile, updateMyStudentProfile, getStudentSidebarData, type StudentProfile } from '@/api/profile';
+import * as echarts from 'echarts';
 
 const router = useRouter();
 const userStore = useUserStore();
-
+const currentTab = ref(0);
 const studentProfile = ref<Partial<StudentProfile>>({});
 // 编辑表单数据
 const profileForm = reactive<Partial<StudentProfile>>({
@@ -310,6 +327,13 @@ const fileInputRef = ref<HTMLInputElement | null>(null);
 const isLoading = ref(false);
 const comfyUrl = ref(''); // 用来存后端返回的 URL
 
+const filteredCourseList = computed(() => {
+  return courseList.value.filter(course => {
+    // 假设后端或 fetch 函数已经把班级的 status 赋值给了 course.status
+    return (course.status || 0) === currentTab.value;
+  });
+});
+
 interface StudentCourseCard {
   id: string;
   name: string;
@@ -317,6 +341,7 @@ interface StudentCourseCard {
   cover: string;
   progress: number;
   color: string;
+  status: number;
   teacherName?: string;
   teacherTitle?: string;
   teacherAvatar?: string;
@@ -335,10 +360,21 @@ const getFirstChar = (name?: string) => {
   return name ? name.charAt(0).toUpperCase() : 'S';
 };
 
+// --- 状态定义 ---
+const sidebarData = ref({
+  activity_chart: [] as any[],
+  total_completed_lessons: 0,
+  latest_notices: [] as any[]
+});
+
+const activityChartRef = ref<HTMLElement | null>(null);
+let activityChart: echarts.ECharts | null = null;
+
 onMounted(() => {
   userStore.fetchUserInfo();
   fetchMyCourses();
   fetchProfile();
+  fetchSidebarData();
 });
 
 const fetchMyCourses = async () => {
@@ -372,6 +408,7 @@ const fetchMyCourses = async () => {
             
             progress: specificProgress, 
             color: getRandomColor(),
+            status: cls.status,
             teacherName: cls.teacher_name, 
             teacherTitle: cls.teacher_title,
             teacherAvatar: cls.teacher_avatar
@@ -386,7 +423,8 @@ const fetchMyCourses = async () => {
           cover: cls.cover_image || '',
           progress: 0,
           color: getRandomColor(),
-          teacherName: '班主任'
+          status: cls.status,
+          teacherName: '老师'
         });
       }
     });
@@ -396,6 +434,59 @@ const fetchMyCourses = async () => {
     console.error("加载课程失败", error);
   }
 };
+
+const fetchSidebarData = async () => {
+  try {
+    const res = await getStudentSidebarData();
+    sidebarData.value = res;
+    
+    // 初始化图表
+    nextTick(() => {
+      initActivityChart(res.activity_chart);
+    });
+  } catch (error) {
+    console.error("加载侧边栏数据失败", error);
+  }
+};
+
+const initActivityChart = (chartData: any[]) => {
+  if (!activityChartRef.value) return;
+  if (activityChart) activityChart.dispose();
+  
+  activityChart = echarts.init(activityChartRef.value);
+  
+  const option = {
+    grid: { top: 10, bottom: 20, left: 10, right: 10, containLabel: false },
+    tooltip: { trigger: 'axis', axisPointer: { type: 'none' } },
+    xAxis: {
+      type: 'category',
+      data: chartData.map(i => i.date),
+      axisLine: { show: false },
+      axisTick: { show: false },
+      axisLabel: { color: '#bdc3c7', fontSize: 10 }
+    },
+    yAxis: { type: 'value', show: false },
+    series: [{
+      data: chartData.map(i => i.count),
+      type: 'bar',
+      barWidth: 8,
+      itemStyle: {
+        // ✅ 使用深紫色渐变，且增加圆角
+        borderRadius: [4, 4, 0, 0],
+        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+          { offset: 0, color: '#6c5ce7' },
+          { offset: 1, color: '#a29bfe' }
+        ])
+      },
+      emphasis: { itemStyle: { color: '#5849be' } }
+    }]
+  };
+  
+  activityChart.setOption(option);
+};
+
+// 窗口缩放适配
+window.addEventListener('resize', () => activityChart?.resize());
 
 // 1. 获取档案
 const fetchProfile = async () => {
@@ -671,6 +762,7 @@ $text-gray: #a4b0be;
     display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; padding-bottom: 20px;
     
     .course-card {
+      position: relative;
       background: white;
       border-radius: 16px;
       overflow: hidden;
@@ -761,16 +853,28 @@ $text-gray: #a4b0be;
 
   .profile-summary {
     text-align: center;
+    margin-bottom: 30px;
+    .class-label {
+      display: inline-block;
+      padding: 2px 10px;
+      background: #e0f2f1;
+      color: #00c9a7;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 600;
+      margin: 10px 0;
+    }
+
     .avatar-large {
       width: 80px; 
-  height: 80px; 
-  margin: 0 auto 15px; 
-  position: relative; 
-  cursor: pointer;
-  border-radius: 50%;
-  overflow: hidden;
-  border: 3px solid #e0f2f1; /* 边框色 */
-  transition: all 0.3s;
+      height: 80px; 
+      margin: 0 auto 15px; 
+      position: relative; 
+      cursor: pointer;
+      border-radius: 50%;
+      overflow: hidden;
+      border: 3px solid #e0f2f1; /* 边框色 */
+      transition: all 0.3s;
 
   &:hover {
     border-color: $primary-color;
@@ -900,4 +1004,116 @@ $text-gray: #a4b0be;
 .custom-select :deep(.el-input__wrapper.is-focus) { box-shadow: 0 0 0 1px #00c9a7 inset !important; }
 
 @keyframes popUp { from { transform: scale(0.9) translateY(20px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
+
+/* ✅ 新增：状态切换 Tabs 样式 */
+.filter-tabs {
+  display: flex;
+  background: #eee;
+  padding: 4px;
+  border-radius: 10px;
+  span {
+    padding: 6px 16px;
+    font-size: 13px;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.3s;
+    color: #666;
+    &.active {
+      background: white;
+      color: #00c9a7; /* 你的主题色 */
+      font-weight: 600;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    }
+  }
+}
+
+/* ✅ 新增：已结课卡片的变灰效果 */
+.course-card.is-archived {
+  &:hover {
+    filter: grayscale(0.1); /* 悬停时稍微恢复颜色 */
+  }
+}
+
+.status-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: white;
+  /* 只圆左下角，实现贴合右上角的视觉效果 */
+  border-bottom-left-radius: 12px; 
+  z-index: 10;
+  box-shadow: -2px 2px 5px rgba(0,0,0,0.1);
+
+  /* 已结课状态配色：参考教师端的 ended (淡红色或深灰色) */
+  &.archived {
+    background-color: #1a6ee4; /* 使用高级的大地灰蓝，或者 #f56c6c 红色 */
+    color: #ffffff;
+  }
+}
+
+/* 右侧面板通用卡片 */
+.sidebar-card {
+  background: white;
+  border-radius: 20px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.02);
+  
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    h4 { font-size: 15px; color: #2c3e50; font-weight: 700; margin: 0; }
+    .tip { font-size: 11px; color: #bdc3c7; }
+    .more-icon { color: #ccc; cursor: pointer; &:hover { color: $primary-color; } }
+  }
+}
+
+/* 学习力分析图表 */
+.activity-chart-box {
+  width: 100%;
+  height: 120px; /* 紧凑型高度 */
+}
+
+/* 班级公告列表 */
+.notice-list {
+  .notice-item {
+    display: flex;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid #f9f9f9;
+    &:last-child { border-bottom: none; }
+    
+    .dot { width: 6px; height: 6px; background: $primary-color; border-radius: 50%; margin-top: 6px; flex-shrink: 0; }
+    .n-content {
+      .n-title { font-size: 13px; color: #34495e; font-weight: 500; margin-bottom: 4px; line-height: 1.4; }
+      .n-time { font-size: 11px; color: #bdc3c7; }
+    }
+  }
+  .empty-notices { text-align: center; padding: 20px; color: #ccc; font-size: 12px; }
+}
+
+/* 学习成就样式 */
+.achievement-section {
+  background: linear-gradient(135deg, #ffffff 0%, #f0fdfa 100%);
+  border: 1px solid #e0f2f1;
+  
+  .achievement-box {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    
+    .ach-icon { font-size: 32px; }
+    .ach-info {
+      .label { font-size: 12px; color: #94a3b8; margin-bottom: 2px; }
+      .num { font-size: 24px; font-weight: 800; color: #2c3e50; 
+        small { font-size: 14px; font-weight: normal; color: #94a3b8; }
+      }
+    }
+  }
+}
 </style>

@@ -24,3 +24,9 @@ class UserResponse(UserBase):
     class Config:
         # Pydantic V2 写法，允许从 ORM 模型读取数据
         from_attributes = True
+
+
+# 修改密码请求体
+class UserPasswordUpdate(BaseModel):
+    old_password: str
+    new_password: str

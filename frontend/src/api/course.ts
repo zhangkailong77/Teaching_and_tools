@@ -19,15 +19,34 @@ export interface ClassItem {
   teacher_avatar?: string;
   styleColor?: string;
   pending_count: number;
+  status: number;
+}
+
+
+// ✅ 新增：图表数据项接口
+export interface ChartItem {
+  name: string;
+  value: number;
+  extra?: string[]; // 用于存储课程名列表
 }
 
 // 统计数据结构 (对应后端 DashboardStats)
 export interface DashboardStats {
+  // 模块1: 学生
   total_students: number;
-  total_classes: number;
-  pending_homeworks: number;
-}
+  student_distribution: ChartItem[];
 
+  // 模块3: 执教
+  teaching_class_count: number;
+  teaching_distribution: ChartItem[];
+
+  // 模块4: 待办
+  total_pending: number;
+  task_distribution: {
+    homework: number;
+    exam: number;
+  };
+}
 // 获取统计数据 (顶部卡片)
 export function getDashboardStats() {
   return request.get<any, DashboardStats>('/classes/stats');
@@ -51,8 +70,8 @@ export interface StudentItem {
 }
 
 // 1. 获取老师创建的所有班级 (用于下拉框选择)
-export function getMyClasses() {
-  return request.get<any, ClassItem[]>('/classes/');
+export function getMyClasses(params?: { status?: number }) {
+  return request.get<any, ClassItem[]>('/classes/', { params });
 }
 
 // 2. 创建新班级 (为了让你能先建个班，否则没法加学生)
@@ -150,7 +169,15 @@ export function getTeacherSchedule() {
   })
 }
 
+// ✅ 重置学生密码
+export function resetStudentPassword(studentId: number) {
+  return request.put(`/users/${studentId}/reset-password`);
+}
 
+// 更新班级状态 (归档/恢复)
+export function updateClassStatus(classId: number, status: number) {
+  return request.put(`/classes/${classId}/status`, null, { params: { status } });
+}
 
 // ------------------------------学生端-----------------------------
 // ✅ 新增：[学生端] 获取我加入的班级及课程信息

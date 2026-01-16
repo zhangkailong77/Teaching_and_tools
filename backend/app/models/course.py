@@ -15,6 +15,7 @@ class Class(Base):
     cover_image = Column(String(255), nullable=True)
     start_date = Column(DateTime, nullable=True)
     end_date = Column(DateTime, nullable=True)
+    status = Column(Integer, default=0)
 
     # 关联关系
     teacher = relationship("User", back_populates="teaching_classes") # 关联到 User

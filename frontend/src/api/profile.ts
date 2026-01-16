@@ -50,3 +50,8 @@ export function getMyStudentProfile() {
 export function updateMyStudentProfile(data: Partial<StudentProfile>) {
   return request.put<any, StudentProfile>('/profiles/student/me', data);
 }
+
+// 获取学生侧边栏聚合统计数据
+export function getStudentSidebarData() {
+  return request.get<any, any>('/profiles/student/sidebar');
+}

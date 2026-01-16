@@ -7,6 +7,12 @@
         <div class="breadcrumb">
           <span>教学管理</span> / <span class="current">班级管理</span>
         </div>
+
+        <div class="status-tabs">
+          <span :class="{ active: currentTabStatus === 0 }" @click="switchTab(0)">进行中</span>
+          <span :class="{ active: currentTabStatus === 1 }" @click="switchTab(1)">已归档</span>
+        </div>
+        
         <div class="actions">
           <button class="btn-primary" @click="openModal('create')">+ 新建班级</button>
         </div>
@@ -17,12 +23,12 @@
         <table class="data-table">
           <thead>
             <tr>
-              <th width="80">封面</th>
-              <th>班级名称</th>
+              <th width="70" style="text-align: center;">封面</th>
+              <th width="150" style="text-align: center;">班级名称</th>
               <th>绑定课程包</th>
-              <th>学生数</th>
-              <th>教学周期</th>
-              <th>操作</th>
+              <th width="80" style="text-align: center;">学生数</th>
+              <th width="220" style="text-align: center;">教学周期</th>
+              <th width="260" style="text-align: center;">操作</th>
             </tr>
           </thead>
           <tbody>
@@ -44,16 +50,33 @@
                   </span>
                 </div>
               </td>
-              <td>{{ cls.student_count }} 人</td>
-              <td class="date-col">
-                {{ formatDate(cls.start_date) }} <br> 至 {{ formatDate(cls.end_date) }}
+              <td align="center">
+                <span class="num-text">{{ cls.student_count }} 人</span>
+              </td>
+              <td class="date-col" align="center">
+                <div class="date-box-inline"> 
+                  <span>{{ formatDateShort(cls.start_date) }}</span>
+                  <span class="date-sep">至</span>
+                  <span>{{ formatDateShort(cls.end_date) }}</span>
+                </div>
               </td>
               <td>
-                <button class="btn-text primary" @click="handleEnterClass(cls)">进入班级</button>
-                <span style="color: #eee; margin: 0 8px;">|</span>
-                
-                <button class="btn-text edit" @click="openModal('edit', cls)">编辑</button>
-                <button class="btn-text delete">归档</button>
+                <div class="action-btns" style="justify-content: center;">
+                  <button class="btn-text primary" @click="handleEnterClass(cls)">进入班级</button>
+                  <span style="color: #eee; margin: 0 8px;">|</span>
+                  
+                  <button class="btn-text edit" @click="openModal('edit', cls)">编辑</button>
+                  <button 
+                    v-if="currentTabStatus === 0" 
+                    class="btn-text delete" 
+                    @click="handleArchive(cls, 1)"
+                  >归档</button>
+                  <button 
+                    v-else 
+                    class="btn-text restore" 
+                    @click="handleArchive(cls, 0)"
+                  >恢复</button>
+                </div>
               </td>
             </tr>
           </tbody>
@@ -267,6 +290,7 @@ import {
   getMyStudents, 
   removeStudentFromClass, 
   addStudentToClass, 
+  updateClassStatus,
   type ClassItem, 
   type StudentItem
 } from '@/api/course';
@@ -280,6 +304,7 @@ const showModal = ref(false); // 班级编辑/新建弹窗
 const isEditMode = ref(false);
 const currentId = ref<number | null>(null); // 编辑班级时的临时ID
 const isLoading = ref(false); // ✅ 新增：通用加载状态(防止按钮重复点击)
+const currentTabStatus = ref(0)
 
 // 抽屉相关状态
 const showDrawer = ref(false);
@@ -315,17 +340,48 @@ const coverOptions = [
 
 const dateConfig = { type: 'string', mask: 'YYYY-MM-DD HH:mm' };
 
+const formatDateShort = (val: any) => {
+  if (!val) return '--';
+  return String(val).split('T')[0];
+};
+
 // --- 初始化 ---
 onMounted(() => {
   fetchData();
 });
 
+const switchTab = (status: number) => {
+  currentTabStatus.value = status
+  fetchData() // 重新调用 API
+}
+
 const fetchData = async () => {
   try {
-    const [classes, courses] = await Promise.all([getMyClasses(), getMyCourses()]);
+    const [classes, courses] = await Promise.all([
+      getMyClasses({ status: currentTabStatus.value }), 
+      getMyCourses()
+    ]);
     classList.value = classes;
     courseLibrary.value = courses;
   } catch (e) { console.error(e); }
+};
+
+// 归档/恢复 处理函数
+const handleArchive = async (cls: ClassItem, targetStatus: number) => {
+  const actionText = targetStatus === 1 ? '归档' : '恢复';
+  const confirmMsg = targetStatus === 1 
+    ? `确定要归档【${cls.name}】吗？\n归档后班级将进入历史库，不再出现在工作台。`
+    : `确定要恢复【${cls.name}】吗？`;
+
+  if (!confirm(confirmMsg)) return;
+
+  try {
+    await updateClassStatus(cls.id, targetStatus);
+    alert(`${actionText}成功`);
+    fetchData(); // 刷新列表
+  } catch (e) {
+    console.error(e);
+  }
 };
 
 // --- 班级管理逻辑 ---
@@ -520,7 +576,7 @@ $bg-color: #f5f6fa;
 
 /* 表格样式 */
 .table-container { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.02); }
-.data-table { width: 100%; border-collapse: collapse; 
+.data-table { width: 100%; border-collapse: collapse; table-layout: fixed; 
   th { text-align: left; padding: 15px; color: #888; font-size: 13px; border-bottom: 1px solid #eee; }
   td { padding: 15px; border-bottom: 1px solid #f5f5f5; font-size: 14px; vertical-align: middle; }
   .table-cover { width: 50px; height: 50px; border-radius: 8px; background-color: #ddd; background-size: cover; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
@@ -742,5 +798,79 @@ $bg-color: #f5f6fa;
 .el-select-dropdown,
 .el-popper {
   z-index: 2500 !important;
+}
+
+.date-col {
+  .date-box-inline {
+    display: flex;
+    align-items: center;
+    justify-content: center; 
+    gap: 8px;               
+    white-space: nowrap;    
+    font-family: monospace; 
+    color: #555;
+    font-size: 13px;
+  }
+
+  .date-sep {
+    color: #999;
+    font-weight: bold;
+    font-size: 12px;
+  }
+}
+
+.data-table td {
+  /* ... 原有样式 ... */
+  text-align: center; /* 确保单元格内整体居中 */
+}
+
+.status-tabs {
+  display: flex;
+  background: #eee;
+  padding: 3px;
+  border-radius: 8px;
+  margin-left: 30px; /* 放在面包屑右边 */
+  
+  span {
+    padding: 6px 16px;
+    font-size: 13px;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.2s;
+    color: #666;
+
+    &.active {
+      background: white;
+      color: $primary-color;
+      font-weight: 600;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    }
+  }
+}
+
+/* ✅ 恢复按钮样式 (使用紫色或蓝色) */
+.btn-text.restore {
+  background-color: #eef2ff; /* 极淡的蓝色/靛蓝色背景 */
+  color: #5f98e2;           /* 现代感强的靛蓝色 */
+  border: none;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-right: 0; // 去掉末尾边距
+
+  &:hover {
+    background-color: #75a5e4; /* 悬停变全蓝 */
+    color: white;
+    box-shadow: 0 4px 10px rgba(99, 102, 241, 0.2);
+  }
+}
+
+/* 如果是已归档状态，可以给表格行加一个淡淡的置灰效果 */
+.data-table tr.archived {
+  opacity: 0.8;
+  background-color: #fafafa;
 }
 </style>

@@ -21,3 +21,7 @@ export function register(data: LoginParams) {
 export function getUserInfo() {
   return request.get<any, UserInfo>('/users/me');
 }
+
+export function changePassword(data: { old_password: string; new_password: string }) {
+  return request.post('/users/change-password', data);
+}

@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Dict, Optional, Any
 from datetime import datetime
 
 # 基础字段
@@ -26,6 +26,7 @@ class ClassOut(ClassBase):
     name: str
     teacher_id: int
     created_at: datetime
+    status: int = 0  # 0进行中 1已归档
     
     student_count: int = 0
     bound_course_names: List[str] = []
@@ -47,11 +48,28 @@ class ClassOut(ClassBase):
     class Config:
         from_attributes = True
 
+
+
+# 通用图表数据项 { name: "班级A", value: 45, extra: [...] }
+class ChartItem(BaseModel):
+    name: str
+    value: int
+    extra: Optional[List[str]] = None # 用于存课程名列表等辅助信息
+
+
 # 新增 Dashboard 统计模型
 class DashboardStats(BaseModel):
-    total_students: int      # 去重后的学生总数
-    total_classes: int       # 班级总数
-    pending_homeworks: int   # 待批改作业 (暂时 Mock)
+    # 模块1: 学生概况
+    total_students: int          # 去重后的总人数
+    student_distribution: List[ChartItem] # 各班级人数分布
+
+    # 模块3: 执教概况
+    teaching_class_count: int    # 执教班级总数
+    teaching_distribution: List[ChartItem] # 各班级绑定的课程数及名称
+
+    # 模块4: 待办任务
+    total_pending: int           # 总待办数
+    task_distribution: Dict[str, int] # { "homework": 10, "exam": 5 }
 
 
 # --- 2. 添加学生相关 Schema ---

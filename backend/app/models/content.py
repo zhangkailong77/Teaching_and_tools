@@ -109,6 +109,20 @@ class StudentLearningProgress(Base):
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
 
+# 7. 班级公告表
+class Announcement(Base):
+    __tablename__ = "announcements"
+
+    id = Column(Integer, primary_key=True, index=True)
+    class_id = Column(Integer, ForeignKey("classes.id"), nullable=False)
+    title = Column(String(100), nullable=False)
+    content = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=func.now())
+
+    # 关联
+    classroom = relationship("app.models.course.Class", backref="announcements")
+
+    
 # ==========================================
 # 课程作业模板 (CourseTask) - 静态资源
 # ==========================================

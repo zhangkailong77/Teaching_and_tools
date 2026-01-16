@@ -52,7 +52,7 @@
     <div class="menu-group bottom">
       <div class="menu-title">系统设置</div>
       
-      <a href="#" class="menu-item">
+      <a class="menu-item" style="cursor: pointer" @click="showSettings = true">
         <el-icon><Setting /></el-icon>
         <span>设置</span>
       </a>
@@ -62,6 +62,9 @@
         <span>退出登录</span>
       </a>
     </div>
+
+    <SettingsModal v-model="showSettings" />
+    
   </aside>
 </template>
 
@@ -69,7 +72,7 @@
 import { useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/modules/user';
 import request from '@/utils/request';
-import { computed } from 'vue';
+import { ref, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { 
   HomeFilled, 
@@ -80,6 +83,9 @@ import {
   Setting, 
   SwitchButton 
 } from '@element-plus/icons-vue';
+import SettingsModal from '@/components/SettingsModal.vue'
+
+const showSettings = ref(false)
 
 const route = useRoute();
 const router = useRouter();

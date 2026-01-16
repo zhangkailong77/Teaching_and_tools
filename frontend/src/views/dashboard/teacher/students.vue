@@ -90,6 +90,7 @@
               </td>
               <td>
                 <button class="action-btn edit" @click="handleEdit(student)">编辑</button>
+                <button class="action-btn warning" @click="handleResetPwd(student)">重置</button>
                 <button class="action-btn delete" @click="handleRemove(student)">移除</button>
               </td>
             </tr>
@@ -312,7 +313,7 @@ import { ref, computed, reactive, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useUserStore } from '@/stores/modules/user';
 import { getMyCourses, type CourseItem } from '@/api/content';
-import { getMyClasses, createClass, addStudentToClass, getMyStudents, batchImportStudents, updateStudent, removeStudentFromClass, type ClassItem, type StudentItem, type ImportResult } from '@/api/course';
+import { getMyClasses, createClass, addStudentToClass, getMyStudents, batchImportStudents, updateStudent, removeStudentFromClass, resetStudentPassword, type ClassItem, type StudentItem, type ImportResult } from '@/api/course';
 import TeacherSidebar from '@/components/TeacherSidebar.vue';
 import { getImgUrl } from '@/utils/index'; 
 import { ElConfigProvider } from 'element-plus'
@@ -612,6 +613,21 @@ const submitAddStudent = async () => {
     isLoading.value = false;
   }
 };
+
+// ✅ 新增：重置密码处理函数
+const handleResetPwd = async (stu: StudentItem) => {
+  // 二次确认，防止手滑
+  if (!confirm(`确定要重置【${stu.name}】的密码吗？\n\n重置后密码将变为：123456`)) {
+    return;
+  }
+
+  try {
+    await resetStudentPassword(stu.id);
+    alert('重置成功！请通知学生使用密码 123456 登录。');
+  } catch (error) {
+    console.error(error);
+  }
+};
 </script>
 
 <style scoped lang="scss">
@@ -729,6 +745,7 @@ $text-gray: #a4b0be;
       .action-btn { background: none; border: none; font-size: 12px; cursor: pointer; margin-right: 10px; }
       .edit { color: $primary-purple; }
       .delete { color: #e74c3c; }
+      .warning { color: #f39c12; }
     }
   }
 

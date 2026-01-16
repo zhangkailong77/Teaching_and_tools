@@ -18,36 +18,14 @@
       </header>
 
       <!-- 数据概览卡片 -->
-      <div class="stats-row">
-        <div class="stat-card">
-          <div class="icon-box purple">👨‍🎓</div>
-          <div class="info">
-            <div class="num">{{ stats.total_students }}</div>
-            <div class="label">学生总数</div>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="icon-box blue">📘</div>
-          <div class="info">
-            <div class="num">{{ stats.total_classes }}</div>
-            <div class="label">执教课程</div>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="icon-box orange">⚡</div>
-          <div class="info">
-            <div class="num">{{ stats.pending_homeworks }}</div>
-            <div class="label">待批改作业</div>
-          </div>
-        </div>
-      </div>
+      <DashboardStats :data="stats" />
 
       <!-- 执教课程列表 -->
       <div class="section-title">
-        <h3>我管理的班级</h3>
+        <h3>我管理的班级与课程</h3>
         <div class="filter-tabs">
-          <span :class="{ active: currentFilter === 'ongoing' }" @click="currentFilter = 'ongoing'">进行中</span>
-          <span :class="{ active: currentFilter === 'finished' }" @click="currentFilter = 'finished'">已结课</span>
+          <span :class="{ active: currentFilter === 0 }" @click="currentFilter = 0">进行中</span>
+          <span :class="{ active: currentFilter === 1 }" @click="currentFilter = 1">已归档</span>
         </div>
       </div>
 
@@ -71,7 +49,12 @@
               <span>👥 {{ item.student_count }} 人</span>
               <span class="divider">|</span>
               <!-- 时间 -->
-              <span>📅 {{ formatDuration(item.start_date, item.end_date) }}</span>
+              <span :class="{ 'overdue-text': isOverdue(item.end_date) && item.status === 0 }">
+              📅 {{ formatDuration(item.start_date, item.end_date) }}
+              <el-tooltip content="教学周期已结束，建议完成作业和考试后归档" placement="top" v-if="isOverdue(item.end_date) && item.status === 0">
+                <el-icon class="warning-icon"><Warning /></el-icon>
+              </el-tooltip>
+            </span>
             </div>
           </div>
 
@@ -86,6 +69,7 @@
               作业
               <span v-if="item.pending_count > 0" class="badge-dot">{{ item.pending_count }}</span>
             </button>
+            
             <button class="btn-primary" @click="goStudents(item)">进入班级</button>
           </div>
         </div>
@@ -394,15 +378,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, reactive, computed } from 'vue';
+import { ref, onMounted, reactive, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/modules/user';
 import { getMyTeacherProfile, updateMyTeacherProfile, type TeacherProfile } from '@/api/profile';
 import { uploadImage } from '@/api/common';
 import TeacherSidebar from '@/components/TeacherSidebar.vue';
-import { getMyClasses, createClass, getDashboardStats, getTeacherSchedule, type ClassItem, type DashboardStats, type ScheduleItem } from '@/api/course';
+import { getMyClasses, createClass, getDashboardStats, getTeacherSchedule, updateClassStatus, type ClassItem, type ScheduleItem } from '@/api/course';
 import { getMyCourses, type CourseItem } from '@/api/content';
 import { getImgUrl } from '@/utils/index'; 
+import DashboardStats from './components/DashboardStats.vue'
+import { 
+  Warning
+} from '@element-plus/icons-vue'
 
 const router = useRouter();
 const userStore = useUserStore();
@@ -426,7 +414,12 @@ const coverOptions = [
   'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=300&auto=format&fit=crop'
 ];
 
-const stats = ref<DashboardStats>({ total_students: 0, total_classes: 0, pending_homeworks: 0 });
+const stats = ref<any>({ 
+  total_students: 0, student_distribution: [], 
+  my_resource_count: 0, platform_resource_count: 0,
+  teaching_class_count: 0, teaching_distribution: [],
+  total_pending: 0, task_distribution: { homework: 0, exam: 0 }
+});
 const classList = ref<ClassItem[]>([]); 
 const courseLibrary = ref<CourseItem[]>([]); 
 
@@ -483,7 +476,7 @@ const loadDashboardData = async () => {
   try {
     const [statsRes, classesRes, scheduleRes] = await Promise.all([
       getDashboardStats(),
-      getMyClasses(),
+      getMyClasses({ status: currentFilter.value }),
       getTeacherSchedule() 
     ]);
 
@@ -660,16 +653,43 @@ const getRandomColor = () => {
 };
 
 // 1. 定义分类状态
-const currentFilter = ref('ongoing');
+const currentFilter = ref(0); 
 
-// 2. 修改 filteredClassList (注意：由于你代码里有扁平化拆分逻辑，我们需要在这个基础上过滤)
 const displayList = computed(() => {
-  const now = new Date().getTime();
-  return classList.value.filter(item => {
-    const isEnded = item.end_date && new Date(item.end_date).getTime() < now;
-    return currentFilter.value === 'ongoing' ? !isEnded : isEnded;
-  });
+  return classList.value.filter(item => item.status === currentFilter.value);
 });
+
+const isOverdue = (endDate?: string) => {
+  if (!endDate) return false;
+  return new Date(endDate).getTime() < new Date().getTime();
+};
+
+// ✅ 4. 新增：处理归档/恢复操作
+const handleStatusChange = async (item: any) => {
+  const isArchiving = item.status === 0;
+  const actionText = isArchiving ? '归档' : '恢复';
+  
+  try {
+    await ElMessageBox.confirm(
+      isArchiving 
+        ? `确定要归档【${item.displaySubtitle}】吗？归档后该班级将移至已归档列表。`
+        : `确定要恢复【${item.displaySubtitle}】的教学状态吗？`,
+      '状态确认',
+      { confirmButtonText: `确认${actionText}`, type: isArchiving ? 'warning' : 'info' }
+    );
+
+    // 调用之前在班级管理写好的接口
+    const targetStatus = isArchiving ? 1 : 0;
+    await updateClassStatus(item.id, targetStatus);
+    
+    ElMessage.success(`班级${actionText}成功`);
+    
+    // 重新加载工作台数据
+    loadDashboardData();
+  } catch (e) {
+    // 取消操作
+  }
+};
 
 // 3. 定义跳转函数
 const goCourseware = (item: any) => {
@@ -706,6 +726,10 @@ const formatScheduleDate = (dateStr: string) => {
 const formatTimeOnly = (dateStr: string) => {
   return new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
+
+watch(currentFilter, () => {
+  loadDashboardData();
+});
 </script>
 
 <style scoped lang="scss">
@@ -1133,5 +1157,39 @@ $text-gray: #a4b0be;
       .class-name { font-size: 11px; color: #999; }
     }
   }
+}
+
+.overdue-text {
+  color: #ff9f43; /* 警示橙色 */
+  font-weight: 600;
+  .warning-icon {
+    margin-left: 4px;
+    vertical-align: middle;
+    cursor: help;
+  }
+}
+
+/* 归档按钮样式 */
+.btn-archive {
+  padding: 8px !important;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: #909399 !important;
+  
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.05) !important;
+    color: $primary-color !important;
+    border-color: $primary-color !important;
+  }
+}
+
+.filter-tabs span.active {
+  background: white;
+  color: $primary-color; /* 确保使用你的青绿色 */
+  font-weight: 600;
 }
 </style>

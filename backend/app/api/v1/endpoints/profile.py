@@ -1,11 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from datetime import datetime, timedelta
+from sqlalchemy import func
 from app.api import deps
 from app.models.user import User
 from app.models.profile import TeacherProfile
 from app.models.profile import StudentProfile
 from app.models.course import Enrollment, Class
-from app.models.content import Course, ClassCourseBinding
+from app.models.content import Course, ClassCourseBinding, StudentLearningProgress, Announcement
 from app.schemas import profile as schemas
 
 router = APIRouter()
@@ -22,10 +24,6 @@ def read_my_teacher_profile(
     profile = db.query(TeacherProfile).filter(TeacherProfile.user_id == current_user.id).first()
     
     if not profile:
-        # ❌ 原来的写法：return TeacherProfile(user_id=current_user.id) -> id 是 None，导致报错
-        
-        # ✅ 修改后的写法：手动给个 id=0，骗过 Pydantic 的 int 校验
-        # 前端拿到 id=0 也没关系，因为更新接口是用 user_id 查数据的，不依赖这个 id
         return TeacherProfile(user_id=current_user.id, id=0)
     
     return profile
@@ -150,4 +148,48 @@ def update_my_student_profile(
         "class_name": "更新后请刷新", 
         "course_count": 0, 
         "course_names": []
+    }
+
+
+@router.get("/student/sidebar", response_model=schemas.StudentSidebarData)  # ✅ 修正：去掉 _profile
+def get_student_dashboard_sidebar(
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    # 1. 统计学习成就：已学课时总数 (status=2)
+    total_completed = db.query(StudentLearningProgress).filter(
+        StudentLearningProgress.student_id == current_user.id,
+        StudentLearningProgress.status == 2
+    ).count()
+
+    # 2. 统计学习力：近7天活跃度 (每天完成的课时数)
+    activity_list = []
+    now = datetime.now()
+    for i in range(6, -1, -1):  # 从6天前到今天
+        target_date = now - timedelta(days=i)
+        date_str = target_date.strftime("%Y-%m-%d")
+        display_date = target_date.strftime("%m-%d")
+        
+        # 查询该生在那一天完成的课时数
+        count = db.query(StudentLearningProgress).filter(
+            StudentLearningProgress.student_id == current_user.id,
+            StudentLearningProgress.status == 2,
+            func.date(StudentLearningProgress.updated_at) == date_str
+        ).count()
+        
+        activity_list.append({"date": display_date, "count": count})
+
+    # 3. 获取班级公告
+    # 首先找到学生所在的班级
+    enrollment = db.query(Enrollment).filter(Enrollment.student_id == current_user.id).first()
+    notices = []
+    if enrollment:
+        notices = db.query(Announcement).filter(
+            Announcement.class_id == enrollment.class_id
+        ).order_by(Announcement.created_at.desc()).limit(3).all()
+
+    return {
+        "activity_chart": activity_list,
+        "total_completed_lessons": total_completed,
+        "latest_notices": notices
     }

@@ -14,7 +14,7 @@ import logging
 import pandas as pd
 import io 
 from datetime import datetime, timedelta
-from app.models.exam import Exam
+from app.models.exam import Exam, ExamRecord
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -26,9 +26,13 @@ router = APIRouter()
 def read_my_classes(
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user),
+    status: int = 0
 ):
     # 1. 查询该老师的所有班级
-    classes = db.query(Class).filter(Class.teacher_id == current_user.id).order_by(Class.start_date.desc()).all()
+    classes = db.query(Class).filter(
+        Class.teacher_id == current_user.id,
+        Class.status == status
+    ).order_by(Class.start_date.desc()).all()
     
     # 2. 遍历班级，手动填充统计数据
     results = []
@@ -72,7 +76,8 @@ def read_my_classes(
             "bound_course_names": c_names,
             "bound_course_ids": c_ids,
             "bound_course_public_ids": c_public_ids,
-            "pending_count": pending
+            "pending_count": pending,
+            "status": cls.status
         })
         
     return results
@@ -362,38 +367,77 @@ def read_dashboard_stats(
     if current_user.role != "teacher":
         raise HTTPException(status_code=403, detail="权限不足")
 
-    # 1. 统计班级总数
-    class_count = db.query(Class).filter(Class.teacher_id == current_user.id).count()
-
-    # 2. 统计学生总数 (去重!)
-    # SQL 逻辑: SELECT count(DISTINCT student_id) FROM enrollments JOIN classes ...
-    student_count = db.query(func.count(distinct(Enrollment.student_id)))\
+    # ==========================
+    # 模块 1: 学生生源概况
+    # ==========================
+    # A. 获取去重后的学生总数
+    total_students = db.query(func.count(distinct(Enrollment.student_id)))\
         .join(Class, Enrollment.class_id == Class.id)\
         .filter(Class.teacher_id == current_user.id)\
-        .scalar()
+        .scalar() or 0
 
-    # 3. 待批改作业
-    my_assignment_ids = db.query(ClassAssignment.id)\
-        .join(Class, ClassAssignment.class_id == Class.id)\
-        .filter(Class.teacher_id == current_user.id)\
-        .all()
+    # B. 获取各班级人数分布 (用于柱状图)
+    my_classes = db.query(Class).filter(Class.teacher_id == current_user.id).all()
+    student_dist = []
     
-    # 提取为列表 [1, 2, 3]
-    assign_id_list = [i[0] for i in my_assignment_ids]
-    
-    pending_homeworks = 0
-    if assign_id_list:
-        # 步骤 B: 查待批改数
-        # status: 1 = 已提交(待批改), 2 = 已批改
-        pending_homeworks = db.query(StudentSubmission).filter(
-            StudentSubmission.assignment_id.in_(assign_id_list),
-            StudentSubmission.status == 1 
-        ).count()
+    for cls in my_classes:
+        count = db.query(Enrollment).filter(Enrollment.class_id == cls.id).count()
+        student_dist.append({
+            "name": cls.name,
+            "value": count
+        })
+
+    # ==========================
+    # 模块 3: 执教课程覆盖
+    # ==========================
+    teaching_class_count = len(my_classes)
+    teaching_dist = []
+
+    for cls in my_classes:
+        # 查该班级绑定的课程
+        bindings = db.query(ClassCourseBinding).filter(ClassCourseBinding.class_id == cls.id).all()
+        course_names = []
+        for b in bindings:
+            c = db.query(Course).filter(Course.id == b.course_id).first()
+            if c:
+                course_names.append(c.name)
+        
+        teaching_dist.append({
+            "name": cls.name,
+            "value": len(course_names), # 课程数量
+            "extra": course_names       # 课程名称列表(用于Tooltip展示)
+        })
+
+    # ==========================
+    # 模块 4: 待办任务聚合
+    # ==========================
+    # A. 待批改作业 (Status=1)
+    pending_homework = db.query(StudentSubmission).join(ClassAssignment).join(Class).filter(
+        Class.teacher_id == current_user.id,
+        StudentSubmission.status == 1
+    ).count()
+
+    # B. 待批改试卷 (Status=1)
+    pending_exam = db.query(ExamRecord).join(Exam).filter(
+        Exam.teacher_id == current_user.id,
+        ExamRecord.status == 1
+    ).count()
 
     return {
-        "total_students": student_count or 0,
-        "total_classes": class_count or 0,
-        "pending_homeworks": pending_homeworks
+        # 模块1
+        "total_students": total_students,
+        "student_distribution": student_dist,
+        
+        # 模块3
+        "teaching_class_count": teaching_class_count,
+        "teaching_distribution": teaching_dist,
+        
+        # 模块4
+        "total_pending": pending_homework + pending_exam,
+        "task_distribution": {
+            "homework": pending_homework,
+            "exam": pending_exam
+        }
     }
 
 
@@ -714,6 +758,7 @@ def read_student_classes(
             "start_date": cls.start_date,
             "end_date": cls.end_date,
             "created_at": cls.created_at,
+            "status": cls.status,
             
             "student_count": real_student_count, 
             "bound_course_names": c_names,
@@ -730,6 +775,27 @@ def read_student_classes(
         })
         
     return results
+
+
+# -----------------------------------------------------------
+# 切换班级状态 (归档/恢复)
+# -----------------------------------------------------------
+@router.put("/{class_id}/status")
+def update_class_status(
+    class_id: int,
+    status: int, # 传 0 或 1
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    class_obj = db.query(Class).filter(Class.id == class_id, Class.teacher_id == current_user.id).first()
+    if not class_obj:
+        raise HTTPException(status_code=404, detail="班级不存在")
+    
+    class_obj.status = status
+    db.commit()
+    
+    msg = "班级已归档" if status == 1 else "班级已恢复"
+    return {"message": msg}
 
 
 # ------------------------------------------------------------------
@@ -844,3 +910,6 @@ def read_teacher_schedule(
     schedule_list.sort(key=lambda x: x["time"])
     
     return schedule_list[:5] # 只返回最近5条
+
+
+

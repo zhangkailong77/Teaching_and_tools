@@ -11,11 +11,31 @@
  Target Server Version : 80042 (8.0.42)
  File Encoding         : 65001
 
- Date: 15/01/2026 17:27:37
+ Date: 16/01/2026 17:24:17
 */
 
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
+
+-- ----------------------------
+-- Table structure for announcements
+-- ----------------------------
+DROP TABLE IF EXISTS `announcements`;
+CREATE TABLE `announcements`  (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `class_id` int NOT NULL,
+  `title` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `content` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `created_at` datetime NULL DEFAULT NULL,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `class_id`(`class_id` ASC) USING BTREE,
+  INDEX `ix_announcements_id`(`id` ASC) USING BTREE,
+  CONSTRAINT `announcements_ibfk_1` FOREIGN KEY (`class_id`) REFERENCES `classes` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of announcements
+-- ----------------------------
 
 -- ----------------------------
 -- Table structure for class_assignments
@@ -66,14 +86,11 @@ CREATE TABLE `class_course_bindings`  (
   INDEX `fk_ccb_course`(`course_id` ASC) USING BTREE,
   CONSTRAINT `fk_ccb_class` FOREIGN KEY (`class_id`) REFERENCES `classes` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `fk_ccb_course` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 41 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 50 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of class_course_bindings
 -- ----------------------------
-INSERT INTO `class_course_bindings` VALUES (10, 2, 2, '2025-12-30 17:08:11');
-INSERT INTO `class_course_bindings` VALUES (11, 2, 1, '2025-12-30 17:08:11');
-INSERT INTO `class_course_bindings` VALUES (12, 2, 3, '2025-12-30 17:08:11');
 INSERT INTO `class_course_bindings` VALUES (15, 4, 7, '2025-12-31 16:09:21');
 INSERT INTO `class_course_bindings` VALUES (16, 5, 8, '2025-12-31 16:10:00');
 INSERT INTO `class_course_bindings` VALUES (36, 1, 1, '2026-01-06 11:40:50');
@@ -81,6 +98,9 @@ INSERT INTO `class_course_bindings` VALUES (37, 1, 2, '2026-01-06 11:40:50');
 INSERT INTO `class_course_bindings` VALUES (38, 1, 6, '2026-01-06 11:40:50');
 INSERT INTO `class_course_bindings` VALUES (39, 3, 1, '2026-01-07 15:40:13');
 INSERT INTO `class_course_bindings` VALUES (40, 3, 6, '2026-01-07 15:40:13');
+INSERT INTO `class_course_bindings` VALUES (47, 2, 2, '2026-01-16 15:41:44');
+INSERT INTO `class_course_bindings` VALUES (48, 2, 1, '2026-01-16 15:41:44');
+INSERT INTO `class_course_bindings` VALUES (49, 2, 3, '2026-01-16 15:41:44');
 
 -- ----------------------------
 -- Table structure for classes
@@ -95,6 +115,7 @@ CREATE TABLE `classes`  (
   `cover_image` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '班级封面图URL',
   `start_date` datetime NULL DEFAULT NULL COMMENT '开课时间',
   `end_date` datetime NULL DEFAULT NULL COMMENT '结课时间',
+  `status` int NULL DEFAULT 0 COMMENT '0进行中 1已归档',
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `teacher_id`(`teacher_id` ASC) USING BTREE,
   INDEX `ix_classes_id`(`id` ASC) USING BTREE,
@@ -104,11 +125,11 @@ CREATE TABLE `classes`  (
 -- ----------------------------
 -- Records of classes
 -- ----------------------------
-INSERT INTO `classes` VALUES (1, '25跨境电商1班', '', 2, '2025-12-26 16:01:20', 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=300&auto=format&fit=crop', '2025-12-10 16:00:00', '2025-12-22 16:00:00');
-INSERT INTO `classes` VALUES (2, '25电子商务1班', '电商', 2, '2025-12-29 10:21:33', 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=300&auto=format&fit=crop', '2025-12-29 10:18:00', '2025-12-31 15:47:00');
-INSERT INTO `classes` VALUES (3, '25商务英语1班', '商务英语1班', 2, '2025-12-29 16:28:53', 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=300&auto=format&fit=crop', '2025-12-29 08:28:00', '2025-12-30 16:00:00');
-INSERT INTO `classes` VALUES (4, '25电子商务2班', '', 4, '2025-12-31 16:09:21', 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=300&auto=format&fit=crop', '2025-12-31 08:08:00', '2026-02-25 16:00:00');
-INSERT INTO `classes` VALUES (5, '25跨境电商2班', '', 4, '2025-12-31 16:10:00', 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=300&auto=format&fit=crop', '2025-12-30 16:00:00', '2026-02-11 16:00:00');
+INSERT INTO `classes` VALUES (1, '25跨境电商1班', '', 2, '2025-12-26 16:01:20', 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=300&auto=format&fit=crop', '2025-12-10 16:00:00', '2025-12-22 16:00:00', 0);
+INSERT INTO `classes` VALUES (2, '25电子商务1班', '电商', 2, '2025-12-29 10:21:33', 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=300&auto=format&fit=crop', '2025-12-29 10:18:00', '2025-12-31 15:47:00', 0);
+INSERT INTO `classes` VALUES (3, '25商务英语1班', '商务英语1班', 2, '2025-12-29 16:28:53', 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=300&auto=format&fit=crop', '2025-12-29 08:28:00', '2025-12-30 16:00:00', 1);
+INSERT INTO `classes` VALUES (4, '25电子商务2班', '', 4, '2025-12-31 16:09:21', 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=300&auto=format&fit=crop', '2025-12-31 08:08:00', '2026-02-25 16:00:00', 0);
+INSERT INTO `classes` VALUES (5, '25跨境电商2班', '', 4, '2025-12-31 16:10:00', 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=300&auto=format&fit=crop', '2025-12-30 16:00:00', '2026-02-11 16:00:00', 0);
 
 -- ----------------------------
 -- Table structure for course_chapters
@@ -600,7 +621,7 @@ CREATE TABLE `student_profiles`  (
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_sp_user_id`(`user_id` ASC) USING BTREE,
   CONSTRAINT `fk_sp_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 9 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '学生详细档案表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 10 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '学生详细档案表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of student_profiles
@@ -613,6 +634,7 @@ INSERT INTO `student_profiles` VALUES (5, 32, '林九', '22014081009', '保密',
 INSERT INTO `student_profiles` VALUES (6, 9, '张七', '22014082037', '保密', NULL, NULL, NULL, '2026-01-07 17:52:13', '2026-01-07 17:52:13');
 INSERT INTO `student_profiles` VALUES (7, 5, '李四', '22014082034', '保密', NULL, NULL, NULL, '2026-01-07 17:52:31', '2026-01-07 17:52:31');
 INSERT INTO `student_profiles` VALUES (8, 22, '贾八', '22014083008', '保密', NULL, NULL, NULL, '2026-01-14 15:38:59', '2026-01-14 15:38:59');
+INSERT INTO `student_profiles` VALUES (9, 10, '张四', '22014082021', '保密', NULL, NULL, NULL, '2026-01-16 15:49:02', '2026-01-16 15:49:02');
 
 -- ----------------------------
 -- Table structure for student_submissions
@@ -728,15 +750,15 @@ CREATE TABLE `users`  (
 -- ----------------------------
 -- Records of users
 -- ----------------------------
-INSERT INTO `users` VALUES (1, '18250636865', '$2b$12$jwxhQX9peRLmh0wxVq7xreuheYZDiDAIAIIzokZOnMsMr/R/RbVMS', 'student', 1, '2025-12-24 11:26:48', '2026-01-15 13:47:28', 8189, '张十一', '22014082032');
-INSERT INTO `users` VALUES (2, '18250636866', '$2b$12$OFGjgw52J9TWeZzKeG6gPOHUKKhi7EM3YYfUh2R1n7e43azYclPWy', 'teacher', 1, '2025-12-24 11:27:14', '2026-01-15 17:02:58', NULL, NULL, NULL);
+INSERT INTO `users` VALUES (1, '18250636865', '$2b$12$DM8zYSLV9Dt.jKfG4jykaetq3F4jmwGcSF6hJBaGDJBWQOc3ol9.y', 'student', 1, '2025-12-24 11:26:48', '2026-01-16 16:57:40', 8189, '张十一', '22014082032');
+INSERT INTO `users` VALUES (2, '18250636866', '$2b$12$BbkngZyC3IaWM.cWcZKmauZxsyO3VZTe5P2mRqrbc75CC13xrMqIi', 'teacher', 1, '2025-12-24 11:27:14', '2026-01-16 16:36:22', NULL, NULL, NULL);
 INSERT INTO `users` VALUES (4, '18250636867', '$2b$12$mVae3WIBNklVoxfL7qkLQ.ymZ9vRDq6vbwB2Za0cTStB1FO1DeYoa', 'teacher', 1, '2025-12-24 15:04:05', '2026-01-04 17:57:41', NULL, NULL, NULL);
 INSERT INTO `users` VALUES (5, '18250636868', '$2b$12$LExgic9UmvpwwLtG5Gufs.08MAc8wx7EfZdv9CjYzn3QiLJnOUZdq', 'student', 1, '2025-12-24 17:26:36', '2026-01-07 17:52:32', 8190, '李四', '22014082034');
 INSERT INTO `users` VALUES (6, '18250636969', '$2b$12$2bR.Xy.PQzAQDApnmWxdSeC.bIEs0C1kklBR751IoX4/tNFuUCyt2', 'student', 1, '2025-12-25 16:30:01', '2025-12-25 16:47:31', 8191, '王五', '22014082035');
 INSERT INTO `users` VALUES (7, '18250636870', '$2b$12$JZUcksLjg6lZfnipDk.rS.Bqwgy4cH.dqmkuUgsvhQCSyw.c0wq9u', 'student', 1, '2025-12-25 16:34:04', '2025-12-25 16:51:53', 8192, '赵六', '22014082036');
 INSERT INTO `users` VALUES (8, '18250636871', '$2b$12$HEqQ8pj0rTTBVi97d5wi2.juSlBWJnQ0AZaov6tlgvoxsf79j5j8m', 'student', 1, '2025-12-26 16:02:05', '2026-01-09 16:21:18', 8193, '张二', '22014082033');
 INSERT INTO `users` VALUES (9, '18250636872', '$2b$12$ahylOLX4IYYfxTXg5xF72.D0V32UfPDd2WDs9B.gLUON2w0cDqw6q', 'student', 1, '2025-12-29 17:59:50', '2026-01-07 17:52:13', NULL, '张七', '22014082037');
-INSERT INTO `users` VALUES (10, '18250636873', '$2b$12$oT0OqX4bUys/2obDlQtKCOxCvpB09s.AyOS83YbvQDq6GCXey5iWK', 'student', 1, '2025-12-30 14:20:52', NULL, NULL, '张四', '22014082021');
+INSERT INTO `users` VALUES (10, '18250636873', '$2b$12$oT0OqX4bUys/2obDlQtKCOxCvpB09s.AyOS83YbvQDq6GCXey5iWK', 'student', 1, '2025-12-30 14:20:52', '2026-01-16 15:49:02', NULL, '张四', '22014082021');
 INSERT INTO `users` VALUES (11, '18250636874', '$2b$12$KXKRsdVENh0EmciRYox5K.OtcLcNoeR/26duy4z24TPhpj75uPe5.', 'student', 1, '2025-12-30 16:38:48', '2025-12-31 17:11:28', NULL, '张五', '22014082022');
 INSERT INTO `users` VALUES (12, '18250636875', '$2b$12$pq9nEyWa41m4WKR/v.PON.artWlJPlEFgOB0sw5w.SrK0NsIfBEYG', 'student', 1, '2025-12-31 16:11:05', '2025-12-31 17:12:02', NULL, '张八', '22014082023');
 INSERT INTO `users` VALUES (13, '18250636876', '$2b$12$NRSQIoCDK7ZW.1HqSy3C8uecojj7O2aFa1YX0ZMWMQ95sbbZ9u28K', 'student', 1, '2025-12-31 16:14:41', NULL, NULL, '张九', '22014082024');
@@ -777,7 +799,7 @@ INSERT INTO `users` VALUES (47, '13800000033', '$2b$12$KfpQjv7GzYEpFVfVuD6dKO6Px
 INSERT INTO `users` VALUES (48, '13800000034', '$2b$12$s8NZyY78KzBNLxvfCE0VlO2ztDCLH1DHBbJ2HGfp7PQxWkRdDhINe', 'student', 1, '2026-01-04 17:31:29', NULL, NULL, '林二五', '22014081025');
 INSERT INTO `users` VALUES (49, '13800000035', '$2b$12$vjdvfA9DlhHn.S9HiASyIOHp59hFpwCepI1.h6cciJ3C5szrJntZm', 'student', 1, '2026-01-04 17:31:29', NULL, NULL, '林二六', '22014081026');
 INSERT INTO `users` VALUES (50, '13800000036', '$2b$12$CeweWNm7Czy31hdXCC8nzO3tNC2P/t20wE1C/DA.KGtZo6p13yyaC', 'student', 1, '2026-01-04 17:31:29', NULL, NULL, '林二七', '22014081027');
-INSERT INTO `users` VALUES (51, '13800000037', '$2b$12$JFfX9d5uhbb2DUi/L45/X.ur5sYgyY2XTMlfPqnuWcZskEszpEu3i', 'student', 1, '2026-01-04 17:31:29', NULL, NULL, '林二八', '22014081028');
+INSERT INTO `users` VALUES (51, '13800000037', '$2b$12$u0y0lHRvoPOL3jQuvElg/.bbUchvuVipScCJTzCJSp3x2xROqWcKS', 'student', 1, '2026-01-04 17:31:29', NULL, NULL, '林二八', '22014081028');
 INSERT INTO `users` VALUES (52, '13800000038', '$2b$12$JMyPT.nR8dDcVYf7USc3L.Ipe3MwqC1GpReWu90Y5YY9h/gVGVnRi', 'student', 1, '2026-01-04 17:31:30', NULL, NULL, '林二九', '22014081029');
 INSERT INTO `users` VALUES (53, '13800000039', '$2b$12$tsiBrw.e6HxcI7Kqji/tyOLwGrLBwvp4cXpSJJigxJ4jFK8C8y3H2', 'student', 1, '2026-01-04 17:31:30', NULL, NULL, '林三十', '22014081030');
 INSERT INTO `users` VALUES (54, '13800000040', '$2b$12$yYepo.TXgUm6DUElB0wgM.9Yi82wu98csJifWgpJHH9/FjMkW8GjC', 'student', 1, '2026-01-04 17:31:30', NULL, NULL, '林三一', '22014081031');
