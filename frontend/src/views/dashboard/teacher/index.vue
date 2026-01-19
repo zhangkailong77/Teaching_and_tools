@@ -341,12 +341,15 @@
 
           <!-- 4. 绑定课程资源 -->
           <div class="form-group">
-            <label>绑定课程教材</label>
+            <label>绑定课程教材(支持多选)</label>
             <el-select 
-              v-model="classForm.courseId" 
+              v-model="classForm.courseIds" 
+              multiple
               placeholder="选择课程资源包" 
               size="large" 
               class="custom-select"
+              :teleported="true"
+              popper-class="class-select-dropdown"
             >
               <el-option 
                 v-for="course in courseLibrary" 
@@ -429,7 +432,7 @@ const showClassModal = ref(false);
 const classForm = reactive({ 
   name: '', 
   description: '', 
-  courseId: '', 
+  courseIds: [] as number[],
   startDate: '', 
   endDate: '',
   coverImage: coverOptions[0] // 默认选中第一张
@@ -606,14 +609,14 @@ const submitCreateClass = async () => {
       cover_image: classForm.coverImage, 
       start_date: formatDate(classForm.startDate),
       end_date: formatDate(classForm.endDate),
-      course_ids: classForm.courseId ? [Number(classForm.courseId)] : []
+      course_ids: classForm.courseIds
     });
     alert('创建成功');
     showClassModal.value = false;
     // 重置表单
     classForm.name = '';
     classForm.description = '';
-    classForm.courseId = '';
+    classForm.courseIds = [];
     classForm.startDate = '';
     classForm.endDate = '';
     

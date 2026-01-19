@@ -11,7 +11,7 @@
         <!-- 左侧：分数展示 -->
         <div class="main-score" :class="isPass ? 'pass' : 'fail'">
           <div class="score-circle">
-            <div class="num">{{ result.total_score }}</div>
+            <div class="num">{{ realTotalScore }}</div>
             <div class="label">最终得分</div>
           </div>
           <div class="badge">
@@ -163,7 +163,13 @@ const filteredQuestions = computed(() => {
   return result.value.questions
 })
 
-const isPass = computed(() => result.value.total_score >= result.value.pass_score)
+// ✅ 1. 新增：实时计算真实总分 (累加每一道题的 earned_score)
+const realTotalScore = computed(() => {
+  if (!result.value.questions) return 0
+  return result.value.questions.reduce((sum: number, q: any) => sum + (q.earned_score || 0), 0)
+})
+
+const isPass = computed(() => realTotalScore.value >= result.value.pass_score)
 
 // 初始化
 onMounted(async () => {
@@ -257,6 +263,7 @@ const scrollToQuestion = (idx: number) => {
     document.getElementById('q-' + idx)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }, 100)
 }
+
 </script>
 
 <style scoped lang="scss">

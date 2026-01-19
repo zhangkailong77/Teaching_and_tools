@@ -58,9 +58,9 @@
           <div class="sum-left">
             <span class="text">
               客观题自动判分：
-              <span class="score">{{ recordData.objective_score }} 分</span>
+              <span class="score">{{ realObjectiveScore }} 分</span>
               <span class="detail">
-                (共 {{ objectiveStats.total }} 题，错 {{ objectiveStats.wrong }} 题)
+                (共 {{ objectiveStats.total }} 题，对 {{ objectiveStats.correct }} 题，错 {{ objectiveStats.wrong }} 题)
               </span>
             </span>
           </div>
@@ -100,13 +100,13 @@
               <div v-if="isObjective(q.type)" class="objective-result">
                 <div class="result-row">
                   <span class="label">学生答案：</span>
-                  <span class="ans" :class="q.is_correct ? 'correct' : 'wrong'">
+                  <span class="ans" :class="isFullScore(q) ? 'correct' : 'wrong'">
                     {{ formatAnswer(q.student_answer) }}
-                    <el-icon class="icon" v-if="q.is_correct"><Select /></el-icon>
+                    <el-icon class="icon" v-if="isFullScore(q)"><Select /></el-icon>
                     <el-icon class="icon" v-else><CloseBold /></el-icon>
                   </span>
                 </div>
-                <div class="result-row" v-if="!q.is_correct">
+                <div class="result-row" v-if="!isFullScore(q)">
                   <span class="label">正确答案：</span>
                   <span class="ans standard">{{ formatAnswer(q.standard_answer) }}</span>
                 </div>
@@ -202,6 +202,19 @@ const submitting = ref(false)
 const recordData = ref<any>({ questions: [] })
 const showAllQuestions = ref(false)
 
+// ✅ 新增：实时计算客观题总分
+const realObjectiveScore = computed(() => {
+  if (!recordData.value.questions) return 0
+  return recordData.value.questions
+    .filter((q: any) => isObjective(q.type))
+    .reduce((sum: number, q: any) => sum + (q.earned_score || 0), 0)
+})
+
+// ✅ 新增：判断是否拿满分 (视觉上算“对”)
+const isFullScore = (q: any) => {
+  return q.earned_score === q.full_score && q.full_score > 0
+}
+
 // 存放主观题的打分数据 { question_id: { score: 0, feedback: '' } }
 const gradingForm = reactive<any>({})
 const studentList = ref<any[]>([])
@@ -282,37 +295,41 @@ const getStatusClass = (status: number) => {
   return 'ing' // 进行中
 }
 
-onMounted(async () => {
-  loading.value = true
-  try {
-    const res = await getRecordDetail(props.recordId)
-    recordData.value = res
+// onMounted(async () => {
+//   loading.value = true
+//   try {
+//     const res = await getRecordDetail(props.recordId)
+//     recordData.value = res
     
-    // 初始化打分表单
-    res.questions.forEach((q: any) => {
-      if (!isObjective(q.type)) {
-        gradingForm[q.question_id] = {
-          score: q.earned_score || 0, // 回显已有的分
-          feedback: q.teacher_feedback || ''
-        }
-      }
-    })
-  } catch (e) {
-    console.error(e)
-  } finally {
-    loading.value = false
-  }
-})
+//     // 初始化打分表单
+//     res.questions.forEach((q: any) => {
+//       if (!isObjective(q.type)) {
+//         gradingForm[q.question_id] = {
+//           score: q.earned_score || 0, // 回显已有的分
+//           feedback: q.teacher_feedback || ''
+//         }
+//       }
+//     })
+//   } catch (e) {
+//     console.error(e)
+//   } finally {
+//     loading.value = false
+//   }
+// })
 
 // ✅ 新增：计算客观题统计信息
 const objectiveStats = computed(() => {
-  if (!recordData.value.questions) return { total: 0, wrong: 0 }
+  if (!recordData.value.questions) return { total: 0, wrong: 0, correct: 0 }
   
   const objQuestions = recordData.value.questions.filter((q: any) => isObjective(q.type))
-  const wrongCount = objQuestions.filter((q: any) => !q.is_correct).length
+  
+  // ✅ 修改：更严格的判断
+  const correctCount = objQuestions.filter((q: any) => q.is_correct === true).length
+  const wrongCount = objQuestions.filter((q: any) => q.is_correct === false).length
   
   return {
     total: objQuestions.length,
+    correct: correctCount,  // ✅ 新增：对了多少题
     wrong: wrongCount
   }
 })

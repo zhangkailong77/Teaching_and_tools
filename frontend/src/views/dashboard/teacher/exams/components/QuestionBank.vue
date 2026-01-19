@@ -90,12 +90,19 @@
           <el-option v-for="t in tagOptions" :key="t" :label="t" :value="t" />
         </el-select>
         
-        <el-button type="primary" plain @click="handleSearch">查询</el-button>
+        <button class="btn-custom primary" @click="handleSearch">
+          查询
+        </button>
       </div>
 
       <div class="actions">
-        <el-button type="success" plain @click="showImportDrawer = true">导入题目</el-button>
-        <el-button type="primary" icon="Plus" @click="handleCreate">录入新题</el-button>
+        <button class="btn-custom outline" @click="showImportDrawer = true">
+          <el-icon><Upload /></el-icon> 导入题目
+        </button>
+        
+        <button class="btn-custom primary" @click="handleCreate">
+          <el-icon><Plus /></el-icon> 录入新题
+        </button>
       </div>
     </div>
 
@@ -328,7 +335,7 @@ const handleEdit = (item: QuestionItem) => {
 }
 
 const handleSuccess = () => {
-  fetchQuestions() // 刷新列表
+  fetchQuestions() 
   loadStats()
 }
 
@@ -458,8 +465,81 @@ $primary: #00c9a7;
     gap: 12px; /* 稍微大一点间距 */
     align-items: center;
   }
-  .actions { display: flex; gap: 10px; }
+  .actions {
+  display: flex;
+  gap: 12px;
+
+  
 }
+}
+
+.btn-custom {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 9px 20px; /* 舒适的点击区域 */
+    border-radius: 8px; /* 圆润边角 */
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 1px solid transparent;
+
+    /* 图标微调 */
+    .el-icon { font-size: 15px; margin-left: -18px;}
+
+    /* 实心主色按钮 (录入新题) */
+    &.primary {
+      background: $primary; /* #00c9a7 */
+      color: white;
+      box-shadow: 0 4px 12px rgba(0, 201, 167, 0.3); /* 青色光晕 */
+
+      &:hover {
+        transform: translateY(-2px); /* 上浮动效 */
+        box-shadow: 0 6px 16px rgba(0, 201, 167, 0.4);
+        filter: brightness(1.05);
+      }
+
+      &:active { transform: translateY(0); }
+    }
+
+    /* 描边次级按钮 (导入题目) */
+    &.outline {
+      background: white;
+      border-color: $primary;
+      color: $primary;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+
+      &:hover {
+        background-color: rgba(0, 201, 167, 0.08); /* 浅青色背景 */
+        transform: translateY(-2px);
+      }
+
+      &:active { transform: translateY(0); }
+    }
+  }
+
+
+.toolbar {
+  display: flex; 
+  justify-content: space-between; 
+  margin-bottom: 20px;
+  align-items: center; /* 垂直居中对齐 */
+
+  .filters { 
+    display: flex; 
+    gap: 12px; 
+    align-items: center; /* 输入框和按钮垂直对齐 */
+  }
+  
+  .actions { 
+    display: flex; 
+    gap: 12px; 
+    /* 这里不需要再写 .btn-custom 的样式了，因为上面已经定义了 */
+  }
+}
+
 
 .q-list {
   display: flex;

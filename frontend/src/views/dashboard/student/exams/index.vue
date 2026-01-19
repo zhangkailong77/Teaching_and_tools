@@ -338,7 +338,63 @@ const updateCharts = () => {
       }]
     });
   }
-  // 折线图逻辑同作业中心...
+  if (lineChart) {
+    // A. 数据处理：筛选已出分(status=2)的考试，并按时间正序排列
+    const completedExams = examList.value
+      .filter(e => {
+        // ✅ 核心修改：增加 isTimeEnded(e) 判断
+        // 只有：(已批改) 且 (有提交时间) 且 (考试已结束/成绩已公布) 的才算进图表
+        return e.my_status === 2 && e.submit_time && isTimeEnded(e);
+      })
+      .sort((a, b) => new Date(a.submit_time).getTime() - new Date(b.submit_time).getTime()); // 按时间升序
+
+    // B. 提取 X轴 (日期) 和 Y轴 (分数) 数据
+    const xData = completedExams.map(e => {
+       // 格式化日期为 "01-13"
+       const d = new Date(e.submit_time);
+       return `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    });
+    
+    const yData = completedExams.map(e => e.my_score);
+
+    // C. 配置 ECharts
+    lineChart.setOption({
+      tooltip: { 
+        trigger: 'axis',
+        formatter: '{b}<br/>得分: {c}分'
+      },
+      grid: { 
+        top: '15%', bottom: '10%', left: '10%', right: '5%', 
+        containLabel: true 
+      },
+      xAxis: {
+        type: 'category',
+        data: xData,
+        axisLine: { show: false },
+        axisTick: { show: false },
+        axisLabel: { color: '#999', fontSize: 10 }
+      },
+      yAxis: {
+        type: 'value',
+        splitLine: { lineStyle: { type: 'dashed', color: '#eee' } }
+      },
+      series: [{
+        data: yData,
+        type: 'line',
+        smooth: true, // 平滑曲线
+        symbol: 'circle',
+        symbolSize: 6,
+        itemStyle: { color: '#00c9a7' }, // 线条颜色
+        areaStyle: {
+          // 渐变填充区域
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: 'rgba(0, 201, 167, 0.4)' },
+            { offset: 1, color: 'rgba(0, 201, 167, 0.01)' }
+          ])
+        }
+      }]
+    });
+  }
 };
 
 const handleViewResult = (exam: any) => {

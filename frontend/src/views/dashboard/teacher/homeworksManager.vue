@@ -23,7 +23,6 @@
           </div>
 
           <div v-if="filteredGroups.length === 0" class="empty-state">
-            <img src="https://cdni.iconscout.com/illustration/premium/thumb/empty-box-3608281-3014674.png" width="120" />
             <p>暂无相关作业任务</p>
           </div>
 
