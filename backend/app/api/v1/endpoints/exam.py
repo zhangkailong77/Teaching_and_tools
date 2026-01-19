@@ -778,9 +778,20 @@ def get_student_exams(
         ).first()
 
         item = schemas.StudentExamOut.from_orm(exam)
+
         if record:
             item.my_status = record.status
-            item.my_score = record.total_score if record.status == 2 else None
+            if record.status == 2:
+                # 聚合查询：把这张卷子所有题目的得分加起来
+                real_total = db.query(func.sum(models.ExamAnswer.score)).filter(
+                    models.ExamAnswer.record_id == record.id
+                ).scalar()
+                
+                item.my_score = int(real_total) if real_total is not None else 0
+            else:
+                item.my_score = None
+
+            item.submit_time = record.submit_time
         else:
             item.my_status = -1 # 未开始
             
@@ -869,7 +880,6 @@ def submit_exam(
     record = db.query(models.ExamRecord).filter(
         models.ExamRecord.exam_id == exam_id,
         models.ExamRecord.student_id == current_user.id,
-        models.ExamRecord.status == 0
     ).first()
     
     if not record:
@@ -910,38 +920,50 @@ def submit_exam(
                 is_correct = True
                 earned_score = q_link.score
 
-        # 3. 记录到答题明细表
-        db_ans = models.ExamAnswer(
-            record_id=record.id,
-            question_id=ans.question_id,
-            answer_content=ans.answer_content,
-            is_correct=is_correct,
-            score=earned_score
-        )
-        db.add(db_ans)
-        
+        existing_ans = db.query(models.ExamAnswer).filter(
+            models.ExamAnswer.record_id == record.id,
+            models.ExamAnswer.question_id == ans.question_id
+        ).first()
+
+        if existing_ans:
+            # 更新已有记录
+            existing_ans.answer_content = ans.answer_content
+            existing_ans.is_correct = is_correct
+            existing_ans.score = earned_score
+        else:
+            # 插入新记录
+            db_ans = models.ExamAnswer(
+                record_id=record.id,
+                question_id=ans.question_id,
+                answer_content=ans.answer_content,
+                is_correct=is_correct,
+                score=earned_score
+            )
+            db.add(db_ans)
+
+        # 统计客观分
         if question.type in ["single", "multiple", "judge", "blank"]:
             objective_score += earned_score
 
     # 4. 更新记录状态
+    # 检查是否包含主观题 (essay)
     has_subjective = db.query(models.ExamQuestion).join(models.Question).filter(
         models.ExamQuestion.exam_id == exam_id,
         models.Question.type == 'essay'
     ).count() > 0
 
     if has_subjective:
-        record.status = 1 # 包含主观题 -> 状态设为 1 (待批改)
+        record.status = 1 # 待批改
     else:
-        record.status = 2 # 全是客观题 -> 状态设为 2 (已完成/已出分)
+        record.status = 2 # 已完成
 
     record.submit_time = datetime.now()
     record.objective_score = objective_score
-    record.total_score = objective_score # 初始总分先等于客观分，如果有主观题，后续老师批改时会更新这个字段
+    record.total_score = objective_score
     record.cheat_count = submit_in.cheat_count
     
     db.commit()
     
-    # ✅ 建议把 status 也返回给前端，方便前端判断显示什么文字
     return {"message": "交卷成功", "score": objective_score, "status": record.status}
 
 
@@ -1023,6 +1045,22 @@ def get_exam_records_list(
     for enroll in all_enrollments:
         student = enroll.student
         record = record_map.get(student.id)
+
+        real_obj_score = 0
+        real_subj_score = 0
+
+        if record:
+            # 查询该学生的所有答题记录，并关联题目信息(为了拿 type)
+            answers = db.query(models.ExamAnswer).join(models.Question).filter(
+                models.ExamAnswer.record_id == record.id
+            ).all()
+            
+            for ans in answers:
+                # ✅ 关键点：在这里把 'blank' (填空) 加入客观题判断列表
+                if ans.question.type in ['single', 'multiple', 'judge', 'blank']:
+                    real_obj_score += ans.score
+                else:
+                    real_subj_score += ans.score
         
         # 构造返回数据
         item = {
@@ -1039,9 +1077,9 @@ def get_exam_records_list(
             "status": record.status if record else -1,
             
             "submit_time": record.submit_time if record else None,
-            "objective_score": record.objective_score if record else 0,
-            "subjective_score": record.subjective_score if record else 0,
-            "total_score": record.total_score if record else 0
+            "objective_score": real_obj_score, 
+            "subjective_score": real_subj_score,
+            "total_score": real_obj_score + real_subj_score 
         }
         results.append(item)
         

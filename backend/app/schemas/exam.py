@@ -136,6 +136,8 @@ class StudentExamOut(BaseModel):
     # 学生特有状态
     my_status: int = -1 # -1:未开始, 0:进行中, 1:已提交, 2:已批改
     my_score: Optional[int] = None
+
+    submit_time: Optional[datetime] = None
     
     class Config:
         from_attributes = True

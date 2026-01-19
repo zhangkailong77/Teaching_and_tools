@@ -12,28 +12,46 @@ from app.models.content import Course, CourseChapter, CourseLesson, TeacherCours
 router = APIRouter()
 
 # ------------------------------------------------------------------
-# 1. 获取“我”创建的课程资源库
+# 1. 获取课程资源库
 # ------------------------------------------------------------------
 @router.get("/courses/me", response_model=List[schemas.CourseOut])
 def read_my_courses(
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user),
 ):
-
+    # 1. 获取所有课程 (公共资源池)
     all_courses = db.query(Course).all()
 
+    # 2. 获取当前用户的授权记录
     access_records = db.query(TeacherCourseAccess).filter(
         TeacherCourseAccess.teacher_id == current_user.id
     ).all()
-
+    
+    # 提取已授权的课程 ID 集合
     unlocked_course_ids = {record.course_id for record in access_records}
     
     results = []
     for course in all_courses:
+        # 3. 判断锁定状态
+        # 逻辑：只要 ID 在授权列表里，就是解锁；否则锁定
         is_locked = course.id not in unlocked_course_ids
-        course_data = course.__dict__.copy()
-        course_data['is_locked'] = is_locked
-        course_data['public_id'] = encode_id(course.id)
+
+        # 4. 构造返回数据 (显式赋值，不依赖 owner_id)
+        course_data = {
+            "id": course.id,
+            "name": course.name,
+            "cover": course.cover,
+            "intro": course.intro,
+            "task_count": course.task_count,
+            "total_duration": course.total_duration,
+            "lesson_count": course.lesson_count,
+            "course_type": course.course_type,
+            "created_at": course.created_at,
+            
+            # 附加字段
+            "public_id": encode_id(course.id),
+            "is_locked": is_locked
+        }
         
         results.append(course_data)
         

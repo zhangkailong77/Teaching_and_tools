@@ -11,7 +11,6 @@ class Course(Base):
     name = Column(String(100), nullable=False)       # 课程名称
     cover = Column(String(255), nullable=True)       # 封面图
     intro = Column(Text, nullable=True)              # 简介
-    owner_id = Column(Integer, ForeignKey("users.id"), nullable=False) # 创建者
     created_at = Column(DateTime, default=func.now())
     task_count = Column(Integer, default=0)
     total_duration = Column(Integer, default=0)
@@ -19,9 +18,6 @@ class Course(Base):
     course_type = Column(String(50), default="实训课程")
     chapters = relationship("CourseChapter", back_populates="course", order_by="CourseChapter.sort_order", cascade="all, delete-orphan")
 
-    # 关联：创建者 (User)
-    owner = relationship("User", back_populates="owned_courses")
-    
     # 关联：绑定关系 (ClassCourseBinding)
     bindings = relationship("ClassCourseBinding", back_populates="course")
     tasks = relationship("CourseTask", back_populates="course", order_by="CourseTask.sort_order", cascade="all, delete-orphan")

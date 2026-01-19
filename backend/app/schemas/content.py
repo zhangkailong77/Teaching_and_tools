@@ -26,7 +26,6 @@ class CourseUpdate(BaseModel):
 # 3. 返回给前端的数据
 class CourseOut(CourseBase):
     id: int
-    owner_id: int
     created_at: datetime
     public_id: Optional[str] = None
 
