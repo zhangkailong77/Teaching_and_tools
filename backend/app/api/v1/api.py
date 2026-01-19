@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import auth, users, practice, course, profile, upload, content, homework, exam
+from app.api.v1.endpoints import auth, users, practice, course, profile, upload, content, homework, exam, announcement
 
 api_router = APIRouter()
 
@@ -30,3 +30,6 @@ api_router.include_router(homework.router, prefix="/homeworks", tags=["homeworks
 
 # ✅ 新增考试路由
 api_router.include_router(exam.router, prefix="/exam", tags=["exam"])
+
+# ✅ 新增公告路由
+api_router.include_router(announcement.router, prefix="/announcements", tags=["announcements"])

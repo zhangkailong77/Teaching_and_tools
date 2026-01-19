@@ -7,7 +7,8 @@ from app.models.user import User
 from app.models.profile import TeacherProfile
 from app.models.profile import StudentProfile
 from app.models.course import Enrollment, Class
-from app.models.content import Course, ClassCourseBinding, StudentLearningProgress, Announcement
+from app.models.content import Course, ClassCourseBinding, StudentLearningProgress
+from app.models.announcement import Announcement, AnnouncementTarget
 from app.schemas import profile as schemas
 
 router = APIRouter()
@@ -184,9 +185,35 @@ def get_student_dashboard_sidebar(
     enrollment = db.query(Enrollment).filter(Enrollment.student_id == current_user.id).first()
     notices = []
     if enrollment:
-        notices = db.query(Announcement).filter(
-            Announcement.class_id == enrollment.class_id
+        # 通过关联表查询该班级的公告
+        anns = db.query(Announcement).join(AnnouncementTarget).filter(
+            AnnouncementTarget.class_id == enrollment.class_id,
+            Announcement.status == 1
         ).order_by(Announcement.created_at.desc()).limit(3).all()
+        
+        # 格式化公告数据
+        for ann in anns:
+            publisher = ann.publisher
+            p_name = publisher.full_name or publisher.username if publisher else "未知"
+            
+            # 如果有教师档案，优先用档案里的 真实姓名 + 职称
+            if publisher and publisher.teacher_profile:
+                real_name = publisher.teacher_profile.real_name
+                title = publisher.teacher_profile.title
+                
+                if real_name:
+                    p_name = real_name
+                if title:
+                    p_name = f"{p_name} · {title}"
+            
+            notices.append({
+                "id": ann.id,
+                "title": ann.title,
+                "content": ann.content,
+                "type": ann.type,
+                "created_at": ann.created_at,
+                "publisher_name": p_name
+            })
 
     return {
         "activity_chart": activity_list,

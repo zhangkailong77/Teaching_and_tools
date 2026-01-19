@@ -1,41 +1,100 @@
 /*
  Navicat Premium Data Transfer
 
- Source Server         : localhost_3308
+ Source Server         : 192.168.31.11_3306
  Source Server Type    : MySQL
- Source Server Version : 80042 (8.0.42)
- Source Host           : localhost:3308
+ Source Server Version : 90200 (9.2.0)
+ Source Host           : 192.168.31.11:3306
  Source Schema         : teaching_platform
 
  Target Server Type    : MySQL
- Target Server Version : 80042 (8.0.42)
+ Target Server Version : 90200 (9.2.0)
  File Encoding         : 65001
 
- Date: 19/01/2026 18:05:24
+ Date: 19/01/2026 23:53:34
 */
 
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
 -- ----------------------------
+-- Table structure for announcement_reads
+-- ----------------------------
+DROP TABLE IF EXISTS `announcement_reads`;
+CREATE TABLE `announcement_reads`  (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `announcement_id` int NOT NULL COMMENT '公告ID',
+  `student_id` int NOT NULL COMMENT '学生ID',
+  `read_at` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '阅读时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_announcement_student`(`announcement_id` ASC, `student_id` ASC) USING BTREE,
+  INDEX `idx_student`(`student_id` ASC) USING BTREE,
+  CONSTRAINT `fk_ar_announcement` FOREIGN KEY (`announcement_id`) REFERENCES `announcements` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
+  CONSTRAINT `fk_ar_student` FOREIGN KEY (`student_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
+) ENGINE = InnoDB AUTO_INCREMENT = 7 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '公告阅读记录表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of announcement_reads
+-- ----------------------------
+INSERT INTO `announcement_reads` VALUES (1, 1, 1, '2026-01-19 22:43:25');
+INSERT INTO `announcement_reads` VALUES (2, 2, 1, '2026-01-19 22:43:27');
+INSERT INTO `announcement_reads` VALUES (3, 3, 1, '2026-01-19 22:43:29');
+INSERT INTO `announcement_reads` VALUES (4, 1, 15, '2026-01-19 23:41:48');
+INSERT INTO `announcement_reads` VALUES (5, 3, 15, '2026-01-19 23:44:58');
+INSERT INTO `announcement_reads` VALUES (6, 2, 15, '2026-01-19 23:45:05');
+
+-- ----------------------------
+-- Table structure for announcement_targets
+-- ----------------------------
+DROP TABLE IF EXISTS `announcement_targets`;
+CREATE TABLE `announcement_targets`  (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `announcement_id` int NOT NULL COMMENT '公告ID',
+  `class_id` int NOT NULL COMMENT '班级ID',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_announcement`(`announcement_id` ASC) USING BTREE,
+  INDEX `idx_class`(`class_id` ASC) USING BTREE,
+  CONSTRAINT `fk_at_announcement` FOREIGN KEY (`announcement_id`) REFERENCES `announcements` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
+  CONSTRAINT `fk_at_class` FOREIGN KEY (`class_id`) REFERENCES `classes` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
+) ENGINE = InnoDB AUTO_INCREMENT = 6 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '公告班级关联表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of announcement_targets
+-- ----------------------------
+INSERT INTO `announcement_targets` VALUES (1, 1, 1);
+INSERT INTO `announcement_targets` VALUES (2, 2, 1);
+INSERT INTO `announcement_targets` VALUES (3, 2, 2);
+INSERT INTO `announcement_targets` VALUES (4, 2, 3);
+INSERT INTO `announcement_targets` VALUES (5, 3, 1);
+
+-- ----------------------------
 -- Table structure for announcements
 -- ----------------------------
 DROP TABLE IF EXISTS `announcements`;
 CREATE TABLE `announcements`  (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `class_id` int NOT NULL,
-  `title` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `content` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `created_at` datetime NULL DEFAULT NULL,
+  `id` int NOT NULL AUTO_INCREMENT COMMENT '公告ID',
+  `title` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '公告标题',
+  `content` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '公告正文',
+  `type` enum('urgent','normal','course','tip') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT 'normal' COMMENT '公告类型:紧急/常规/课程/提示',
+  `target_type` enum('all','class') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT 'class' COMMENT '发布范围:全部/指定班级',
+  `is_pinned` tinyint(1) NULL DEFAULT 0 COMMENT '是否置顶',
+  `publisher_id` int NOT NULL COMMENT '发布者ID(教师)',
+  `created_at` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '发布时间',
+  `expires_at` datetime NULL DEFAULT NULL COMMENT '过期时间(可选)',
+  `status` tinyint NULL DEFAULT 1 COMMENT '状态:1正常/0已删除',
   PRIMARY KEY (`id`) USING BTREE,
-  INDEX `class_id`(`class_id` ASC) USING BTREE,
-  INDEX `ix_announcements_id`(`id` ASC) USING BTREE,
-  CONSTRAINT `announcements_ibfk_1` FOREIGN KEY (`class_id`) REFERENCES `classes` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+  INDEX `idx_publisher`(`publisher_id` ASC) USING BTREE,
+  INDEX `idx_created`(`created_at` ASC) USING BTREE,
+  INDEX `idx_status`(`status` ASC) USING BTREE,
+  CONSTRAINT `fk_announcement_publisher` FOREIGN KEY (`publisher_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
+) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '班级公告表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of announcements
 -- ----------------------------
+INSERT INTO `announcements` VALUES (1, '📌 期末考试时间安排', '各位同学请注意：\n本学期期末考试将于下周开始，请提前做好复习准备。\n考试时间：1月25日-27日\n考试地点：另行通知', 'urgent', 'class', 1, 2, '2026-01-19 21:43:33', '2026-01-27 23:59:59', 1);
+INSERT INTO `announcements` VALUES (2, '第五章课件已更新', 'ComfyUI第五章《商品变体工作流》课件已上传，请同学们及时查看学习。', 'course', 'class', 0, 2, '2026-01-19 21:43:33', NULL, 1);
+INSERT INTO `announcements` VALUES (3, '💡 作业提交注意事项', '请同学们在提交作业时注意：\n1. 图片清晰度\n2. 文字说明完整\n3. 截图包含完整界面\n祝大家学习愉快！', 'tip', 'class', 0, 2, '2026-01-19 21:43:33', NULL, 1);
 
 -- ----------------------------
 -- Table structure for class_assignments
@@ -57,7 +116,7 @@ CREATE TABLE `class_assignments`  (
   INDEX `fk_assign_origin`(`origin_task_id` ASC) USING BTREE,
   CONSTRAINT `fk_assign_class` FOREIGN KEY (`class_id`) REFERENCES `classes` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `fk_assign_origin` FOREIGN KEY (`origin_task_id`) REFERENCES `course_tasks` (`id`) ON DELETE SET NULL ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 12 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '班级作业发布表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 12 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '班级作业发布表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of class_assignments
@@ -88,7 +147,7 @@ CREATE TABLE `class_course_bindings`  (
   INDEX `fk_ccb_course`(`course_id` ASC) USING BTREE,
   CONSTRAINT `fk_ccb_class` FOREIGN KEY (`class_id`) REFERENCES `classes` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `fk_ccb_course` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 52 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 52 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of class_course_bindings
@@ -124,7 +183,7 @@ CREATE TABLE `classes`  (
   INDEX `teacher_id`(`teacher_id` ASC) USING BTREE,
   INDEX `ix_classes_id`(`id` ASC) USING BTREE,
   CONSTRAINT `classes_ibfk_1` FOREIGN KEY (`teacher_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 7 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 7 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of classes
@@ -149,7 +208,7 @@ CREATE TABLE `course_chapters`  (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `fk_chapter_course`(`course_id` ASC) USING BTREE,
   CONSTRAINT `fk_chapter_course` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 55 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '课程章节表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 55 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '课程章节表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of course_chapters
@@ -179,7 +238,7 @@ CREATE TABLE `course_lessons`  (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `fk_lesson_chapter`(`chapter_id` ASC) USING BTREE,
   CONSTRAINT `fk_lesson_chapter` FOREIGN KEY (`chapter_id`) REFERENCES `course_chapters` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 410 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '课时资源表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 410 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '课时资源表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of course_lessons
@@ -263,7 +322,7 @@ CREATE TABLE `course_tasks`  (
   INDEX `fk_task_lesson`(`lesson_id` ASC) USING BTREE,
   CONSTRAINT `fk_task_course` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `fk_task_lesson` FOREIGN KEY (`lesson_id`) REFERENCES `course_lessons` (`id`) ON DELETE SET NULL ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '课程作业模板表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '课程作业模板表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of course_tasks
@@ -288,7 +347,7 @@ CREATE TABLE `courses`  (
   `lesson_count` int NULL DEFAULT 0 COMMENT '本课程课时数',
   `course_type` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '实训课程' COMMENT '课程类型',
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 12 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 12 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of courses
@@ -317,7 +376,7 @@ CREATE TABLE `enrollments`  (
   INDEX `ix_enrollments_id`(`id` ASC) USING BTREE,
   CONSTRAINT `enrollments_ibfk_1` FOREIGN KEY (`class_id`) REFERENCES `classes` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `enrollments_ibfk_2` FOREIGN KEY (`student_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 112 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 112 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of enrollments
@@ -442,7 +501,7 @@ CREATE TABLE `exam_answers`  (
   INDEX `ix_exam_answers_id`(`id` ASC) USING BTREE,
   CONSTRAINT `exam_answers_ibfk_1` FOREIGN KEY (`record_id`) REFERENCES `exam_records` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `exam_answers_ibfk_2` FOREIGN KEY (`question_id`) REFERENCES `questions` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 35 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 35 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of exam_answers
@@ -480,7 +539,7 @@ CREATE TABLE `exam_questions`  (
   INDEX `ix_exam_questions_id`(`id` ASC) USING BTREE,
   CONSTRAINT `exam_questions_ibfk_1` FOREIGN KEY (`exam_id`) REFERENCES `exams` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `exam_questions_ibfk_2` FOREIGN KEY (`question_id`) REFERENCES `questions` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 56 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 56 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of exam_questions
@@ -539,7 +598,7 @@ CREATE TABLE `exam_records`  (
   INDEX `ix_exam_records_id`(`id` ASC) USING BTREE,
   CONSTRAINT `exam_records_ibfk_1` FOREIGN KEY (`exam_id`) REFERENCES `exams` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `exam_records_ibfk_2` FOREIGN KEY (`student_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of exam_records
@@ -572,7 +631,7 @@ CREATE TABLE `exams`  (
   INDEX `teacher_id`(`teacher_id` ASC) USING BTREE,
   INDEX `ix_exams_id`(`id` ASC) USING BTREE,
   CONSTRAINT `exams_ibfk_1` FOREIGN KEY (`teacher_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 11 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 11 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of exams
@@ -604,7 +663,7 @@ CREATE TABLE `questions`  (
   INDEX `ix_questions_teacher_id`(`teacher_id` ASC) USING BTREE,
   INDEX `ix_questions_type`(`type` ASC) USING BTREE,
   CONSTRAINT `fk_questions_teacher` FOREIGN KEY (`teacher_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 24 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 24 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of questions
@@ -649,7 +708,7 @@ CREATE TABLE `student_learning_progress`  (
   INDEX `fk_slp_lesson`(`lesson_id` ASC) USING BTREE,
   CONSTRAINT `fk_slp_lesson` FOREIGN KEY (`lesson_id`) REFERENCES `course_lessons` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `fk_slp_student` FOREIGN KEY (`student_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 13 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 13 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of student_learning_progress
@@ -685,7 +744,7 @@ CREATE TABLE `student_profiles`  (
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_sp_user_id`(`user_id` ASC) USING BTREE,
   CONSTRAINT `fk_sp_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 11 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '学生详细档案表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 11 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '学生详细档案表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of student_profiles
@@ -722,7 +781,7 @@ CREATE TABLE `student_submissions`  (
   INDEX `fk_sub_student`(`student_id` ASC) USING BTREE,
   CONSTRAINT `fk_sub_assign` FOREIGN KEY (`assignment_id`) REFERENCES `class_assignments` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `fk_sub_student` FOREIGN KEY (`student_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 9 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '学生作业提交表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 9 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '学生作业提交表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of student_submissions
@@ -750,7 +809,7 @@ CREATE TABLE `teacher_course_access`  (
   INDEX `fk_tca_course`(`course_id` ASC) USING BTREE,
   CONSTRAINT `fk_tca_course` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `fk_tca_teacher` FOREIGN KEY (`teacher_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 15 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '教师课程权限表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 15 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '教师课程权限表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of teacher_course_access
@@ -789,7 +848,7 @@ CREATE TABLE `teacher_profiles`  (
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_user_id`(`user_id` ASC) USING BTREE,
   CONSTRAINT `fk_tp_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of teacher_profiles
@@ -817,13 +876,13 @@ CREATE TABLE `users`  (
   UNIQUE INDEX `ix_users_username`(`username` ASC) USING BTREE,
   UNIQUE INDEX `comfyui_port`(`comfyui_port` ASC) USING BTREE,
   INDEX `ix_users_id`(`id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 106 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 106 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of users
 -- ----------------------------
-INSERT INTO `users` VALUES (1, '18250636865', '$2b$12$DM8zYSLV9Dt.jKfG4jykaetq3F4jmwGcSF6hJBaGDJBWQOc3ol9.y', 'student', 1, '2025-12-24 11:26:48', '2026-01-19 17:52:30', 8189, '张十一', '22014082032');
-INSERT INTO `users` VALUES (2, '18250636866', '$2b$12$BbkngZyC3IaWM.cWcZKmauZxsyO3VZTe5P2mRqrbc75CC13xrMqIi', 'teacher', 1, '2025-12-24 11:27:14', '2026-01-19 17:51:42', NULL, NULL, NULL);
+INSERT INTO `users` VALUES (1, '18250636865', '$2b$12$DM8zYSLV9Dt.jKfG4jykaetq3F4jmwGcSF6hJBaGDJBWQOc3ol9.y', 'student', 1, '2025-12-24 11:26:48', '2026-01-19 23:18:33', 8189, '张十一', '22014082032');
+INSERT INTO `users` VALUES (2, '18250636866', '$2b$12$BbkngZyC3IaWM.cWcZKmauZxsyO3VZTe5P2mRqrbc75CC13xrMqIi', 'teacher', 1, '2025-12-24 11:27:14', '2026-01-19 23:17:18', NULL, NULL, NULL);
 INSERT INTO `users` VALUES (4, '18250636867', '$2b$12$mVae3WIBNklVoxfL7qkLQ.ymZ9vRDq6vbwB2Za0cTStB1FO1DeYoa', 'teacher', 1, '2025-12-24 15:04:05', '2026-01-04 17:57:41', NULL, NULL, NULL);
 INSERT INTO `users` VALUES (5, '18250636868', '$2b$12$LExgic9UmvpwwLtG5Gufs.08MAc8wx7EfZdv9CjYzn3QiLJnOUZdq', 'student', 1, '2025-12-24 17:26:36', '2026-01-07 17:52:32', 8190, '李四', '22014082034');
 INSERT INTO `users` VALUES (6, '18250636969', '$2b$12$2bR.Xy.PQzAQDApnmWxdSeC.bIEs0C1kklBR751IoX4/tNFuUCyt2', 'student', 1, '2025-12-25 16:30:01', '2025-12-25 16:47:31', 8191, '王五', '22014082035');
@@ -835,7 +894,7 @@ INSERT INTO `users` VALUES (11, '18250636874', '$2b$12$KXKRsdVENh0EmciRYox5K.Otc
 INSERT INTO `users` VALUES (12, '18250636875', '$2b$12$pq9nEyWa41m4WKR/v.PON.artWlJPlEFgOB0sw5w.SrK0NsIfBEYG', 'student', 1, '2025-12-31 16:11:05', '2025-12-31 17:12:02', NULL, '张八', '22014082023');
 INSERT INTO `users` VALUES (13, '18250636876', '$2b$12$NRSQIoCDK7ZW.1HqSy3C8uecojj7O2aFa1YX0ZMWMQ95sbbZ9u28K', 'student', 1, '2025-12-31 16:14:41', NULL, NULL, '张九', '22014082024');
 INSERT INTO `users` VALUES (14, '18250636877', '$2b$12$4tZqq/x/k4LNU3hXUckHHeCkbCCIU7sN1Tab07dRj127smk8Q0a96', 'student', 1, '2025-12-31 16:15:10', NULL, NULL, '张十', '22014082025');
-INSERT INTO `users` VALUES (15, '13800000001', '$2b$12$iCtsBwN3Pr72doOlHKNShuyQSHuCvsBn6mgY3Pl4dfTgu0vuHDVo2', 'student', 1, '2026-01-04 16:34:15', '2026-01-19 17:07:40', NULL, '贾一', '22014083001');
+INSERT INTO `users` VALUES (15, '13800000001', '$2b$12$iCtsBwN3Pr72doOlHKNShuyQSHuCvsBn6mgY3Pl4dfTgu0vuHDVo2', 'student', 1, '2026-01-04 16:34:15', '2026-01-19 23:52:41', NULL, '贾一', '22014083001');
 INSERT INTO `users` VALUES (16, '13800000002', '$2b$12$7iPzfP81cDM/najRnW3exeLSnlRO9pWmZSk8cYsJDU/4f1L8kWqH.', 'student', 1, '2026-01-04 16:34:15', NULL, NULL, '贾二', '22014083002');
 INSERT INTO `users` VALUES (17, '13800000003', '$2b$12$cj/Apjf6zd33ysXSYJB0weIhjYhQ25xRVLPzI67ImihSnhAFJPEF2', 'student', 1, '2026-01-04 16:34:15', NULL, NULL, '贾三', '22014083003');
 INSERT INTO `users` VALUES (18, '13800000004', '$2b$12$pqg9oMG/yOPa2j0mY.RJ4ub3THykA9jCF7czA6aUte4cYHfLL4Kom', 'student', 1, '2026-01-04 16:34:16', '2026-01-04 17:56:56', NULL, '贾四', '22014083004');

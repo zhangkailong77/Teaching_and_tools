@@ -66,7 +66,9 @@ class NoticeSimple(BaseModel):
     id: int
     title: str
     content: str
+    type: str
     created_at: datetime
+    publisher_name: str
 
 # 3. 侧边栏聚合数据
 class StudentSidebarData(BaseModel):

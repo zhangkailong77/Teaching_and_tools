@@ -1263,7 +1263,7 @@ $bg-color: #f5f7fa;
   margin-top: 10px;
 
   .btn-generate {
-    background: linear-gradient(135deg, $primary 0%, lighten($primary, 10%) 100%);
+    background: linear-gradient(135deg, $primary 0%, color-mix(in srgb, $primary 90%, white 10%) 100%);
     border: none;
     padding: 10px 30px;
     border-radius: 20px;

@@ -619,7 +619,7 @@ $primary: #00c9a7;
     box-shadow: 0 2px 6px rgba(0, 201, 167, 0.25);
     
     &:hover {
-      background-color: mix(#fff, $primary, 10%);
+      background-color: color-mix(in srgb, $primary 90%, white 10%);
       transform: translateY(-1px);
       box-shadow: 0 4px 10px rgba(0, 201, 167, 0.35);
     }

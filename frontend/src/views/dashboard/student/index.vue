@@ -163,7 +163,7 @@
       </div>
       
 
-      <!-- ✅ 模块 2: 班级公告栏 (替换推荐导师) -->
+      <!-- ✅ 模块 2: 班级公告栏 -->
       <div class="sidebar-card notice-section">
         <div class="card-header">
           <h4>班级公告</h4>
@@ -177,6 +177,7 @@
             v-for="notice in sidebarData.latest_notices" 
             :key="notice.id" 
             class="notice-item"
+            @click="openNoticeDetail(notice)"
           >
             <div class="dot"></div>
             <div class="n-content">
@@ -290,11 +291,64 @@
         </div>
       </div>
     </div>
+
+    <!-- ================= 公告详情弹窗 ================= -->
+    <el-dialog
+      v-model="showNoticeDialog"
+      width="600px"
+      class="premium-dialog"
+      :show-close="false" 
+      align-center
+      destroy-on-close
+    >
+      <!-- 自定义头部 -->
+      <template #header="{ close }">
+        <div class="dialog-header">
+          <span class="header-title">公告详情</span>
+          <div class="close-btn" @click="close">×</div>
+        </div>
+      </template>
+
+      <!-- 内容区域 -->
+      <div class="dialog-content">
+        <!-- 标题区 -->
+        <div class="msg-head">
+          <el-tag :type="getTypeTagType(currentNotice.type)" effect="dark" size="small" class="type-badge">
+            {{ getTypeLabel(currentNotice.type) }}
+          </el-tag>
+          <h3 class="full-title">{{ currentNotice.title }}</h3>
+        </div>
+
+        <!-- 元数据区 -->
+        <div class="msg-meta">
+          <div class="meta-item">
+            <el-icon><User /></el-icon> <span>{{ currentNotice.publisher_name }}</span>
+          </div>
+          <div class="meta-item">
+            <el-icon><Clock /></el-icon> <span>{{ formatTimeFull(currentNotice.created_at) }}</span>
+          </div>
+        </div>
+        
+        <div class="divider"></div>
+
+        <!-- 正文区 -->
+        <div class="msg-body">
+          {{ currentNotice.content }}
+        </div>
+      </div>
+
+      <!-- 底部 -->
+      <template #footer>
+        <div class="dialog-footer">
+          <button class="btn-confirm" @click="showNoticeDialog = false">我已知晓</button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, reactive, computed } from 'vue';
+import { ref, onMounted, reactive, computed, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/modules/user';
 import request from '@/utils/request';
@@ -304,6 +358,8 @@ import { getMyEnrolledClasses, type ClassItem } from '@/api/course';
 import { uploadImage } from '@/api/common';
 // ✅ 引入新写的 API
 import { getMyStudentProfile, updateMyStudentProfile, getStudentSidebarData, type StudentProfile } from '@/api/profile';
+import { markAnnouncementRead } from '@/api/announcement';
+import { User, Clock, Bell } from '@element-plus/icons-vue';
 import * as echarts from 'echarts';
 
 const router = useRouter();
@@ -322,6 +378,10 @@ const profileForm = reactive<Partial<StudentProfile>>({
 const showProfileModal = ref(false);
 const isSubmitLoading = ref(false);
 const fileInputRef = ref<HTMLInputElement | null>(null);
+
+  // 公告弹窗控制
+const showNoticeDialog = ref(false);
+const currentNotice = ref<any>({});
 
 // 定义状态
 const isLoading = ref(false);
@@ -576,11 +636,8 @@ const handleLogout = async () => {
 };
 
 const openSystemB = async () => {
-  // 1. 【关键】点击瞬间，先打开一个新标签页
-  // 这样浏览器就不会拦截了，因为它认为是你自己点的
   const newWindow = window.open('', '_blank');
 
-  // 2. 给这个新窗口写一点提示文字，告诉用户别关
   if (newWindow) {
     newWindow.document.write(`
       <div style="text-align:center; padding-top:20%; font-family:sans-serif;">
@@ -619,6 +676,27 @@ const openSystemB = async () => {
     if(btnText) btnText.innerHTML = '启动 ComfyUI 环境 <span class="arrow">▶</span>';
   }
 };
+
+// 打开公告详情
+const openNoticeDetail = async (notice: any) => {
+  console.log('点击的公告数据:', notice);
+  currentNotice.value = notice;
+  showNoticeDialog.value = true;
+
+  // 标记已读
+  try {
+    await markAnnouncementRead(notice.id);
+    // 刷新侧边栏数据
+    fetchSidebarData();
+  } catch (e) {
+    console.error(e);
+  }
+};
+
+// 工具函数
+const formatTimeFull = (t: string) => t ? new Date(t).toLocaleString() : '';
+const getTypeLabel = (type: string) => ({ urgent: '紧急', normal: '通知', course: '课程', tip: '提示' }[type] || '公告');
+const getTypeTagType = (type: string) => ({ urgent: 'danger', normal: 'primary', course: 'success', tip: 'warning' }[type] || 'info');
 </script>
 
 <style scoped lang="scss">
@@ -1114,6 +1192,121 @@ $text-gray: #a4b0be;
         small { font-size: 14px; font-weight: normal; color: #94a3b8; }
       }
     }
+  }
+}
+
+/* 班级公告列表 */
+.notice-list {
+  .notice-item {
+    display: flex;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid #f9f9f9;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 4px;
+    
+    &:hover {
+      background: #f5f5f5;
+      transform: translateX(5px);
+    }
+    
+    &:last-child { border-bottom: none; }
+    
+    .dot { width: 6px; height: 6px; background: $primary-color; border-radius: 50%; margin-top: 6px; flex-shrink: 0; }
+    .n-content {
+      flex: 1;
+      .n-title { font-size: 13px; color: #34495e; font-weight: 500; margin-bottom: 4px; line-height: 1.4; }
+      .n-time { font-size: 11px; color: #bdc3c7; }
+    }
+  }
+  .empty-notices { text-align: center; padding: 20px; color: #ccc; font-size: 12px; }
+}
+
+/* 弹窗整体样式覆盖 */
+:deep(.premium-dialog) {
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  
+  .el-dialog__header {
+    padding: 0;
+    margin: 0;
+  }
+  
+  .el-dialog__body {
+    padding: 0;
+  }
+  
+  .el-dialog__footer {
+    padding: 0;
+  }
+}
+
+.dialog-header {
+  padding: 20px 25px;
+  border-bottom: 1px solid #f5f5f5;
+  display: flex; justify-content: space-between; align-items: center;
+  
+  .header-title { font-size: 16px; font-weight: bold; color: #333; }
+  .close-btn { 
+    font-size: 24px; color: #ccc; cursor: pointer; line-height: 1; 
+    &:hover { color: #333; }
+  }
+}
+
+.dialog-content {
+  padding: 25px;
+  
+  .msg-head {
+    display: flex; align-items: flex-start; gap: 10px; margin-bottom: 15px;
+    .type-badge { flex-shrink: 0; margin-top: 4px; border: none; }
+    .full-title { font-size: 20px; font-weight: bold; color: #2c3e50; line-height: 1.4; margin: 0; }
+  }
+
+  .msg-meta {
+    display: flex; gap: 20px; font-size: 13px; color: #999; margin-bottom: 20px;
+    .meta-item { display: flex; align-items: center; gap: 5px; }
+  }
+
+  .divider { height: 1px; background: #f0f0f0; margin-bottom: 20px; }
+
+  .msg-body {
+    font-size: 15px;
+    line-height: 1.8;
+    color: #4a5568;
+    white-space: pre-wrap;
+    min-height: 120px;
+    background: #fcfcfc;
+    padding: 15px;
+    border-radius: 8px;
+  }
+}
+
+.dialog-footer {
+  padding: 15px 25px 25px;
+  display: flex; justify-content: flex-end;
+  
+  .btn-confirm {
+    background: $primary-color;
+    color: white;
+    border: none;
+    padding: 10px 28px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 201, 167, 0.3);
+    transition: all 0.2s;
+    
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 201, 167, 0.4);
+      filter: brightness(1.05);
+    }
+    
+    &:active { transform: translateY(0); }
   }
 }
 </style>

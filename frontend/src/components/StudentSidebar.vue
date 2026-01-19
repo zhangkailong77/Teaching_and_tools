@@ -18,11 +18,16 @@
         <span>课程中心</span>
       </router-link>
 
-      <!-- 后续功能预留链接 -->
-      <a href="#" class="menu-item">
+      <router-link 
+        to="/dashboard/student/messages" 
+        class="menu-item"
+        :class="{ active: activePath === '/dashboard/student/messages' }"
+      >
         <el-icon><Bell /></el-icon>
         <span>消息通知</span>
-      </a>
+        <el-badge v-if="unreadCount > 0" :value="unreadCount" class="badge" />
+      </router-link>
+      
       <router-link 
         to="/dashboard/student/exams" 
         class="menu-item"
@@ -72,7 +77,7 @@
 import { useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/modules/user';
 import request from '@/utils/request';
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { 
   HomeFilled, 
@@ -86,6 +91,7 @@ import {
 import SettingsModal from '@/components/SettingsModal.vue'
 
 const showSettings = ref(false)
+const unreadCount = ref(0)
 
 const route = useRoute();
 const router = useRouter();
@@ -111,6 +117,27 @@ const activePath = computed(() => {
   }
   return path;
 });
+
+onMounted(() => {
+  fetchUnreadCount();
+});
+
+// 监听路由变化，当从消息通知页面返回时刷新未读数量
+watch(() => route.path, (newPath, oldPath) => {
+  if (oldPath === '/dashboard/student/messages' && newPath !== '/dashboard/student/messages') {
+    fetchUnreadCount();
+  }
+});
+
+// 获取未读消息数量
+const fetchUnreadCount = async () => {
+  try {
+    const res = await request.get('/announcements/student/unread-count');
+    unreadCount.value = res.unread_count || 0;
+  } catch (e) {
+    console.error('获取未读消息数量失败', e);
+  }
+};
 </script>
 
 <style scoped lang="scss">
@@ -146,6 +173,7 @@ $text-gray: #a4b0be;
       color: $text-dark; text-decoration: none; font-size: 14px; font-weight: 500;
       border-radius: 10px; transition: all 0.3s;
       margin-bottom: 5px;
+      position: relative;
 
       &:hover { background-color: rgba(0, 201, 167, 0.1); color: $primary-color; }
       
@@ -157,6 +185,18 @@ $text-gray: #a4b0be;
       }
       
       &.logout:hover { color: #e74c3c; background: rgba(231, 76, 60, 0.1); }
+      
+      .badge {
+        margin-left: auto;
+        :deep(.el-badge__content) {
+          background-color: #ff4d4f;
+          border: none;
+          font-size: 11px;
+          height: 18px;
+          line-height: 18px;
+          padding: 0 6px;
+        }
+      }
     }
   }
 }

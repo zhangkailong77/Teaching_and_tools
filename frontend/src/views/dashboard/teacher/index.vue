@@ -139,6 +139,8 @@
           </div>
         </div>
       </div>
+
+      <AnnouncementWidget />
     </aside>
 
     <!-- ================= 编辑资料弹窗 ================= -->
@@ -394,6 +396,7 @@ import DashboardStats from './components/DashboardStats.vue'
 import { 
   Warning
 } from '@element-plus/icons-vue'
+import AnnouncementWidget from './components/AnnouncementWidget.vue'
 
 const router = useRouter();
 const userStore = useUserStore();
