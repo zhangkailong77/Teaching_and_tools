@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
 
 from app.api import deps
+from app.core.redis import get_cache, set_cache, delete_cache_pattern
 from app.models.user import User
 from app.models import announcement as models
 from app.models.course import Class, Enrollment
@@ -60,6 +61,16 @@ def create_announcement(
     db.commit()
     db.refresh(db_obj)
 
+    # 清除教师公告缓存
+    delete_cache_pattern(f"teacher:{current_user.id}:announcements")
+
+    # 清除目标班级学生的公告缓存
+    for cid in target_class_ids:
+        # 获取该班级所有学生ID并清除缓存
+        enrollments = db.query(Enrollment).filter(Enrollment.class_id == cid).all()
+        for e in enrollments:
+            delete_cache_pattern(f"student:{e.student_id}:announcements:*")
+
     publisher = current_user
     p_name = publisher.full_name or publisher.username
     if publisher.teacher_profile:
@@ -89,6 +100,12 @@ def get_teacher_announcements(
     current_user: User = Depends(deps.get_current_user),
 ):
     if current_user.role != "teacher": return []
+
+    # 尝试从缓存获取
+    cache_key = f"teacher:{current_user.id}:announcements"
+    cached = get_cache(cache_key)
+    if cached:
+        return cached
 
     # 查询该老师发布的所有公告
     anns = db.query(models.Announcement).filter(
@@ -129,8 +146,12 @@ def get_teacher_announcements(
             "publisher_name": p_name,
             "read_count": read_count,
             "total_count": total_count,
-            "content": ann.content 
+            "content": ann.content
         })
+
+    # 存入缓存（5分钟，公告读数可能变化）
+    set_cache(cache_key, results, expire=300)
+
     return results
 
 
@@ -217,8 +238,14 @@ def get_student_announcements(
     # 1. 找到学生所在的班级ID
     enrollment = db.query(Enrollment).filter(Enrollment.student_id == current_user.id).first()
     if not enrollment: return []
-    
+
     class_id = enrollment.class_id
+
+    # 尝试从缓存获取
+    cache_key = f"student:{current_user.id}:announcements:{class_id}"
+    cached = get_cache(cache_key)
+    if cached:
+        return cached
 
     # 2. 查询发给该班级的公告
     # 关联路径: Announcement -> AnnouncementTarget -> class_id
@@ -256,8 +283,12 @@ def get_student_announcements(
             "created_at": ann.created_at,
             "publisher_name": p_name,
             "is_read": is_read,
-            "content": ann.content 
+            "content": ann.content
         })
+
+    # 存入缓存（5分钟，已读状态可能变化）
+    set_cache(cache_key, results, expire=300)
+
     return results
 
 # -----------------------------------------------------------
@@ -282,7 +313,10 @@ def mark_as_read(
         )
         db.add(read_record)
         db.commit()
-    
+
+        # 清除该学生的公告缓存
+        delete_cache_pattern(f"student:{current_user.id}:announcements:*")
+
     return {"status": "ok"}
 
 

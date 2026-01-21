@@ -16,6 +16,7 @@ from app.models.user import User
 from sqlalchemy import func, cast, String
 from app.schemas.exam import QuestionPagination
 from app.models.course import Class, Enrollment
+from app.core.redis import save_exam_progress, get_exam_progress, clear_exam_progress, delete_cache_pattern, get_cache, set_cache
 
 router = APIRouter()
 
@@ -54,8 +55,8 @@ def read_questions(
         
     # 5. 分页与排序
     questions = query.order_by(models.Question.created_at.desc()).offset(skip).limit(limit).all()
-    
-    # 6. 返回特定结构
+
+    # 6. 返回数据（Question对象结构复杂，暂不缓存items列表）
     return {
         "total": total,
         "items": questions
@@ -143,6 +144,10 @@ def batch_delete_questions(
     )
     count = stmt.delete(synchronize_session=False)
     db.commit()
+
+    # 清除题库缓存
+    delete_cache_pattern(f"teacher:{current_user.id}:questions:*")
+
     return {"message": f"成功删除 {count} 道题目"}
 
 # 2. 创建题目
@@ -171,6 +176,10 @@ def create_question(
     db.add(db_obj)
     db.commit()
     db.refresh(db_obj)
+
+    # 清除题库缓存
+    delete_cache_pattern(f"teacher:{current_user.id}:questions:*")
+
     return db_obj
 
 # 3. 删除题目
@@ -188,6 +197,10 @@ def delete_question(
         
     db.delete(question)
     db.commit()
+
+    # 清除题库缓存
+    delete_cache_pattern(f"teacher:{current_user.id}:questions:*")
+
     return {"message": "删除成功"}
 
 # 4. 获取题目详情 (用于编辑回显)
@@ -227,6 +240,10 @@ def update_question(
     
     db.commit()
     db.refresh(question)
+
+    # 清除题库缓存
+    delete_cache_pattern(f"teacher:{current_user.id}:questions:*")
+
     return question
 
 
@@ -333,6 +350,10 @@ def batch_import_questions(
             errors.append(f"第{row_num}行：解析异常 - {str(e)}")
 
     db.commit()
+
+    # 清除题库缓存
+    delete_cache_pattern(f"teacher:{current_user.id}:questions:*")
+
     return {
         "total": len(df),
         "success": success_count,
@@ -881,14 +902,23 @@ def submit_exam(
         models.ExamRecord.exam_id == exam_id,
         models.ExamRecord.student_id == current_user.id,
     ).first()
-    
+
     if not record:
         raise HTTPException(status_code=400, detail="未找到进行中的考试记录")
 
+    # 从Redis获取暂存的答案（如果前端传的为空）
+    final_answers = submit_in.answers
+    if not final_answers or len(final_answers) == 0:
+        redis_progress = get_exam_progress(exam_id, current_user.id)
+        final_answers = [
+            schemas.AnswerSubmit(question_id=qid, answer_content=ans)
+            for qid, ans in redis_progress.items()
+        ]
+
     objective_score = 0
-    
+
     # 2. 遍历学生提交的答案
-    for ans in submit_in.answers:
+    for ans in final_answers:
         # 获取题目详情（包含正确答案）
         question = db.query(models.Question).filter(models.Question.id == ans.question_id).first()
         # 获取该题在试卷中的分值
@@ -963,48 +993,65 @@ def submit_exam(
     record.cheat_count = submit_in.cheat_count
     
     db.commit()
-    
+
+    # 清除Redis暂存数据
+    clear_exam_progress(exam_id, current_user.id)
+
     return {"message": "交卷成功", "score": objective_score, "status": record.status}
 
 
-# [学生端] 暂存答案 (断电保护/每30秒触发)
+# [学生端] 暂存单题答案 (变化即保存)
 @router.post("/student/save-progress/{exam_id}")
-def save_exam_progress(
+def save_exam_progress_endpoint(
     exam_id: int,
     answers: List[schemas.AnswerSubmit],
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user),
 ):
-    # 找到记录
+    """
+    保存单题或多题答案到Redis（断电保护）
+    不再写MySQL，只在提交时才写入
+    """
+    # 验证考试记录存在
+    record = db.query(models.ExamRecord).filter(
+        models.ExamRecord.exam_id == exam_id,
+        models.ExamRecord.student_id == current_user.id,
+        models.ExamRecord.status == 0  # 进行中
+    ).first()
+
+    if not record:
+        return {"msg": "无正在进行的考试记录"}
+
+    # 保存到Redis
+    saved_count = 0
+    for ans in answers:
+        if save_exam_progress(exam_id, current_user.id, ans.question_id, ans.answer_content):
+            saved_count += 1
+
+    return {"status": "success", "saved_count": saved_count}
+
+
+# [学生端] 获取暂存的答案（重新进入考试时调用）
+@router.get("/student/progress/{exam_id}")
+def get_exam_progress_endpoint(
+    exam_id: int,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    """获取Redis中暂存的答案，用于断线重连恢复"""
+    # 验证考试记录存在
     record = db.query(models.ExamRecord).filter(
         models.ExamRecord.exam_id == exam_id,
         models.ExamRecord.student_id == current_user.id,
         models.ExamRecord.status == 0
     ).first()
-    
-    if not record:
-        return {"msg": "无正在进行的考试记录"}
 
-    # 批量更新或插入答案
-    for ans in answers:
-        # 查找是否已存在该题作答
-        db_ans = db.query(models.ExamAnswer).filter(
-            models.ExamAnswer.record_id == record.id,
-            models.ExamAnswer.question_id == ans.question_id
-        ).first()
-        
-        if db_ans:
-            db_ans.answer_content = ans.answer_content
-        else:
-            new_ans = models.ExamAnswer(
-                record_id=record.id,
-                question_id=ans.question_id,
-                answer_content=ans.answer_content
-            )
-            db.add(new_ans)
-    
-    db.commit()
-    return {"status": "success", "saved_at": datetime.now()}
+    if not record:
+        return {"answers": {}}
+
+    # 从Redis获取暂存数据
+    progress = get_exam_progress(exam_id, current_user.id)
+    return {"answers": progress}
 
 
 

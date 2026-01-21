@@ -8,6 +8,7 @@ from app.core import security
 from app.db.session import SessionLocal
 from app.models.user import User
 from app.schemas.token import TokenPayload
+from app.core.redis import get_cache, set_cache
 
 # 定义认证入口，如果Token无效，让前端去哪个URL登录（Swagger文档用）
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.api_v1_str}/auth/login")
@@ -36,9 +37,22 @@ def get_current_user(
         token_data = TokenPayload(sub=username, role=payload.get("role"))
     except JWTError:
         raise credentials_exception
-        
-    # 查数据库确认用户存在
+
+    # 缓存未命中，查数据库
     user = db.query(User).filter(User.username == token_data.sub).first()
     if user is None:
         raise credentials_exception
+
+    # 存入缓存（只存基本字段，1小时过期）
+    cache_key = f"user:{username}"
+    user_dict = {
+        "id": user.id,
+        "username": user.username,
+        "full_name": user.full_name,
+        "role": user.role,
+        "is_active": user.is_active,
+        "student_number": user.student_number,
+    }
+    set_cache(cache_key, user_dict, expire=3600)
+
     return user

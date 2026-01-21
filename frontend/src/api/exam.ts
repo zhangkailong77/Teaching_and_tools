@@ -222,6 +222,23 @@ export function submitExam(examId: number, data: { answers: any[], cheat_count: 
   })
 }
 
+// 5. 保存考试进度（暂存答案）
+export function saveExamProgress(examId: number, answers: Array<{question_id: number, answer_content: any}>) {
+  return request({
+    url: `/exam/student/save-progress/${examId}`,
+    method: 'post',
+    data: answers
+  })
+}
+
+// 6. 获取暂存的进度
+export function getExamProgress(examId: number) {
+  return request({
+    url: `/exam/student/progress/${examId}`,
+    method: 'get'
+  })
+}
+
 
 
 // ===========================

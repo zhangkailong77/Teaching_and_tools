@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.utils.hash import encode_id, decode_id
 
 from app.api import deps
+from app.core.redis import get_cache, set_cache, delete_cache_pattern
 from app.models.user import User
 from app.schemas import content as schemas
 from app.models.course import Enrollment, Class, ClassAssignment, StudentSubmission
@@ -155,11 +156,17 @@ def read_course_chapters(
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user),
 ):
-
     course_id = decode_id(public_id)
+
+    # 尝试从缓存获取（课程章节是静态内容）
+    cache_key = f"course:{course_id}:chapters"
+    cached = get_cache(cache_key)
+    if cached:
+        return cached
+
     if not course_id:
         raise HTTPException(status_code=404, detail="课程不存在")
-        
+
     # 1. 检查课程是否存在
     course = db.query(Course).filter(Course.id == course_id).first()
     if not course:
@@ -199,7 +206,10 @@ def read_course_chapters(
             "isOpen": False, # 前端控制折叠状态
             "lessons": lesson_list
         })
-        
+
+    # 存入缓存（30分钟，课程章节是静态内容）
+    set_cache(cache_key, results, expire=1800)
+
     return results
 
 

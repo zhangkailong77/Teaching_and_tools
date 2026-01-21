@@ -1,4 +1,5 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from typing import Optional
 
 class Settings(BaseSettings):
     # 定义字段（使用小写，符合 Python 规范）
@@ -8,6 +9,12 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 60
     database_url: str
     base_url: str = "http://127.0.0.1:8000"
+
+    # Redis配置
+    redis_host: str = "localhost"
+    redis_port: int = 6379
+    redis_db: int = 0
+    redis_password: Optional[str] = None
 
     # Pydantic V2 配置
     model_config = SettingsConfigDict(

@@ -6,6 +6,7 @@ from app.utils.hash import encode_id
 
 from app.api import deps
 from app.core import security
+from app.core.redis import get_cache, set_cache, delete_cache_pattern
 from app.models.user import User
 from app.models.course import Class, Enrollment, ClassAssignment, StudentSubmission
 from app.models.content import Course, ClassCourseBinding, CourseChapter, CourseLesson, StudentLearningProgress
@@ -28,6 +29,12 @@ def read_my_classes(
     current_user: User = Depends(deps.get_current_user),
     status: int = 0
 ):
+    # 尝试从缓存获取
+    cache_key = f"teacher:{current_user.id}:classes:{status}"
+    cached = get_cache(cache_key)
+    if cached:
+        return cached
+
     # 1. 查询该老师的所有班级
     classes = db.query(Class).filter(
         Class.teacher_id == current_user.id,
@@ -79,7 +86,10 @@ def read_my_classes(
             "pending_count": pending,
             "status": cls.status
         })
-        
+
+    # 存入缓存（30分钟）
+    set_cache(cache_key, results, expire=1800)
+
     return results
 
 # ------------------------------------------------------------------
@@ -127,6 +137,12 @@ def create_class(
 
     db.commit()
     db.refresh(new_class)
+
+    # 清除班级列表缓存
+    delete_cache_pattern(f"teacher:{current_user.id}:classes:*")
+    # 清除学生列表缓存
+    delete_cache_pattern(f"teacher:{current_user.id}:students:*")
+
     return new_class
 
 
@@ -168,6 +184,11 @@ def update_class(
     db.add(class_obj)
     db.commit()
     db.refresh(class_obj)
+
+    # 清除班级列表缓存
+    delete_cache_pattern(f"teacher:{current_user.id}:classes:*")
+    # 清除学生列表缓存
+    delete_cache_pattern(f"teacher:{current_user.id}:students:*")
     
     # 5. 重新构造返回数据 (为了包含统计信息)
     # 简单调用一下查询逻辑补全字段
@@ -264,6 +285,10 @@ def add_student_to_class(
         enrollment = Enrollment(class_id=class_id, student_id=student.id)
         db.add(enrollment)
         db.commit()
+
+        # 清除班级列表缓存
+        delete_cache_pattern(f"teacher:{current_user.id}:classes:*")
+
         return {"message": f"学生 {student.full_name} 添加成功"}
     else:
         return {"message": f"学生 {student.full_name} 已经在班级中"}
@@ -281,7 +306,12 @@ def read_my_students(
     page: int = 1,
     limit: int = 10
 ):
-    
+    # 尝试从缓存获取（包含筛选和分页参数）
+    cache_key = f"teacher:{current_user.id}:students:{class_id or 'all'}:{keyword or ''}:{page}:{limit}"
+    cached = get_cache(cache_key)
+    if cached:
+        return cached
+
     # 1. 构建基础查询 (保持原本的联表逻辑)
     query = db.query(Enrollment).join(Class).join(User, Enrollment.student_id == User.id)\
         .filter(Class.teacher_id == current_user.id)
@@ -348,13 +378,19 @@ def read_my_students(
             "joined_at": enrollment.joined_at,
             "is_active": student.is_active,
             "progress": progress_percent,
-            "avatar": s_avatar 
+            "avatar": s_avatar
         })
-        
-    return {
+
+    result = {
         "total": total,
         "items": students_data
     }
+
+    # 存入缓存（10分钟，学生数据可能变化）
+    set_cache(cache_key, result, expire=600)
+
+    return result
+
 
 # ------------------------------------------------------------------
 # 新增: 获取教师工作台统计数据
@@ -467,6 +503,12 @@ def remove_student_from_class(
 
     db.delete(enrollment)
     db.commit()
+
+    # 清除班级列表缓存
+    delete_cache_pattern(f"teacher:{current_user.id}:classes:*")
+    # 清除学生列表缓存
+    delete_cache_pattern(f"teacher:{current_user.id}:students:*")
+
     return {"message": "移出成功"}
 
 
@@ -589,6 +631,11 @@ def batch_import_students(
         db.rollback()
         raise HTTPException(status_code=500, detail="数据库提交失败")
 
+    # 清除班级列表缓存
+    delete_cache_pattern(f"teacher:{current_user.id}:classes:*")
+    # 清除学生列表缓存
+    delete_cache_pattern(f"teacher:{current_user.id}:students:*")
+
     return {
         "total_processed": len(df),
         "success_count": success_count,
@@ -643,8 +690,14 @@ def update_student_info(
     db.add(student)
     if current_enrollment:
         db.add(current_enrollment)
-        
+
     db.commit()
+
+    # 清除班级列表缓存
+    delete_cache_pattern(f"teacher:{current_user.id}:classes:*")
+    # 清除学生列表缓存
+    delete_cache_pattern(f"teacher:{current_user.id}:students:*")
+
     return {"message": "修改成功"}
 
 
@@ -793,7 +846,12 @@ def update_class_status(
     
     class_obj.status = status
     db.commit()
-    
+
+    # 清除班级列表缓存
+    delete_cache_pattern(f"teacher:{current_user.id}:classes:*")
+    # 清除学生列表缓存
+    delete_cache_pattern(f"teacher:{current_user.id}:students:*")
+
     msg = "班级已归档" if status == 1 else "班级已恢复"
     return {"message": msg}
 

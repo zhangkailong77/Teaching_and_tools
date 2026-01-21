@@ -178,11 +178,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onUnmounted } from 'vue';
+import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { getExamPaper, submitExam } from '@/api/exam'; // 需在 api/exam.ts 定义
+import { getExamPaper, submitExam, saveExamProgress, getExamProgress } from '@/api/exam';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Memo, Timer, Opportunity, CircleCheck } from '@element-plus/icons-vue';
+import { debounce } from 'lodash-es';
 
 const route = useRoute();
 const router = useRouter();
@@ -246,14 +247,17 @@ onMounted(async () => {
     examInfo.duration = Number(route.query.duration) || 60;
     examInfo.total_score = Number(route.query.total_score) || 100;
     examInfo.pass_score = Number(route.query.pass_score) || 60;
-    
+
     timeLeft.value = examInfo.duration * 60;
-    
+
     // 初始化答案结构
     questions.value.forEach(q => {
       if (q.type === 'multiple') answers[q.id] = [];
       else answers[q.id] = '';
     });
+
+    // 加载暂存的答案
+    await loadSavedProgress();
 
     // 监控网络
     window.addEventListener('online', () => isOnline.value = true);
@@ -269,14 +273,12 @@ const startExam = () => {
     document.documentElement.requestFullscreen().then(() => {
       isStarted.value = true;
       startTimer();
-      startAutoSave();
       setupAntiCheat();
     }).catch((err) => {
       ElMessage.warning('全屏请求被拒绝，请手动开启以获得最佳体验');
       // 即使全屏失败，也允许开始考试
       isStarted.value = true;
       startTimer();
-      startAutoSave();
       setupAntiCheat();
     });
   } else {
@@ -297,15 +299,56 @@ const startTimer = () => {
   }, 1000);
 };
 
-// 4. 自动保存逻辑
-let saveInterval: any = null;
-const startAutoSave = () => {
-  saveInterval = setInterval(async () => {
-    isSaving.value = true;
-    // 调用后端暂存接口 (save-progress)
-    // await saveExamProgress(examId, answers);
-    setTimeout(() => isSaving.value = false, 1500);
-  }, 30000);
+// 4. 保存单题答案（防抖3秒，变化即保存）
+const saveSingleAnswer = debounce(async () => {
+  isSaving.value = true;
+  try {
+    // 收集所有已作答的题目
+    const answerList = [];
+    for (const qid in answers) {
+      const val = answers[qid];
+      // 只保存有值的答案
+      if (val !== undefined && val !== '' && (Array.isArray(val) ? val.length > 0 : true)) {
+        answerList.push({
+          question_id: Number(qid),
+          answer_content: val
+        });
+      }
+    }
+
+    if (answerList.length > 0) {
+      await saveExamProgress(examId, answerList);
+    }
+  } catch (e) {
+    console.error('保存失败:', e);
+  } finally {
+    setTimeout(() => isSaving.value = false, 1000);
+  }
+}, 3000);
+
+// 5. 监听answers变化，自动保存
+watch(
+  () => answers,
+  () => {
+    // 直接触发保存（reactive对象newVal和oldVal是同一个引用）
+    saveSingleAnswer();
+  },
+  { deep: true }
+);
+
+// 6. 加载暂存的答案
+const loadSavedProgress = async () => {
+  try {
+    const res = await getExamProgress(examId);
+    if (res.answers) {
+      // 恢复已保存的答案
+      for (const [qid, answer] of Object.entries(res.answers)) {
+        answers[Number(qid)] = answer;
+      }
+    }
+  } catch (e) {
+    console.error('加载暂存失败:', e);
+  }
 };
 
 // 5. 防作弊逻辑
@@ -366,19 +409,16 @@ const confirmSubmit = () => {
 
 const autoSubmit = async () => {
   clearInterval(timerInterval);
-  clearInterval(saveInterval);
-  
+
   try {
+    // 传空数组，让后端从Redis读取暂存的答案
     const submitData = {
-      answers: Object.keys(answers).map(id => ({
-        question_id: Number(id),
-        answer_content: answers[Number(id)]
-      })),
+      answers: [],
       cheat_count: cheatCount.value
     };
-    
+
     await submitExam(examId, submitData);
-    
+
     ElMessage.success('提交成功！');
     if (document.fullscreenElement) {
       document.exitFullscreen().catch(err => console.error(err));
@@ -416,7 +456,6 @@ const scrollToType = (type: string) => {
 
 onUnmounted(() => {
   clearInterval(timerInterval);
-  clearInterval(saveInterval);
   document.removeEventListener('visibilitychange', handleVisibilityChange);
   window.removeEventListener('blur', handleBlur);
 });

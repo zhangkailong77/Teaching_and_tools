@@ -5,6 +5,7 @@ from sqlalchemy import func
 from datetime import datetime, timedelta
 
 from app.api import deps
+from app.core.redis import get_cache, set_cache, delete_cache_pattern
 from app.models.user import User
 from app.models.course import ClassAssignment, StudentSubmission, Class, Enrollment
 from app.models.content import CourseTask, Course
@@ -52,8 +53,16 @@ def submit_homework(
         # 如果被打回(status=2)，重交后改为0
         if submission.status == 2:
             submission.status = 0
-            
+
     db.commit()
+
+    # 清除作业统计缓存（获取教师ID）
+    if assignment.classroom and assignment.classroom.teacher_id:
+        delete_cache_pattern(f"teacher:{assignment.classroom.teacher_id}:homework_stats")
+
+    # 清除学生待办作业缓存
+    delete_cache_pattern(f"student:{current_user.id}:homework_todos")
+
     return {"message": "作业提交成功"}
 
 # 2. [学生] 获取我的作业待办列表 (用于左侧红点和列表页)
@@ -62,6 +71,12 @@ def get_my_homework_todos(
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user),
 ):
+    # 尝试从缓存获取
+    cache_key = f"student:{current_user.id}:homework_todos"
+    cached = get_cache(cache_key)
+    if cached:
+        return cached
+
     # 1. 找到学生加入的所有班级
     enrollments = current_user.enrollments
     class_ids = [e.class_id for e in enrollments]
@@ -120,7 +135,10 @@ def get_my_homework_todos(
             "score": score,
             "course_cover": course_cover
         })
-        
+
+    # 存入缓存（5分钟，作业状态可能变化）
+    set_cache(cache_key, results, expire=300)
+
     return results
 
 
@@ -197,6 +215,12 @@ def get_teacher_homework_stats(
     if current_user.role != "teacher":
         raise HTTPException(status_code=403, detail="权限不足")
 
+    # 尝试从缓存获取
+    cache_key = f"teacher:{current_user.id}:homework_stats"
+    cached = get_cache(cache_key)
+    if cached:
+        return cached
+
     # A. 全局计数 (饼图数据)
     # 找到该老师发布的所有作业实例 ID
     assign_ids = db.query(ClassAssignment.id).join(Class).filter(Class.teacher_id == current_user.id).all()
@@ -240,16 +264,21 @@ def get_teacher_homework_stats(
     # 按提交率倒序排，取前5
     rank_data.sort(key=lambda x: x['rate'], reverse=True)
 
-    return {
+    result = {
         "pending_count": pending_count,
         "pie_data": {
             "graded": graded,
             "submitted": submitted,
             # 未提交 = (所有作业的应交总数) - (实交总数) - 这里简化处理，前端画图时不显示未提交也可以
-            "unsubmitted": 0 
+            "unsubmitted": 0
         },
         "rank_data": rank_data[:5]
     }
+
+    # 存入缓存（10分钟）
+    set_cache(cache_key, result, expire=600)
+
+    return result
 
 
 # ------------------------------------------------------------------
@@ -402,8 +431,16 @@ def grade_submission(
         
     sub.status = 2 # 标记为已批改
     sub.graded_at = datetime.now()
-    
+
     db.commit()
+
+    # 清除作业统计缓存（获取教师ID）
+    if sub.assignment and sub.assignment.classroom and sub.assignment.classroom.teacher_id:
+        delete_cache_pattern(f"teacher:{sub.assignment.classroom.teacher_id}:homework_stats")
+
+    # 清除该学生的待办作业缓存
+    delete_cache_pattern(f"student:{sub.student_id}:homework_todos")
+
     return {"message": "评分与批注已保存"}
 
 
@@ -445,7 +482,10 @@ def create_custom_homework(
         created_ids.append(db_obj.id)
 
     db.commit()
-    
+
+    # 清除作业统计缓存
+    delete_cache_pattern(f"teacher:{current_user.id}:homework_stats")
+
     return {
         "code": 200, 
         "message": "发布成功", 
