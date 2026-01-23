@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import auth, users, practice, course, profile, upload, content, homework, exam, announcement
+from app.api.v1.endpoints import auth, users, practice, course, profile, upload, content, homework, exam, announcement, comfy_proxy
 
 api_router = APIRouter()
 
@@ -33,3 +33,6 @@ api_router.include_router(exam.router, prefix="/exam", tags=["exam"])
 
 # ✅ 新增公告路由
 api_router.include_router(announcement.router, prefix="/announcements", tags=["announcements"])
+
+# ✅ 新增ComfyUI队列代理路由
+api_router.include_router(comfy_proxy.router, prefix="/comfy_proxy", tags=["comfy_proxy"])

@@ -39,6 +39,8 @@ export const useUserStore = defineStore('user', () => {
     if (!token.value) return;
     const res = await getUserInfo();
     userInfo.value = res;
+    // 持久化用户信息（供ComfyUI队列脚本使用）
+    localStorage.setItem('user', JSON.stringify(res));
   }
 
   // 退出登录

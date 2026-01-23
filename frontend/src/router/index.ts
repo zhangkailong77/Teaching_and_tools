@@ -60,6 +60,12 @@ const routes: RouteRecordRaw[] = [
         meta: { requiresAuth: true, role: 'student' }
       },
       {
+        path: 'student/comfyui',
+        name: 'ComfyUIProxy',
+        component: () => import('@/views/dashboard/student/comfyui/index.vue'),
+        meta: { requiresAuth: true, role: 'student', hideSidebar: true }
+      },
+      {
         path: 'teacher', // 访问地址: /dashboard/teacher
         name: 'TeacherDashboard',
         component: () => import('@/views/dashboard/teacher/index.vue'),

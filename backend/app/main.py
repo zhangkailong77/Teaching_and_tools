@@ -27,6 +27,7 @@ origins = [
     "http://localhost:5173", # Vue 默认端口
     "http://127.0.0.1:5173",
     "http://ai.yz-cube.com:5173",
+    "http://192.168.150.27:5173", # 教学系统 IP
     "http://localhost:3000", # 备用
     "*"
 ]

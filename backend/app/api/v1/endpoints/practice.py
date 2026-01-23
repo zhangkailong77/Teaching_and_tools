@@ -12,6 +12,14 @@ def start_practice(
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user)
 ):
+    """
+    启动ComfyUI实训环境
+
+    返回信息包含：
+    - url: 教学系统代理URL（用于排队控制）
+    - direct_url: GPU服务器直接URL（备用/调试）
+    - port: 分配的端口号
+    """
     # 1. 检查用户是否有分配端口
     if not current_user.comfyui_port:
         # 查找当前最大的端口号，如果没人用过，就从 8189 开始
@@ -20,22 +28,26 @@ def start_practice(
             new_port = 8189
         else:
             new_port = max_port + 1
-            
+
         current_user.comfyui_port = new_port
         db.add(current_user)
         db.commit()
-    
+
     port = current_user.comfyui_port
     username = current_user.username
 
     # 2. 调用 SSH 启动服务
     success = start_comfyui_remote(username, port)
-    
+
     if success:
-        # 返回 System B 的访问地址
+        # 返回访问地址
+        # url: 开发环境使用Vite代理（需要前端配置）
+        # direct_url: GPU服务器直接访问（备用）
         return {
-            "status": "success", 
-            "url": f"http://192.168.150.2:{port}",
+            "status": "success",
+            "url": f"/comfyui-direct/{port}/",  # Vite代理路径
+            "direct_url": f"http://192.168.150.2:{port}",  # 直接访问（备用）
+            "port": port,
             "message": "实训环境启动成功"
         }
     else:

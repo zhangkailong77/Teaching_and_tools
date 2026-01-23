@@ -5,7 +5,7 @@ import time
 import socket # 引入 socket 用于捕获底层网络错误
 
 # ... (配置部分保持不变) ...
-GPU_HOST = "192.168.110.2"
+GPU_HOST = "192.168.150.2"
 GPU_PORT = 22
 GPU_USER = "yzcube"
 GPU_PASSWORD = "Yanzhi2025."
@@ -37,6 +37,7 @@ def start_comfyui_remote(username: str, port: int):
             nohup python main.py \
                 --port {port} \
                 --listen 0.0.0.0 \
+                --enable-cors-header \
                 --output-directory {output_dir} \
                 --user-directory {user_dir} \
                 < /dev/null > {output_dir}/startup.log 2>&1 &

@@ -636,45 +636,8 @@ const handleLogout = async () => {
 };
 
 const openSystemB = async () => {
-  const newWindow = window.open('', '_blank');
-
-  if (newWindow) {
-    newWindow.document.write(`
-      <div style="text-align:center; padding-top:20%; font-family:sans-serif;">
-        <h1>🚀 正在连接云端实训台...</h1>
-        <p>系统正在唤醒 GPU 资源，这可能需要 30-60 秒，请勿关闭本窗口。</p>
-        <div style="margin-top:20px; font-size: 24px;">⏳</div>
-      </div>
-    `);
-  }
-
-  // 加个按钮 loading 状态 (可选)
-  const btnText = document.querySelector('.action-btn');
-  if(btnText) btnText.innerHTML = '正在启动云显卡... ⏳';
-
-  try {
-    // 3. 后台慢慢请求接口 (这时候新窗口在转圈等待)
-    const res = await request.post<any, any>('/practice/start-practice', {}, { 
-      timeout: 120000 
-    });
-    
-    // 4. 【关键】拿到 URL 后，把刚才那个窗口的地址替换掉
-    if (res.url && newWindow) {
-        newWindow.location.href = res.url;
-    } else if (newWindow) {
-        // 如果没返回 url，就关掉窗口
-        newWindow.close();
-        alert('启动异常，未获取到地址');
-    }
-
-  } catch (error) {
-    // 5. 如果报错了，把那个新窗口关掉，并提示错误
-    if (newWindow) newWindow.close();
-    alert('启动失败，请联系管理员');
-    console.error(error);
-  } finally {
-    if(btnText) btnText.innerHTML = '启动 ComfyUI 环境 <span class="arrow">▶</span>';
-  }
+  // 跳转到ComfyUI代理页面（支持排队功能）
+  router.push('/dashboard/student/comfyui');
 };
 
 // 打开公告详情

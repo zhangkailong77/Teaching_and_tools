@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  # ========== 前端 + Nginx 代理 ==========
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: teaching-frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    networks:
+      - teaching-network
+    restart: unless-stopped
+
+  # ========== 后端 API ==========
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: teaching-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=mysql+pymysql://root:teaching2024@mysql:3306/teaching_platform
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+      - SECRET_KEY=your-secret-key-change-in-production
+      - ACCESS_TOKEN_EXPIRE_MINUTES=60
+      - COMFY_MAX_CONCURRENT=2
+      - COMFY_MAX_CONCURRENT_PROD=10
+      - COMFY_GPU_HOST=192.168.150.2
+    depends_on:
+      - mysql
+      - redis
+    volumes:
+      - ./backend/static:/app/static
+    networks:
+      - teaching-network
+    restart: unless-stopped
+
+  # ========== MySQL 数据库 ==========
+  mysql:
+    image: mysql:8.0
+    container_name: teaching-mysql
+    ports:
+      - "3308:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=teaching2024
+      - MYSQL_DATABASE=teaching_platform
+      - MYSQL_CHARSET=utf8mb4
+      - MYSQL_COLLATION=utf8mb4_unicode_ci
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./teaching_platform.sql:/docker-entrypoint-initdb.d/teaching_platform.sql
+    networks:
+      - teaching-network
+    restart: unless-stopped
+
+  # ========== Redis 缓存 ==========
+  redis:
+    image: redis:7-alpine
+    container_name: teaching-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - teaching-network
+    restart: unless-stopped
+
+networks:
+  teaching-network:
+    driver: bridge
+
+volumes:
+  mysql-data:
+  redis-data:
