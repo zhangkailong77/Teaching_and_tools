@@ -263,7 +263,7 @@ const sortedStudents = computed(() => {
   if (!gradingData.value.students) return [];
   // 排序：待批改(1) > 已批改(2) > 未交(0)
   return [...gradingData.value.students].sort((a, b) => {
-    const order = { 1: 0, 2: 1, 0: 2 }; // 优先级 map
+    const order: Record<number, number> = { 1: 0, 2: 1, 0: 2 }; // 优先级 map
     return order[a.status] - order[b.status];
   });
 });

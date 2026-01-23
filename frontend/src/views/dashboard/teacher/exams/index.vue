@@ -65,11 +65,11 @@ const isEditorMode = ref(false)
 const currentEditExam = ref<any>(null)
 const currentExamData = ref<any>(null)
 const isResultMode = ref(false)
-const currentExamId = ref<number | null>(null)
+const currentExamId = ref<number>(0)
 
 
 const isGradingMode = ref(false) // ✅ 新增状态
-const currentRecordId = ref<number | null>(null) // ✅ 新增记录ID
+const currentRecordId = ref<number>(0) // ✅ 新增记录ID
 
 // 处理进入批阅
 const handleGoGrade = (recordId: number) => {

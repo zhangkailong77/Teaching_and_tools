@@ -571,12 +571,13 @@ onMounted(async () => {
   }
 });
 
-// 1. 打开“添加学生”弹窗前，先去拉取最新的班级列表
+// 1. 打开"添加学生"弹窗前，先去拉取最新的班级列表
 const openAddStudentModal = async () => {
   try {
     const res = await getMyClasses();
-    classList.value = res;
-    if (res.length > 0) studentForm.classId = res[0].id;
+    const classData = (res as any).data || res;
+    classList.value = classData;
+    if (classData.length > 0) studentForm.classId = classData[0].id;
     showStudentModal.value = true;
   } catch (error) {
     console.error(error);

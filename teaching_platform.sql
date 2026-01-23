@@ -1,17 +1,17 @@
 /*
  Navicat Premium Data Transfer
 
- Source Server         : 192.168.31.11_3306
+ Source Server         : localhost_3308
  Source Server Type    : MySQL
- Source Server Version : 90200 (9.2.0)
- Source Host           : 192.168.31.11:3306
+ Source Server Version : 80042 (8.0.42)
+ Source Host           : localhost:3308
  Source Schema         : teaching_platform
 
  Target Server Type    : MySQL
- Target Server Version : 90200 (9.2.0)
+ Target Server Version : 80042 (8.0.42)
  File Encoding         : 65001
 
- Date: 19/01/2026 23:53:34
+ Date: 23/01/2026 15:07:01
 */
 
 SET NAMES utf8mb4;
@@ -31,7 +31,7 @@ CREATE TABLE `announcement_reads`  (
   INDEX `idx_student`(`student_id` ASC) USING BTREE,
   CONSTRAINT `fk_ar_announcement` FOREIGN KEY (`announcement_id`) REFERENCES `announcements` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `fk_ar_student` FOREIGN KEY (`student_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 7 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '公告阅读记录表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 10 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '公告阅读记录表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of announcement_reads
@@ -42,6 +42,9 @@ INSERT INTO `announcement_reads` VALUES (3, 3, 1, '2026-01-19 22:43:29');
 INSERT INTO `announcement_reads` VALUES (4, 1, 15, '2026-01-19 23:41:48');
 INSERT INTO `announcement_reads` VALUES (5, 3, 15, '2026-01-19 23:44:58');
 INSERT INTO `announcement_reads` VALUES (6, 2, 15, '2026-01-19 23:45:05');
+INSERT INTO `announcement_reads` VALUES (7, 2, 8, '2026-01-20 10:00:48');
+INSERT INTO `announcement_reads` VALUES (8, 1, 8, '2026-01-20 10:38:05');
+INSERT INTO `announcement_reads` VALUES (9, 3, 8, '2026-01-20 10:38:09');
 
 -- ----------------------------
 -- Table structure for announcement_targets
@@ -56,7 +59,7 @@ CREATE TABLE `announcement_targets`  (
   INDEX `idx_class`(`class_id` ASC) USING BTREE,
   CONSTRAINT `fk_at_announcement` FOREIGN KEY (`announcement_id`) REFERENCES `announcements` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `fk_at_class` FOREIGN KEY (`class_id`) REFERENCES `classes` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 6 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '公告班级关联表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 6 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '公告班级关联表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of announcement_targets
@@ -87,7 +90,7 @@ CREATE TABLE `announcements`  (
   INDEX `idx_created`(`created_at` ASC) USING BTREE,
   INDEX `idx_status`(`status` ASC) USING BTREE,
   CONSTRAINT `fk_announcement_publisher` FOREIGN KEY (`publisher_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '班级公告表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '班级公告表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of announcements
@@ -208,7 +211,7 @@ CREATE TABLE `course_chapters`  (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `fk_chapter_course`(`course_id` ASC) USING BTREE,
   CONSTRAINT `fk_chapter_course` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 55 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '课程章节表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 62 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '课程章节表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of course_chapters
@@ -220,6 +223,13 @@ INSERT INTO `course_chapters` VALUES (29, 6, '第04章 订单履约与售后服�
 INSERT INTO `course_chapters` VALUES (52, 1, '第01章 课程简介', 1, '2026-01-19 11:43:38');
 INSERT INTO `course_chapters` VALUES (53, 1, '第02章 ComfyUI基础入门', 2, '2026-01-19 11:43:38');
 INSERT INTO `course_chapters` VALUES (54, 1, '第03章 跨境电商业务场景实战工作流体系', 3, '2026-01-19 11:43:38');
+INSERT INTO `course_chapters` VALUES (55, 7, '第01章 平台入驻与基础建设', 1, '2026-01-22 18:12:08');
+INSERT INTO `course_chapters` VALUES (56, 7, '第02章 商品运营与管理', 2, '2026-01-22 18:12:09');
+INSERT INTO `course_chapters` VALUES (57, 7, '第03章 店铺装修与视觉', 3, '2026-01-22 18:12:09');
+INSERT INTO `course_chapters` VALUES (58, 7, '第04章 营销活动与推广', 4, '2026-01-22 18:12:10');
+INSERT INTO `course_chapters` VALUES (59, 7, '第05章 订单履约与客户服务', 5, '2026-01-22 18:12:11');
+INSERT INTO `course_chapters` VALUES (60, 7, '第06章 数据分析与复盘', 6, '2026-01-22 18:12:12');
+INSERT INTO `course_chapters` VALUES (61, 7, '第07章 直播与达人联盟', 7, '2026-01-22 18:12:13');
 
 -- ----------------------------
 -- Table structure for course_lessons
@@ -238,7 +248,7 @@ CREATE TABLE `course_lessons`  (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `fk_lesson_chapter`(`chapter_id` ASC) USING BTREE,
   CONSTRAINT `fk_lesson_chapter` FOREIGN KEY (`chapter_id`) REFERENCES `course_chapters` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 410 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '课时资源表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 476 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '课时资源表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of course_lessons
@@ -304,6 +314,72 @@ INSERT INTO `course_lessons` VALUES (406, 54, '任务09 商品变体工作流（
 INSERT INTO `course_lessons` VALUES (407, 54, '任务10 模特换装（绘制遮罩）', 'pdf', '/static/uploads/materials/course_1/chapter_54/任务10 模特换装（绘制遮罩）.pdf', '15页', 0, 0, '2026-01-19 11:43:38');
 INSERT INTO `course_lessons` VALUES (408, 54, '任务11 模特换装（Qwen全自动指令版）', 'pdf', '/static/uploads/materials/course_1/chapter_54/任务11 模特换装（Qwen全自动指令版）.pdf', '15页', 0, 0, '2026-01-19 11:43:38');
 INSERT INTO `course_lessons` VALUES (409, 54, '任务12 图像编辑', 'pdf', '/static/uploads/materials/course_1/chapter_54/任务12 图像编辑.pdf', '15页', 0, 0, '2026-01-19 11:43:38');
+INSERT INTO `course_lessons` VALUES (410, 55, '任务1 TikTok Shop平台注册及店铺开通', 'pdf', '/static/uploads/materials/course_7/chapter_55/任务1 TikTok Shop平台注册及店铺开通.pdf', '15页', 0, 0, '2026-01-22 18:12:09');
+INSERT INTO `course_lessons` VALUES (411, 55, '任务1 TikTok Shop平台注册及店铺开通', 'ppt', '/static/uploads/materials/course_7/chapter_55/任务1 TikTok Shop平台注册及店铺开通.pptx', '15页', 0, 0, '2026-01-22 18:12:09');
+INSERT INTO `course_lessons` VALUES (412, 55, '任务2 TikTok Shop平台店铺信息设置', 'pdf', '/static/uploads/materials/course_7/chapter_55/任务2 TikTok Shop平台店铺信息设置.pdf', '15页', 0, 0, '2026-01-22 18:12:09');
+INSERT INTO `course_lessons` VALUES (413, 55, '任务2 TikTok Shop平台店铺信息设置', 'ppt', '/static/uploads/materials/course_7/chapter_55/任务2 TikTok Shop平台店铺信息设置.pptx', '15页', 0, 0, '2026-01-22 18:12:09');
+INSERT INTO `course_lessons` VALUES (414, 56, '任务3 如何在TikTok Shop平台上传商品', 'pdf', '/static/uploads/materials/course_7/chapter_56/任务3 如何在TikTok Shop平台上传商品.pdf', '15页', 0, 0, '2026-01-22 18:12:09');
+INSERT INTO `course_lessons` VALUES (415, 56, '任务3 如何在TikTok Shop平台上传商品', 'ppt', '/static/uploads/materials/course_7/chapter_56/任务3 如何在TikTok Shop平台上传商品.pptx', '15页', 0, 0, '2026-01-22 18:12:09');
+INSERT INTO `course_lessons` VALUES (416, 56, '任务4 学会使用TikTok Shop平台商品管理功能', 'pdf', '/static/uploads/materials/course_7/chapter_56/任务4 学会使用TikTok Shop平台商品管理功能.pdf', '15页', 0, 0, '2026-01-22 18:12:09');
+INSERT INTO `course_lessons` VALUES (417, 56, '任务4 学会使用TikTok Shop平台商品管理功能', 'ppt', '/static/uploads/materials/course_7/chapter_56/任务4 学会使用TikTok Shop平台商品管理功能.pptx', '15页', 0, 0, '2026-01-22 18:12:09');
+INSERT INTO `course_lessons` VALUES (418, 56, '任务5 TikTok Shop平台商品优化基础指南', 'pdf', '/static/uploads/materials/course_7/chapter_56/任务5 TikTok Shop平台商品优化基础指南.pdf', '15页', 0, 0, '2026-01-22 18:12:09');
+INSERT INTO `course_lessons` VALUES (419, 56, '任务5 TikTok Shop平台商品优化基础指南', 'ppt', '/static/uploads/materials/course_7/chapter_56/任务5 TikTok Shop平台商品优化基础指南.pptx', '15页', 0, 0, '2026-01-22 18:12:09');
+INSERT INTO `course_lessons` VALUES (420, 56, '任务6 如何使用TikTok的商品媒体中心(Media Center) ', 'pdf', '/static/uploads/materials/course_7/chapter_56/任务6 如何使用TikTok的商品媒体中心(Media Center) .pdf', '15页', 0, 0, '2026-01-22 18:12:09');
+INSERT INTO `course_lessons` VALUES (421, 56, '任务6 如何使用TikTok的商品媒体中心(Media Center) ', 'ppt', '/static/uploads/materials/course_7/chapter_56/任务6 如何使用TikTok的商品媒体中心(Media Center) .pptx', '15页', 0, 0, '2026-01-22 18:12:09');
+INSERT INTO `course_lessons` VALUES (422, 56, '任务7 学会使用TikTok Shop平台商店分类管理功能', 'pdf', '/static/uploads/materials/course_7/chapter_56/任务7 学会使用TikTok Shop平台商店分类管理功能.pdf', '15页', 0, 0, '2026-01-22 18:12:09');
+INSERT INTO `course_lessons` VALUES (423, 56, '任务7 学会使用TikTok Shop平台商店分类管理功能', 'ppt', '/static/uploads/materials/course_7/chapter_56/任务7 学会使用TikTok Shop平台商店分类管理功能.pptx', '15页', 0, 0, '2026-01-22 18:12:09');
+INSERT INTO `course_lessons` VALUES (424, 57, '任务8 如何设计你的TikTok Shop店铺', 'pdf', '/static/uploads/materials/course_7/chapter_57/任务8 如何设计你的TikTok Shop店铺.pdf', '15页', 0, 0, '2026-01-22 18:12:10');
+INSERT INTO `course_lessons` VALUES (425, 57, '任务8 如何设计你的TikTok Shop店铺', 'ppt', '/static/uploads/materials/course_7/chapter_57/任务8 如何设计你的TikTok Shop店铺.pptx', '15页', 0, 0, '2026-01-22 18:12:10');
+INSERT INTO `course_lessons` VALUES (426, 57, '任务9 TikTok Shop平台商店页面(Store Page) 介绍', 'pdf', '/static/uploads/materials/course_7/chapter_57/任务9 TikTok Shop平台商店页面(Store Page) 介绍.pdf', '15页', 0, 0, '2026-01-22 18:12:10');
+INSERT INTO `course_lessons` VALUES (427, 57, '任务9 TikTok Shop平台商店页面(Store Page) 介绍', 'ppt', '/static/uploads/materials/course_7/chapter_57/任务9 TikTok Shop平台商店页面(Store Page) 介绍.pptx', '15页', 0, 0, '2026-01-22 18:12:10');
+INSERT INTO `course_lessons` VALUES (428, 57, '任务10 TikTok Shop平台商店健康管理(Shop Healthl) 与店铺评分', 'pdf', '/static/uploads/materials/course_7/chapter_57/任务10 TikTok Shop平台商店健康管理(Shop Healthl) 与店铺评分.pdf', '15页', 0, 0, '2026-01-22 18:12:10');
+INSERT INTO `course_lessons` VALUES (429, 57, '任务10 TikTok Shop平台商店健康管理(Shop Healthl) 与店铺评分', 'ppt', '/static/uploads/materials/course_7/chapter_57/任务10 TikTok Shop平台商店健康管理(Shop Healthl) 与店铺评分.pptx', '15页', 0, 0, '2026-01-22 18:12:10');
+INSERT INTO `course_lessons` VALUES (430, 58, '任务11 TikTok Shop平台设置产品折扣', 'pdf', '/static/uploads/materials/course_7/chapter_58/任务11 TikTok Shop平台设置产品折扣.pdf', '15页', 0, 0, '2026-01-22 18:12:11');
+INSERT INTO `course_lessons` VALUES (431, 58, '任务11 TikTok Shop平台设置产品折扣', 'ppt', '/static/uploads/materials/course_7/chapter_58/任务11 TikTok Shop平台设置产品折扣.pptx', '15页', 0, 0, '2026-01-22 18:12:11');
+INSERT INTO `course_lessons` VALUES (432, 58, '任务12 TikTok Shop平台如何设置商店闪购(Flash Deal）', 'pdf', '/static/uploads/materials/course_7/chapter_58/任务12 TikTok Shop平台如何设置商店闪购(Flash Deal）.pdf', '15页', 0, 0, '2026-01-22 18:12:11');
+INSERT INTO `course_lessons` VALUES (433, 58, '任务12 TikTok Shop平台如何设置商店闪购(Flash Deal）', 'ppt', '/static/uploads/materials/course_7/chapter_58/任务12 TikTok Shop平台如何设置商店闪购(Flash Deal）.pptx', '15页', 0, 0, '2026-01-22 18:12:11');
+INSERT INTO `course_lessons` VALUES (434, 58, '任务13 如何在TikTok Shop平台设置运费折扣', 'pdf', '/static/uploads/materials/course_7/chapter_58/任务13 如何在TikTok Shop平台设置运费折扣.pdf', '15页', 0, 0, '2026-01-22 18:12:11');
+INSERT INTO `course_lessons` VALUES (435, 58, '任务13 如何在TikTok Shop平台设置运费折扣', 'ppt', '/static/uploads/materials/course_7/chapter_58/任务13 如何在TikTok Shop平台设置运费折扣.pptx', '15页', 0, 0, '2026-01-22 18:12:11');
+INSERT INTO `course_lessons` VALUES (436, 58, '任务14 TikTok Shop平台如何设置优惠券(Voucher）', 'pdf', '/static/uploads/materials/course_7/chapter_58/任务14 TikTok Shop平台如何设置优惠券(Voucher）.pdf', '15页', 0, 0, '2026-01-22 18:12:11');
+INSERT INTO `course_lessons` VALUES (437, 58, '任务14 TikTok Shop平台如何设置优惠券(Voucher）', 'ppt', '/static/uploads/materials/course_7/chapter_58/任务14 TikTok Shop平台如何设置优惠券(Voucher）.pptx', '15页', 0, 0, '2026-01-22 18:12:11');
+INSERT INTO `course_lessons` VALUES (438, 58, '任务15 TikTok Shop平台多件多折设置', 'pdf', '/static/uploads/materials/course_7/chapter_58/任务15 TikTok Shop平台多件多折设置.pdf', '15页', 0, 0, '2026-01-22 18:12:11');
+INSERT INTO `course_lessons` VALUES (439, 58, '任务15 TikTok Shop平台多件多折设置', 'ppt', '/static/uploads/materials/course_7/chapter_58/任务15 TikTok Shop平台多件多折设置.pptx', '15页', 0, 0, '2026-01-22 18:12:11');
+INSERT INTO `course_lessons` VALUES (440, 58, '任务16 TikTok Shop平台广告 (Ads) 投放流程', 'pdf', '/static/uploads/materials/course_7/chapter_58/任务16 TikTok Shop平台广告 (Ads) 投放流程.pdf', '15页', 0, 0, '2026-01-22 18:12:11');
+INSERT INTO `course_lessons` VALUES (441, 58, '任务16 TikTok Shop平台广告 (Ads) 投放流程', 'ppt', '/static/uploads/materials/course_7/chapter_58/任务16 TikTok Shop平台广告 (Ads) 投放流程.pptx', '15页', 0, 0, '2026-01-22 18:12:11');
+INSERT INTO `course_lessons` VALUES (442, 59, '任务17 TikTok Shop平台退货退款处理', 'pdf', '/static/uploads/materials/course_7/chapter_59/任务17 TikTok Shop平台退货退款处理.pdf', '15页', 0, 0, '2026-01-22 18:12:12');
+INSERT INTO `course_lessons` VALUES (443, 59, '任务17 TikTok Shop平台退货退款处理', 'ppt', '/static/uploads/materials/course_7/chapter_59/任务17 TikTok Shop平台退货退款处理.pptx', '15页', 0, 0, '2026-01-22 18:12:12');
+INSERT INTO `course_lessons` VALUES (444, 59, '任务18 TikTok Shop平台订单发货流程', 'pdf', '/static/uploads/materials/course_7/chapter_59/任务18 TikTok Shop平台订单发货流程.pdf', '15页', 0, 0, '2026-01-22 18:12:12');
+INSERT INTO `course_lessons` VALUES (445, 59, '任务18 TikTok Shop平台订单发货流程', 'ppt', '/static/uploads/materials/course_7/chapter_59/任务18 TikTok Shop平台订单发货流程.pptx', '15页', 0, 0, '2026-01-22 18:12:12');
+INSERT INTO `course_lessons` VALUES (446, 59, '任务19 TikTok Shop平台运费计费', 'pdf', '/static/uploads/materials/course_7/chapter_59/任务19 TikTok Shop平台运费计费.pdf', '15页', 0, 0, '2026-01-22 18:12:12');
+INSERT INTO `course_lessons` VALUES (447, 59, '任务19 TikTok Shop平台运费计费', 'ppt', '/static/uploads/materials/course_7/chapter_59/任务19 TikTok Shop平台运费计费.pptx', '15页', 0, 0, '2026-01-22 18:12:12');
+INSERT INTO `course_lessons` VALUES (448, 59, '任务20 TikTok Shop平台聊天界面及其功能', 'pdf', '/static/uploads/materials/course_7/chapter_59/任务20 TikTok Shop平台聊天界面及其功能.pdf', '15页', 0, 0, '2026-01-22 18:12:12');
+INSERT INTO `course_lessons` VALUES (449, 59, '任务20 TikTok Shop平台聊天界面及其功能', 'ppt', '/static/uploads/materials/course_7/chapter_59/任务20 TikTok Shop平台聊天界面及其功能.pptx', '15页', 0, 0, '2026-01-22 18:12:12');
+INSERT INTO `course_lessons` VALUES (450, 59, '任务21 TikTok Shop平台常见问题设置及自动回复', 'pdf', '/static/uploads/materials/course_7/chapter_59/任务21 TikTok Shop平台常见问题设置及自动回复.pdf', '15页', 0, 0, '2026-01-22 18:12:12');
+INSERT INTO `course_lessons` VALUES (451, 59, '任务21 TikTok Shop平台常见问题设置及自动回复', 'ppt', '/static/uploads/materials/course_7/chapter_59/任务21 TikTok Shop平台常见问题设置及自动回复.pptx', '15页', 0, 0, '2026-01-22 18:12:12');
+INSERT INTO `course_lessons` VALUES (452, 60, '任务22 TikTok Shop数据罗盘指南—概览模块', 'pdf', '/static/uploads/materials/course_7/chapter_60/任务22 TikTok Shop数据罗盘指南—概览模块.pdf', '15页', 0, 0, '2026-01-22 18:12:13');
+INSERT INTO `course_lessons` VALUES (453, 60, '任务22 TikTok Shop数据罗盘指南—概览模块', 'ppt', '/static/uploads/materials/course_7/chapter_60/任务22 TikTok Shop数据罗盘指南—概览模块.pptx', '15页', 0, 0, '2026-01-22 18:12:13');
+INSERT INTO `course_lessons` VALUES (454, 60, '任务23 TikTok Shop数据罗盘指南—服务模块', 'pdf', '/static/uploads/materials/course_7/chapter_60/任务23 TikTok Shop数据罗盘指南—服务模块.pdf', '15页', 0, 0, '2026-01-22 18:12:13');
+INSERT INTO `course_lessons` VALUES (455, 60, '任务23 TikTok Shop数据罗盘指南—服务模块', 'ppt', '/static/uploads/materials/course_7/chapter_60/任务23 TikTok Shop数据罗盘指南—服务模块.pptx', '15页', 0, 0, '2026-01-22 18:12:13');
+INSERT INTO `course_lessons` VALUES (456, 60, '任务24 TikTok Shop数据罗盘指南—搜索模块', 'pdf', '/static/uploads/materials/course_7/chapter_60/任务24 TikTok Shop数据罗盘指南—搜索模块.pdf', '15页', 0, 0, '2026-01-22 18:12:13');
+INSERT INTO `course_lessons` VALUES (457, 60, '任务24 TikTok Shop数据罗盘指南—搜索模块', 'ppt', '/static/uploads/materials/course_7/chapter_60/任务24 TikTok Shop数据罗盘指南—搜索模块.pptx', '15页', 0, 0, '2026-01-22 18:12:13');
+INSERT INTO `course_lessons` VALUES (458, 60, '任务25 TikTok Shop数据罗盘指南—营销模块', 'pdf', '/static/uploads/materials/course_7/chapter_60/任务25 TikTok Shop数据罗盘指南—营销模块.pdf', '15页', 0, 0, '2026-01-22 18:12:13');
+INSERT INTO `course_lessons` VALUES (459, 60, '任务25 TikTok Shop数据罗盘指南—营销模块', 'ppt', '/static/uploads/materials/course_7/chapter_60/任务25 TikTok Shop数据罗盘指南—营销模块.pptx', '15页', 0, 0, '2026-01-22 18:12:13');
+INSERT INTO `course_lessons` VALUES (460, 60, '任务26 TikTok Shop 数据罗盘指南—用户模块', 'pdf', '/static/uploads/materials/course_7/chapter_60/任务26 TikTok Shop 数据罗盘指南—用户模块.pdf', '15页', 0, 0, '2026-01-22 18:12:13');
+INSERT INTO `course_lessons` VALUES (461, 60, '任务26 TikTok Shop 数据罗盘指南—用户模块', 'ppt', '/static/uploads/materials/course_7/chapter_60/任务26 TikTok Shop 数据罗盘指南—用户模块.pptx', '15页', 0, 0, '2026-01-22 18:12:13');
+INSERT INTO `course_lessons` VALUES (462, 60, '任务27 TikTok Shop 数据罗盘指南一商品诊断模块', 'pdf', '/static/uploads/materials/course_7/chapter_60/任务27 TikTok Shop 数据罗盘指南一商品诊断模块.pdf', '15页', 0, 0, '2026-01-22 18:12:13');
+INSERT INTO `course_lessons` VALUES (463, 60, '任务27 TikTok Shop 数据罗盘指南一商品诊断模块', 'ppt', '/static/uploads/materials/course_7/chapter_60/任务27 TikTok Shop 数据罗盘指南一商品诊断模块.pptx', '15页', 0, 0, '2026-01-22 18:12:13');
+INSERT INTO `course_lessons` VALUES (464, 60, '任务28 TikTok Shop 数据罗盘指南一直播和视频模块', 'pdf', '/static/uploads/materials/course_7/chapter_60/任务28 TikTok Shop 数据罗盘指南一直播和视频模块.pdf', '15页', 0, 0, '2026-01-22 18:12:13');
+INSERT INTO `course_lessons` VALUES (465, 60, '任务28 TikTok Shop 数据罗盘指南一直播和视频模块', 'ppt', '/static/uploads/materials/course_7/chapter_60/任务28 TikTok Shop 数据罗盘指南一直播和视频模块.pptx', '15页', 0, 0, '2026-01-22 18:12:13');
+INSERT INTO `course_lessons` VALUES (466, 60, '任务29 TikTok Shop 数据罗盘指南一商店选项卡模块', 'pdf', '/static/uploads/materials/course_7/chapter_60/任务29 TikTok Shop 数据罗盘指南一商店选项卡模块.pdf', '15页', 0, 0, '2026-01-22 18:12:13');
+INSERT INTO `course_lessons` VALUES (467, 60, '任务29 TikTok Shop 数据罗盘指南一商店选项卡模块', 'ppt', '/static/uploads/materials/course_7/chapter_60/任务29 TikTok Shop 数据罗盘指南一商店选项卡模块.pptx', '15页', 0, 0, '2026-01-22 18:12:13');
+INSERT INTO `course_lessons` VALUES (468, 61, '任务30 如何在TikTok Shop平台上创建联盟计划', 'pdf', '/static/uploads/materials/course_7/chapter_61/任务30 如何在TikTok Shop平台上创建联盟计划.pdf', '15页', 0, 0, '2026-01-22 18:12:14');
+INSERT INTO `course_lessons` VALUES (469, 61, '任务30 如何在TikTok Shop平台上创建联盟计划', 'ppt', '/static/uploads/materials/course_7/chapter_61/任务30 如何在TikTok Shop平台上创建联盟计划.pptx', '15页', 0, 0, '2026-01-22 18:12:14');
+INSERT INTO `course_lessons` VALUES (470, 61, '任务31  如何在TikTok Shop平台上与达人建联', 'pdf', '/static/uploads/materials/course_7/chapter_61/任务31  如何在TikTok Shop平台上与达人建联.pdf', '15页', 0, 0, '2026-01-22 18:12:14');
+INSERT INTO `course_lessons` VALUES (471, 61, '任务31  如何在TikTok Shop平台上与达人建联', 'ppt', '/static/uploads/materials/course_7/chapter_61/任务31  如何在TikTok Shop平台上与达人建联.pptx', '15页', 0, 0, '2026-01-22 18:12:14');
+INSERT INTO `course_lessons` VALUES (472, 61, '任务32 TikTok主播工作台——使用手册（上）', 'pdf', '/static/uploads/materials/course_7/chapter_61/任务32 TikTok主播工作台——使用手册（上）.pdf', '15页', 0, 0, '2026-01-22 18:12:14');
+INSERT INTO `course_lessons` VALUES (473, 61, '任务32 TikTok主播工作台——使用手册（上）', 'ppt', '/static/uploads/materials/course_7/chapter_61/任务32 TikTok主播工作台——使用手册（上）.pptx', '15页', 0, 0, '2026-01-22 18:12:14');
+INSERT INTO `course_lessons` VALUES (474, 61, '任务33 TikTok主播工作台——使用手册（下）', 'pdf', '/static/uploads/materials/course_7/chapter_61/任务33 TikTok主播工作台——使用手册（下）.pdf', '15页', 0, 0, '2026-01-22 18:12:14');
+INSERT INTO `course_lessons` VALUES (475, 61, '任务33 TikTok主播工作台——使用手册（下）', 'ppt', '/static/uploads/materials/course_7/chapter_61/任务33 TikTok主播工作台——使用手册（下）.pptx', '15页', 0, 0, '2026-01-22 18:12:14');
 
 -- ----------------------------
 -- Table structure for course_tasks
@@ -358,7 +434,7 @@ INSERT INTO `courses` VALUES (3, '【03】AI提示词工程与跨境电商运营
 INSERT INTO `courses` VALUES (4, '【04】跨境AI+短视频运营实战', '/static/uploads/courses/829cd3c3-d1b1-4b0d-8a7e-63c543a9f588.png', '', '2025-12-30 17:11:50', 0, 0, 0, '实训课程');
 INSERT INTO `courses` VALUES (5, '【05】AI+跨境电商数据分析实务', '/static/uploads/courses/0486fddf-3fbc-4907-a7ed-ce9ec8c925c6.png', '', '2025-12-30 17:12:10', 0, 0, 0, '实训课程');
 INSERT INTO `courses` VALUES (6, '【06】Shopee虚拟仿真与实战应用（东盟市场）', '/static/uploads/courses/379724bb-5ef3-47a5-b1b4-84dc219f8f7d.png', 'Shopee电商平台实训课程以典型工作任务驱 ，该课程涵盖卖家开店与经营的完整业务流程。在本课程中，学生将学习如何卖家完成账号注册、业务信息设置、运费模板设置、商品管理、营销活动、广告活动、订单管理等平台任务操作，使学生具备Shopee店铺的开设与营销、客服服务等能力。', '2025-12-30 17:12:33', 20, 510, 50, '实训课程');
-INSERT INTO `courses` VALUES (7, '【07】Ozon虚拟仿真与实战应用（中亚市场）', '/static/uploads/courses/3f48e3fb-130e-4acf-b059-0406583edf67.png', '', '2025-12-30 17:12:49', 0, 0, 0, '实训课程');
+INSERT INTO `courses` VALUES (7, '【07】TikTok课程资源', '/static/uploads/courses/b6051e13-5959-4df2-a9f8-aec3bf727954.png', 'TikTok Shop 电商实训课程以典型工作任务为驱动，该课程涵盖“内容+货架”双域经营的完整业务流程。在本课程中，学生将学习如何完成店铺入驻与定级、商品媒体中心素材制作、短视频挂车推广、联盟营销计划设置、达人建联邀约、广告投流及数据罗盘复盘等平台任务操作，使学生具备 TikTok Shop 内容种草、流量获取及全链路转化等能力。', '2025-12-30 17:12:49', 33, 1200, 60, '实训课程');
 INSERT INTO `courses` VALUES (8, '【08】东盟语种跨境直播实战', '/static/uploads/courses/e7c2c671-aa9b-4e1f-80d4-b0ff47e8c927.png', '', '2025-12-30 17:13:34', 0, 0, 0, '实训课程');
 
 -- ----------------------------
@@ -501,7 +577,7 @@ CREATE TABLE `exam_answers`  (
   INDEX `ix_exam_answers_id`(`id` ASC) USING BTREE,
   CONSTRAINT `exam_answers_ibfk_1` FOREIGN KEY (`record_id`) REFERENCES `exam_records` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `exam_answers_ibfk_2` FOREIGN KEY (`question_id`) REFERENCES `questions` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 35 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 64 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of exam_answers
@@ -522,6 +598,35 @@ INSERT INTO `exam_answers` VALUES (31, 4, 2, '\"\"', 0, 0, NULL);
 INSERT INTO `exam_answers` VALUES (32, 4, 5, '[]', 0, 0, NULL);
 INSERT INTO `exam_answers` VALUES (33, 4, 9, '\"\"', 0, 0, NULL);
 INSERT INTO `exam_answers` VALUES (34, 4, 10, '\"\"', 0, 0, NULL);
+INSERT INTO `exam_answers` VALUES (35, 5, 2, '\"\"', 0, 0, NULL);
+INSERT INTO `exam_answers` VALUES (36, 5, 5, '[]', 0, 0, NULL);
+INSERT INTO `exam_answers` VALUES (37, 5, 9, '\"\"', 0, 0, NULL);
+INSERT INTO `exam_answers` VALUES (38, 5, 10, '\"\"', 0, 0, NULL);
+INSERT INTO `exam_answers` VALUES (39, 9, 2, '\"A\"', 1, 5, NULL);
+INSERT INTO `exam_answers` VALUES (40, 9, 5, '[\"A\", \"C\"]', 0, 0, NULL);
+INSERT INTO `exam_answers` VALUES (41, 9, 9, '\"2, 3\"', 1, 5, NULL);
+INSERT INTO `exam_answers` VALUES (42, 9, 10, '\"11, 12\"', 1, 5, NULL);
+INSERT INTO `exam_answers` VALUES (43, 9, 11, '\"我不知道这个怎么做\"', 0, 0, NULL);
+INSERT INTO `exam_answers` VALUES (44, 10, 2, '\"B\"', 0, 0, NULL);
+INSERT INTO `exam_answers` VALUES (45, 10, 5, '[\"A\", \"B\", \"C\"]', 1, 5, NULL);
+INSERT INTO `exam_answers` VALUES (46, 10, 9, '\"2, 3\"', 1, 5, NULL);
+INSERT INTO `exam_answers` VALUES (47, 10, 10, '\"11, 12\"', 1, 5, NULL);
+INSERT INTO `exam_answers` VALUES (48, 10, 11, '\"我不知道1111111\"', 0, 0, NULL);
+INSERT INTO `exam_answers` VALUES (49, 11, 2, '\"D\"', 0, 0, NULL);
+INSERT INTO `exam_answers` VALUES (50, 11, 5, '[\"A\", \"B\"]', 0, 0, NULL);
+INSERT INTO `exam_answers` VALUES (51, 11, 9, '\"2, 3\"', 1, 5, NULL);
+INSERT INTO `exam_answers` VALUES (52, 11, 10, '\"11\"', 0, 0, NULL);
+INSERT INTO `exam_answers` VALUES (53, 11, 11, '\"我不知道\"', 0, 0, NULL);
+INSERT INTO `exam_answers` VALUES (54, 12, 2, '\"C\"', 0, 0, NULL);
+INSERT INTO `exam_answers` VALUES (55, 12, 9, '\"2, 3\"', 1, 5, NULL);
+INSERT INTO `exam_answers` VALUES (56, 12, 11, '\"我不会做，有什么需要修改的吗\"', 0, 0, NULL);
+INSERT INTO `exam_answers` VALUES (57, 12, 5, '[\"A\", \"B\", \"C\"]', 1, 5, NULL);
+INSERT INTO `exam_answers` VALUES (58, 12, 10, '\"11, 12\"', 1, 5, NULL);
+INSERT INTO `exam_answers` VALUES (59, 13, 2, '\"C\"', 0, 0, NULL);
+INSERT INTO `exam_answers` VALUES (60, 13, 5, '[\"B\"]', 0, 0, NULL);
+INSERT INTO `exam_answers` VALUES (61, 13, 9, '\"23213\"', 0, 0, NULL);
+INSERT INTO `exam_answers` VALUES (62, 13, 10, '\"123123313\"', 0, 0, NULL);
+INSERT INTO `exam_answers` VALUES (63, 13, 11, '\"123123131\"', 0, 0, NULL);
 
 -- ----------------------------
 -- Table structure for exam_questions
@@ -539,7 +644,7 @@ CREATE TABLE `exam_questions`  (
   INDEX `ix_exam_questions_id`(`id` ASC) USING BTREE,
   CONSTRAINT `exam_questions_ibfk_1` FOREIGN KEY (`exam_id`) REFERENCES `exams` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `exam_questions_ibfk_2` FOREIGN KEY (`question_id`) REFERENCES `questions` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 56 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 65 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of exam_questions
@@ -570,10 +675,11 @@ INSERT INTO `exam_questions` VALUES (48, 2, 10, 2, 2);
 INSERT INTO `exam_questions` VALUES (49, 2, 9, 2, 3);
 INSERT INTO `exam_questions` VALUES (50, 2, 8, 2, 4);
 INSERT INTO `exam_questions` VALUES (51, 2, 11, 2, 5);
-INSERT INTO `exam_questions` VALUES (52, 9, 2, 5, 0);
-INSERT INTO `exam_questions` VALUES (53, 9, 5, 5, 1);
-INSERT INTO `exam_questions` VALUES (54, 9, 9, 5, 2);
-INSERT INTO `exam_questions` VALUES (55, 9, 10, 5, 3);
+INSERT INTO `exam_questions` VALUES (60, 9, 2, 5, 0);
+INSERT INTO `exam_questions` VALUES (61, 9, 5, 5, 1);
+INSERT INTO `exam_questions` VALUES (62, 9, 9, 5, 2);
+INSERT INTO `exam_questions` VALUES (63, 9, 10, 5, 3);
+INSERT INTO `exam_questions` VALUES (64, 9, 11, 2, 4);
 
 -- ----------------------------
 -- Table structure for exam_records
@@ -598,7 +704,7 @@ CREATE TABLE `exam_records`  (
   INDEX `ix_exam_records_id`(`id` ASC) USING BTREE,
   CONSTRAINT `exam_records_ibfk_1` FOREIGN KEY (`exam_id`) REFERENCES `exams` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `exam_records_ibfk_2` FOREIGN KEY (`student_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 14 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of exam_records
@@ -607,6 +713,15 @@ INSERT INTO `exam_records` VALUES (1, 2, 1, '2026-01-13 16:28:32', '2026-01-13 1
 INSERT INTO `exam_records` VALUES (2, 6, 22, '2026-01-14 15:39:06', '2026-01-14 15:39:30', 2, 4, 0, 4, 2, '2026-01-14 15:39:06', '2026-01-14 15:42:36');
 INSERT INTO `exam_records` VALUES (3, 7, 1, '2026-01-15 13:47:50', '2026-01-15 13:48:13', 2, 6, 0, 6, 0, '2026-01-15 13:47:50', '2026-01-15 13:48:12');
 INSERT INTO `exam_records` VALUES (4, 9, 1, '2026-01-19 17:59:15', '2026-01-19 17:59:52', 2, 0, 0, 0, 3, '2026-01-19 17:59:15', '2026-01-19 17:59:52');
+INSERT INTO `exam_records` VALUES (5, 9, 23, '2026-01-20 11:42:51', '2026-01-20 11:43:05', 2, 0, 0, 0, 3, '2026-01-20 11:42:51', '2026-01-20 11:43:04');
+INSERT INTO `exam_records` VALUES (6, 9, 54, '2026-01-21 14:27:16', '2026-01-21 14:34:17', 1, 0, 0, 0, 0, '2026-01-21 14:27:16', '2026-01-21 14:34:16');
+INSERT INTO `exam_records` VALUES (7, 9, 53, '2026-01-21 14:44:45', '2026-01-21 14:46:13', 1, 0, 0, 0, 0, '2026-01-21 14:44:45', '2026-01-21 14:46:13');
+INSERT INTO `exam_records` VALUES (8, 9, 44, '2026-01-21 14:49:21', '2026-01-21 14:51:02', 1, 0, 0, 0, 0, '2026-01-21 14:49:21', '2026-01-21 14:51:02');
+INSERT INTO `exam_records` VALUES (9, 9, 42, '2026-01-21 14:54:23', '2026-01-21 14:56:16', 1, 15, 0, 15, 0, '2026-01-21 14:54:23', '2026-01-21 14:56:15');
+INSERT INTO `exam_records` VALUES (10, 9, 45, '2026-01-21 15:02:34', '2026-01-21 15:04:18', 1, 15, 0, 15, 0, '2026-01-21 15:02:34', '2026-01-21 15:04:18');
+INSERT INTO `exam_records` VALUES (11, 9, 48, '2026-01-21 15:08:03', '2026-01-21 15:10:15', 1, 5, 0, 5, 0, '2026-01-21 15:08:03', '2026-01-21 15:10:14');
+INSERT INTO `exam_records` VALUES (12, 9, 24, '2026-01-21 15:18:00', '2026-01-21 15:19:57', 1, 15, 0, 15, 0, '2026-01-21 15:18:00', '2026-01-21 15:19:57');
+INSERT INTO `exam_records` VALUES (13, 9, 37, '2026-01-21 15:24:02', '2026-01-21 15:26:09', 1, 0, 0, 0, 0, '2026-01-21 15:24:02', '2026-01-21 15:26:09');
 
 -- ----------------------------
 -- Table structure for exams
@@ -640,7 +755,7 @@ INSERT INTO `exams` VALUES (2, '2025期中考', 2, '2026-01-13 00:00:00', '2026-
 INSERT INTO `exams` VALUES (6, '填空题测试', 2, '2026-01-14 00:00:00', '2026-01-14 16:00:00', 60, 3, 6, 1, '[2]', 1, NULL, '2026-01-14 15:30:20', '2026-01-14 17:12:59');
 INSERT INTO `exams` VALUES (7, '测试', 2, '2026-01-15 00:00:00', '2026-01-15 13:00:00', 60, 3, 6, 1, '[1]', 1, NULL, '2026-01-15 11:46:52', '2026-01-15 11:46:52');
 INSERT INTO `exams` VALUES (8, '手动组卷测试', 2, '2026-01-15 00:00:00', '2026-01-16 00:00:00', 60, 12, 20, 1, '[3]', 1, NULL, '2026-01-15 13:45:26', '2026-01-15 13:45:26');
-INSERT INTO `exams` VALUES (9, '随机组卷测试', 2, '2026-01-15 00:00:00', '2026-01-20 00:00:00', 60, 12, 20, 1, '[2, 1]', 1, NULL, '2026-01-15 13:46:30', '2026-01-19 17:52:15');
+INSERT INTO `exams` VALUES (9, '随机组卷测试', 2, '2026-01-15 00:00:00', '2026-01-22 00:00:00', 60, 12, 22, 1, '[2, 1]', 1, NULL, '2026-01-15 13:46:30', '2026-01-21 14:26:32');
 INSERT INTO `exams` VALUES (10, '2025跨境电商期中考', 55, '2026-01-19 00:00:00', '2026-01-20 00:00:00', 60, 60, 100, 1, '[6]', 1, NULL, '2026-01-19 15:19:03', '2026-01-19 15:19:03');
 
 -- ----------------------------
@@ -663,7 +778,7 @@ CREATE TABLE `questions`  (
   INDEX `ix_questions_teacher_id`(`teacher_id` ASC) USING BTREE,
   INDEX `ix_questions_type`(`type` ASC) USING BTREE,
   CONSTRAINT `fk_questions_teacher` FOREIGN KEY (`teacher_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 24 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 58 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of questions
@@ -691,6 +806,40 @@ INSERT INTO `questions` VALUES (20, 55, 'blank', 'Shopee 的订单履约期限�
 INSERT INTO `questions` VALUES (21, 55, 'blank', '东南亚市场中，最大的移动电商大促节点通常是双 ___ 大促。', '[]', '\"11, 12\"', '11.11 和 12.12 是全平台流量最高的日子。', 1, '[\"平台大促\"]', '2026-01-19 14:41:19', '2026-01-19 14:41:19');
 INSERT INTO `questions` VALUES (22, 55, 'essay', '请简述如何通过“加价购”（Add-on Deal）提升客单价？', '[]', '\"\"', '答：通过主商品搭配相关附属商品并给予折扣，引导买家凑单购买。', 2, '[\"营销工具\"]', '2026-01-19 14:41:19', '2026-01-19 14:41:19');
 INSERT INTO `questions` VALUES (23, 55, 'essay', '如果店铺因延迟发货率（LSR）过高导致扣分，应如何优化？', '[]', '\"\"', '答：盘点库存确保现货、优化供应链、及时转预售、提高仓库打包效率。', 3, '[\"店铺运维\"]', '2026-01-19 14:41:19', '2026-01-19 14:41:19');
+INSERT INTO `questions` VALUES (24, 4, 'judge', '现代市场经济条件下，人力资源流动主要依赖于人力资源市场，人力资源市场的完善程度决定了人力资源流动的规模、质量和效益。(　　)', '[]', 'false', '', 1, '[]', '2026-01-20 10:23:28', '2026-01-20 10:23:28');
+INSERT INTO `questions` VALUES (25, 4, 'judge', '在市场经济条件下，人力资源激励是实现人力资源优化配置的根本途径。(　　)', '[]', 'false', '', 1, '[]', '2026-01-20 10:23:28', '2026-01-20 10:23:28');
+INSERT INTO `questions` VALUES (26, 4, 'judge', '绩效管理对企业的战略目标实现具有重要意义。(    )', '[]', 'false', '', 1, '[]', '2026-01-20 10:23:28', '2026-01-20 10:23:28');
+INSERT INTO `questions` VALUES (27, 4, 'judge', '角色扮演法是指将现实生活中可能出现的情况写成剧本，要求受训人员在剧中扮演特定角色，目的是让受训人员演练如何处理实际问题。(　　)', '[]', 'false', '', 1, '[]', '2026-01-20 10:23:28', '2026-01-20 10:23:28');
+INSERT INTO `questions` VALUES (28, 4, 'judge', '为了获取充分的信息，绩效信息收集问卷要包含尽可能详尽的问题。(　　)', '[]', 'false', '', 1, '[]', '2026-01-20 10:23:28', '2026-01-20 10:23:28');
+INSERT INTO `questions` VALUES (29, 4, 'judge', '工作分析是展开工作评估的前提和基础，而工作评估则可被看作是工作分析活动的进一步延伸。(　　)', '[]', 'false', '', 1, '[]', '2026-01-20 10:23:28', '2026-01-20 10:23:28');
+INSERT INTO `questions` VALUES (30, 4, 'judge', '定量绩效资料的来源有两个:一是从文献资料中得到的材料，是统计资料。(　　)', '[]', 'false', '', 1, '[]', '2026-01-20 10:23:28', '2026-01-20 10:23:28');
+INSERT INTO `questions` VALUES (31, 4, 'judge', '分工和协作是不可分割的整体。(　　)', '[]', 'false', '', 1, '[]', '2026-01-20 10:23:28', '2026-01-20 10:23:28');
+INSERT INTO `questions` VALUES (32, 4, 'judge', '保险基金来自企业和劳动者两方面的养老保险形式属于投保资助型。(　　)', '[]', 'false', '', 1, '[]', '2026-01-20 10:23:28', '2026-01-20 10:23:28');
+INSERT INTO `questions` VALUES (33, 4, 'judge', '新成立的缴费单位应当自成立之日起60日内，持营业执照或者登记证书等有关证件，到社会保险经办机构办理社会保险登记。(　　)', '[]', 'false', '', 1, '[]', '2026-01-20 10:23:28', '2026-01-20 10:23:28');
+INSERT INTO `questions` VALUES (34, 4, 'judge', '国家不向劳动者本人征收任何养老保险费，养老保险需要的全部资金都来自于国家的财政拨(    )款，这是强制储蓄型养老保险模式。(　　)', '[]', 'false', '', 1, '[]', '2026-01-20 10:23:28', '2026-01-20 10:23:28');
+INSERT INTO `questions` VALUES (35, 4, 'judge', '资料归档就是对收集到的原始资料进行检查、分类和简化使之系统化、 条理化，为进一步分析提供条件的过程。(    )', '[]', 'false', '', 1, '[]', '2026-01-20 10:23:28', '2026-01-20 10:23:28');
+INSERT INTO `questions` VALUES (36, 4, 'judge', '人力资源规划的主要目的是预测未来的人员需求。(    )', '[]', 'false', '', 1, '[]', '2026-01-20 10:23:28', '2026-01-20 10:23:28');
+INSERT INTO `questions` VALUES (37, 4, 'judge', '员工培训与开发是一种投资，而不是一种成本。(    )', '[]', 'false', '', 1, '[]', '2026-01-20 10:23:28', '2026-01-20 10:23:28');
+INSERT INTO `questions` VALUES (38, 4, 'judge', '绩效管理的最终目的是提高员工的绩效。(    )', '[]', 'false', '', 1, '[]', '2026-01-20 10:23:28', '2026-01-20 10:23:28');
+INSERT INTO `questions` VALUES (39, 4, 'judge', '劳动合同期限不满三个月的，不得约定试用期。(    )', '[]', 'false', '', 1, '[]', '2026-01-20 10:23:28', '2026-01-20 10:23:28');
+INSERT INTO `questions` VALUES (40, 4, 'judge', '效度审查就是审查收集到的材料对于分析所研究的问题有效的程度。', '[]', 'false', '', 1, '[]', '2026-01-20 10:23:28', '2026-01-20 10:23:28');
+INSERT INTO `questions` VALUES (41, 4, 'judge', '薪酬水平应与市场薪酬水平保持一致。（     ）', '[]', 'false', '', 1, '[]', '2026-01-20 10:23:28', '2026-01-20 10:23:28');
+INSERT INTO `questions` VALUES (42, 4, 'judge', '招聘渠道的选择应根据企业规模和行业特点进行。（    ）', '[]', 'false', '', 1, '[]', '2026-01-20 10:23:28', '2026-01-20 10:23:28');
+INSERT INTO `questions` VALUES (43, 4, 'judge', '人力资源管理的主要目标是提高员工的工作效率。（     ）', '[]', 'false', '', 1, '[]', '2026-01-20 10:23:28', '2026-01-20 10:23:28');
+INSERT INTO `questions` VALUES (44, 4, 'judge', '人员招聘信息主要包括招聘人数、工作描述、任职资格和招聘方法等。（    ）', '[]', 'false', '', 1, '[]', '2026-01-20 10:23:28', '2026-01-20 10:23:28');
+INSERT INTO `questions` VALUES (45, 4, 'judge', '培训效果的评价应采用多种方法。（    ）', '[]', 'false', '', 1, '[]', '2026-01-20 10:23:28', '2026-01-20 10:23:28');
+INSERT INTO `questions` VALUES (46, 4, 'judge', '劳动关系应遵循公平、公正、公开的原则。（    ）', '[]', 'false', '', 1, '[]', '2026-01-20 10:23:28', '2026-01-20 10:23:28');
+INSERT INTO `questions` VALUES (47, 4, 'judge', '为了获取充分的信息，绩效信息收集判断问卷要包含尽可能详尽的问题。(    )', '[]', 'false', '', 1, '[]', '2026-01-20 10:23:28', '2026-01-20 10:23:28');
+INSERT INTO `questions` VALUES (48, 4, 'judge', '人员流向属于劳动强度要素的评价指标。(    )', '[]', 'false', '', 1, '[]', '2026-01-20 10:23:28', '2026-01-20 10:23:28');
+INSERT INTO `questions` VALUES (49, 4, 'judge', '影响员工个人薪酬水平的因素不包括工会的力量。(    )', '[]', 'false', '', 1, '[]', '2026-01-20 10:23:28', '2026-01-20 10:23:28');
+INSERT INTO `questions` VALUES (50, 4, 'judge', '薪酬通常以工时或完成产品的件数计算员工应当获得的劳动报酬。(    )', '[]', 'false', '', 1, '[]', '2026-01-20 10:23:28', '2026-01-20 10:23:28');
+INSERT INTO `questions` VALUES (51, 4, 'judge', '合成考评法是将几种比较有效的绩效考评方法综合在一起，对组织或员工个人进行考评。(    )', '[]', 'false', '', 1, '[]', '2026-01-20 10:23:28', '2026-01-20 10:23:28');
+INSERT INTO `questions` VALUES (52, 4, 'judge', '岗位评价的对象是工作条件。(    )', '[]', 'false', '', 1, '[]', '2026-01-20 10:23:28', '2026-01-20 10:23:28');
+INSERT INTO `questions` VALUES (53, 4, 'judge', '职工代表大会制度是企业职工行使民主管理的基本形式，是职工民主管理的组织参与的具体表现(    )', '[]', 'false', '', 1, '[]', '2026-01-20 10:23:28', '2026-01-20 10:23:28');
+INSERT INTO `questions` VALUES (54, 4, 'judge', '企业在进行人力资源需求预测时，使用的最简单的回归分析是趋势分析，它是根据整个企业中各个部门在过去员工数量变化时的趋势来分析。(    )', '[]', 'false', '', 1, '[]', '2026-01-20 10:23:28', '2026-01-20 10:23:28');
+INSERT INTO `questions` VALUES (55, 4, 'judge', '绩效考评中的目标管理法，实际上就是绩效管理的具体体现，这个方法是系统的绩效管理方法，这里要求个人目标和企业目标完全一致。(    )', '[]', 'false', '', 1, '[]', '2026-01-20 10:23:28', '2026-01-20 10:23:28');
+INSERT INTO `questions` VALUES (56, 4, 'judge', '笔试是我们录用人员的一个常用的办法，在进行笔试的时候，对基础知识和素质能力的测试一般包括两个层次，即一般知识能力和专业知识能力。(    )', '[]', 'false', '', 1, '[]', '2026-01-20 10:23:28', '2026-01-20 10:23:28');
+INSERT INTO `questions` VALUES (57, 4, 'judge', '工作分析作为一种活动， 其主体是工作分析者， 客体是工作环境。(    )', '[]', 'false', '', 1, '[]', '2026-01-20 10:23:28', '2026-01-20 10:23:28');
 
 -- ----------------------------
 -- Table structure for student_learning_progress
@@ -708,7 +857,7 @@ CREATE TABLE `student_learning_progress`  (
   INDEX `fk_slp_lesson`(`lesson_id` ASC) USING BTREE,
   CONSTRAINT `fk_slp_lesson` FOREIGN KEY (`lesson_id`) REFERENCES `course_lessons` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `fk_slp_student` FOREIGN KEY (`student_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 13 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 15 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of student_learning_progress
@@ -725,6 +874,8 @@ INSERT INTO `student_learning_progress` VALUES (9, 15, 201, 2, 0, '2026-01-09 16
 INSERT INTO `student_learning_progress` VALUES (10, 105, 201, 1, 1, '2026-01-19 13:57:01');
 INSERT INTO `student_learning_progress` VALUES (11, 15, 205, 2, 0, '2026-01-19 17:16:14');
 INSERT INTO `student_learning_progress` VALUES (12, 15, 203, 1, 1, '2026-01-19 17:16:51');
+INSERT INTO `student_learning_progress` VALUES (13, 8, 389, 1, 1, '2026-01-20 10:43:48');
+INSERT INTO `student_learning_progress` VALUES (14, 1, 213, 2, 0, '2026-01-21 10:26:16');
 
 -- ----------------------------
 -- Table structure for student_profiles
@@ -744,7 +895,7 @@ CREATE TABLE `student_profiles`  (
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_sp_user_id`(`user_id` ASC) USING BTREE,
   CONSTRAINT `fk_sp_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 11 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '学生详细档案表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 21 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '学生详细档案表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of student_profiles
@@ -759,6 +910,16 @@ INSERT INTO `student_profiles` VALUES (7, 5, '李四', '22014082034', '保密', 
 INSERT INTO `student_profiles` VALUES (8, 22, '贾八', '22014083008', '保密', NULL, NULL, NULL, '2026-01-14 15:38:59', '2026-01-14 15:38:59');
 INSERT INTO `student_profiles` VALUES (9, 10, '张四', '22014082021', '保密', NULL, NULL, NULL, '2026-01-16 15:49:02', '2026-01-16 15:49:02');
 INSERT INTO `student_profiles` VALUES (10, 105, '50', '20250119050', '保密', NULL, NULL, NULL, '2026-01-19 13:56:35', '2026-01-19 13:56:35');
+INSERT INTO `student_profiles` VALUES (11, 23, '贾九', '22014083009', '保密', NULL, NULL, NULL, '2026-01-20 11:42:45', '2026-01-20 11:42:45');
+INSERT INTO `student_profiles` VALUES (12, 54, '林三一', '22014081031', '保密', NULL, NULL, NULL, '2026-01-21 14:26:50', '2026-01-21 14:26:50');
+INSERT INTO `student_profiles` VALUES (13, 53, '林三十', '22014081030', '保密', NULL, NULL, NULL, '2026-01-21 14:44:38', '2026-01-21 14:44:38');
+INSERT INTO `student_profiles` VALUES (14, 44, '林二一', '22014081021', '保密', NULL, NULL, NULL, '2026-01-21 14:49:05', '2026-01-21 14:49:05');
+INSERT INTO `student_profiles` VALUES (15, 42, '林十九', '22014081019', '保密', NULL, NULL, NULL, '2026-01-21 14:54:15', '2026-01-21 14:54:15');
+INSERT INTO `student_profiles` VALUES (16, 45, '林二二', '22014081022', '保密', NULL, NULL, NULL, '2026-01-21 15:02:25', '2026-01-21 15:02:25');
+INSERT INTO `student_profiles` VALUES (17, 48, '林二五', '22014081025', '保密', NULL, NULL, NULL, '2026-01-21 15:07:57', '2026-01-21 15:07:57');
+INSERT INTO `student_profiles` VALUES (18, 24, '林一', '22014081001', '保密', NULL, NULL, NULL, '2026-01-21 15:17:54', '2026-01-21 15:17:54');
+INSERT INTO `student_profiles` VALUES (19, 37, '林十四', '22014081014', '保密', NULL, NULL, NULL, '2026-01-21 15:23:50', '2026-01-21 15:23:50');
+INSERT INTO `student_profiles` VALUES (20, 7, '赵六', '22014082036', '保密', NULL, NULL, NULL, '2026-01-22 11:47:25', '2026-01-22 11:47:25');
 
 -- ----------------------------
 -- Table structure for student_submissions
@@ -881,13 +1042,13 @@ CREATE TABLE `users`  (
 -- ----------------------------
 -- Records of users
 -- ----------------------------
-INSERT INTO `users` VALUES (1, '18250636865', '$2b$12$DM8zYSLV9Dt.jKfG4jykaetq3F4jmwGcSF6hJBaGDJBWQOc3ol9.y', 'student', 1, '2025-12-24 11:26:48', '2026-01-19 23:18:33', 8189, '张十一', '22014082032');
-INSERT INTO `users` VALUES (2, '18250636866', '$2b$12$BbkngZyC3IaWM.cWcZKmauZxsyO3VZTe5P2mRqrbc75CC13xrMqIi', 'teacher', 1, '2025-12-24 11:27:14', '2026-01-19 23:17:18', NULL, NULL, NULL);
-INSERT INTO `users` VALUES (4, '18250636867', '$2b$12$mVae3WIBNklVoxfL7qkLQ.ymZ9vRDq6vbwB2Za0cTStB1FO1DeYoa', 'teacher', 1, '2025-12-24 15:04:05', '2026-01-04 17:57:41', NULL, NULL, NULL);
-INSERT INTO `users` VALUES (5, '18250636868', '$2b$12$LExgic9UmvpwwLtG5Gufs.08MAc8wx7EfZdv9CjYzn3QiLJnOUZdq', 'student', 1, '2025-12-24 17:26:36', '2026-01-07 17:52:32', 8190, '李四', '22014082034');
+INSERT INTO `users` VALUES (1, '18250636865', '$2b$12$DM8zYSLV9Dt.jKfG4jykaetq3F4jmwGcSF6hJBaGDJBWQOc3ol9.y', 'student', 1, '2025-12-24 11:26:48', '2026-01-22 17:23:28', 8189, '张十一', '22014082032');
+INSERT INTO `users` VALUES (2, '18250636866', '$2b$12$BbkngZyC3IaWM.cWcZKmauZxsyO3VZTe5P2mRqrbc75CC13xrMqIi', 'teacher', 1, '2025-12-24 11:27:14', '2026-01-23 11:33:12', NULL, NULL, NULL);
+INSERT INTO `users` VALUES (4, '18250636867', '$2b$12$mVae3WIBNklVoxfL7qkLQ.ymZ9vRDq6vbwB2Za0cTStB1FO1DeYoa', 'teacher', 1, '2025-12-24 15:04:05', '2026-01-20 10:04:33', NULL, NULL, NULL);
+INSERT INTO `users` VALUES (5, '18250636868', '$2b$12$LExgic9UmvpwwLtG5Gufs.08MAc8wx7EfZdv9CjYzn3QiLJnOUZdq', 'student', 1, '2025-12-24 17:26:36', '2026-01-22 13:48:48', 8190, '李四', '22014082034');
 INSERT INTO `users` VALUES (6, '18250636969', '$2b$12$2bR.Xy.PQzAQDApnmWxdSeC.bIEs0C1kklBR751IoX4/tNFuUCyt2', 'student', 1, '2025-12-25 16:30:01', '2025-12-25 16:47:31', 8191, '王五', '22014082035');
-INSERT INTO `users` VALUES (7, '18250636870', '$2b$12$JZUcksLjg6lZfnipDk.rS.Bqwgy4cH.dqmkuUgsvhQCSyw.c0wq9u', 'student', 1, '2025-12-25 16:34:04', '2025-12-25 16:51:53', 8192, '赵六', '22014082036');
-INSERT INTO `users` VALUES (8, '18250636871', '$2b$12$HEqQ8pj0rTTBVi97d5wi2.juSlBWJnQ0AZaov6tlgvoxsf79j5j8m', 'student', 1, '2025-12-26 16:02:05', '2026-01-09 16:21:18', 8193, '张二', '22014082033');
+INSERT INTO `users` VALUES (7, '18250636870', '$2b$12$JZUcksLjg6lZfnipDk.rS.Bqwgy4cH.dqmkuUgsvhQCSyw.c0wq9u', 'student', 1, '2025-12-25 16:34:04', '2026-01-22 13:49:10', 8192, '赵六', '22014082036');
+INSERT INTO `users` VALUES (8, '18250636871', '$2b$12$HEqQ8pj0rTTBVi97d5wi2.juSlBWJnQ0AZaov6tlgvoxsf79j5j8m', 'student', 1, '2025-12-26 16:02:05', '2026-01-20 11:40:40', 8193, '张二', '22014082033');
 INSERT INTO `users` VALUES (9, '18250636872', '$2b$12$ahylOLX4IYYfxTXg5xF72.D0V32UfPDd2WDs9B.gLUON2w0cDqw6q', 'student', 1, '2025-12-29 17:59:50', '2026-01-07 17:52:13', NULL, '张七', '22014082037');
 INSERT INTO `users` VALUES (10, '18250636873', '$2b$12$oT0OqX4bUys/2obDlQtKCOxCvpB09s.AyOS83YbvQDq6GCXey5iWK', 'student', 1, '2025-12-30 14:20:52', '2026-01-16 15:49:02', NULL, '张四', '22014082021');
 INSERT INTO `users` VALUES (11, '18250636874', '$2b$12$KXKRsdVENh0EmciRYox5K.OtcLcNoeR/26duy4z24TPhpj75uPe5.', 'student', 1, '2025-12-30 16:38:48', '2025-12-31 17:11:28', NULL, '张五', '22014082022');
@@ -902,8 +1063,8 @@ INSERT INTO `users` VALUES (19, '13800000005', '$2b$12$/aD6l4ZqWVBsWXwvcpvYKOyL8
 INSERT INTO `users` VALUES (20, '13800000006', '$2b$12$SOxWlzI5.vl3nLxyPjt.QeNzS1PjCGia9QY2HcMiK8dK2xPs/5m9K', 'student', 1, '2026-01-04 16:34:16', NULL, NULL, '贾六', '22014083006');
 INSERT INTO `users` VALUES (21, '13800000007', '$2b$12$f7kv8nGn7AjtAh7R4fez7ubUVYu2K0zRGH72tufxLngFDaS0iifo2', 'student', 1, '2026-01-04 16:34:16', NULL, NULL, '贾七', '22014083007');
 INSERT INTO `users` VALUES (22, '13800000008', '$2b$12$K0p3Tkxo0EzWtPEKPr05ROq0JOy.kEyu6vIGV1/JYmV2NQrKOurk.', 'student', 1, '2026-01-04 16:34:16', '2026-01-14 16:06:51', NULL, '贾八', '22014083008');
-INSERT INTO `users` VALUES (23, '13800000009', '$2b$12$jRdwdVxJYCo0KwdAjjSwuOen61OLZ1HHrp85zLz8W0TPL7bIcXFpe', 'student', 1, '2026-01-04 16:34:17', NULL, NULL, '贾九', '22014083009');
-INSERT INTO `users` VALUES (24, '13800000010', '$2b$12$kdxeNZFd0LDNmc1sBHmrbusIBjTLynGNt1K8juwZHAUWEKoc6.yyS', 'student', 1, '2026-01-04 17:27:29', NULL, NULL, '林一', '22014081001');
+INSERT INTO `users` VALUES (23, '13800000009', '$2b$12$jRdwdVxJYCo0KwdAjjSwuOen61OLZ1HHrp85zLz8W0TPL7bIcXFpe', 'student', 1, '2026-01-04 16:34:17', '2026-01-20 11:42:45', NULL, '贾九', '22014083009');
+INSERT INTO `users` VALUES (24, '13800000010', '$2b$12$kdxeNZFd0LDNmc1sBHmrbusIBjTLynGNt1K8juwZHAUWEKoc6.yyS', 'student', 1, '2026-01-04 17:27:29', '2026-01-21 15:17:54', NULL, '林一', '22014081001');
 INSERT INTO `users` VALUES (25, '13800000011', '$2b$12$xmmkIGE75pggM1y/12yuWOmqRdtMbqCQV6miljvsjYnLHKADoo5yC', 'student', 1, '2026-01-04 17:27:29', NULL, NULL, '林二', '22014081002');
 INSERT INTO `users` VALUES (26, '13800000012', '$2b$12$mMdDv04GlYkm3oLr5DmhveQ8SLQ8WcrMOLDaaZXv2S/qKjLhD8nSm', 'student', 1, '2026-01-04 17:27:29', NULL, NULL, '林三', '22014081003');
 INSERT INTO `users` VALUES (27, '13800000013', '$2b$12$pQ1QlXKQXDEmlsM8UroPm.Vjcu9JARuKXK03JNzU3lAQPC2ANvhmO', 'student', 1, '2026-01-04 17:27:29', NULL, NULL, '林四', '22014081004');
@@ -916,24 +1077,24 @@ INSERT INTO `users` VALUES (33, '13800000019', '$2b$12$Agwl04gvXuv8BRw19YuRUO3Ey
 INSERT INTO `users` VALUES (34, '13800000020', '$2b$12$RpF0w9w7S.zodMghFyfERuyl9jXqe4spjfInfqFdTHyUd87TEhuoS', 'student', 1, '2026-01-04 17:31:26', NULL, NULL, '林十一', '22014081011');
 INSERT INTO `users` VALUES (35, '13800000021', '$2b$12$IqnnLclMHEiPNVTH69segesRMRTBrcncraySJ14Adbk.iX9ivRvlq', 'student', 1, '2026-01-04 17:31:26', NULL, NULL, '林十二', '22014081012');
 INSERT INTO `users` VALUES (36, '13800000022', '$2b$12$nRj4SQ7vcaXks.el7Y.AQ.ySAIp54e2OUf2TeVrA6NqCnyjklaoHq', 'student', 1, '2026-01-04 17:31:26', NULL, NULL, '林十三', '22014081013');
-INSERT INTO `users` VALUES (37, '13800000023', '$2b$12$AodUPHoU2eXai7NM/E6D6eiwmVRxhKueaJgJZtYP980/W4MAq0A0m', 'student', 1, '2026-01-04 17:31:27', NULL, NULL, '林十四', '22014081014');
+INSERT INTO `users` VALUES (37, '13800000023', '$2b$12$AodUPHoU2eXai7NM/E6D6eiwmVRxhKueaJgJZtYP980/W4MAq0A0m', 'student', 1, '2026-01-04 17:31:27', '2026-01-21 15:25:55', NULL, '林十四', '22014081014');
 INSERT INTO `users` VALUES (38, '13800000024', '$2b$12$uuy3iXuLuBjV0QKf.szuIO4miYajgLOcb0yfoLyotmF.xN8foYkWO', 'student', 1, '2026-01-04 17:31:27', NULL, NULL, '林十五', '22014081015');
 INSERT INTO `users` VALUES (39, '13800000025', '$2b$12$V9cHKRRxy7b0cYE0LOXE3OmJ9wtf7O1.vrn7wlmSHvh4sH55/CmUi', 'student', 1, '2026-01-04 17:31:27', NULL, NULL, '林十六', '22014081016');
 INSERT INTO `users` VALUES (40, '13800000026', '$2b$12$KrJ6nfzG3MrDpmmQyEP/Ee1DQwLmZu5A5AY1efFFMw1nU2SOKvggK', 'student', 1, '2026-01-04 17:31:27', NULL, NULL, '林十七', '22014081017');
 INSERT INTO `users` VALUES (41, '13800000027', '$2b$12$syr2Oad/bL34pz3z1Dsv6OdG/7IJ9jn84vFF9ALN.kAI2QXG1JiaK', 'student', 1, '2026-01-04 17:31:27', NULL, NULL, '林十八', '22014081018');
-INSERT INTO `users` VALUES (42, '13800000028', '$2b$12$grSqoR.wyJZCUAfosCWU4eh2J2u.MxcplQf/EIn8xdAzDC4o3LPEy', 'student', 1, '2026-01-04 17:31:28', NULL, NULL, '林十九', '22014081019');
+INSERT INTO `users` VALUES (42, '13800000028', '$2b$12$grSqoR.wyJZCUAfosCWU4eh2J2u.MxcplQf/EIn8xdAzDC4o3LPEy', 'student', 1, '2026-01-04 17:31:28', '2026-01-21 14:54:15', NULL, '林十九', '22014081019');
 INSERT INTO `users` VALUES (43, '13800000029', '$2b$12$x34iQapfJaZKSCk0RlAleuluzWmxMbTxN8Bq/hUATBIsL104MI9j2', 'student', 1, '2026-01-04 17:31:28', NULL, NULL, '林二十', '22014081020');
-INSERT INTO `users` VALUES (44, '13800000030', '$2b$12$Z5XGW06NY6Jr6Hq8pma4hOaj3HJQsxol84YqSw94GhHZVF4PcDBSS', 'student', 1, '2026-01-04 17:31:28', NULL, NULL, '林二一', '22014081021');
-INSERT INTO `users` VALUES (45, '13800000031', '$2b$12$2Y9Z9OAflHC0nU9XWe4b7.ZLl2ICFIyWL3MO1ryuPEqm4ykpBvK26', 'student', 1, '2026-01-04 17:31:28', NULL, NULL, '林二二', '22014081022');
+INSERT INTO `users` VALUES (44, '13800000030', '$2b$12$Z5XGW06NY6Jr6Hq8pma4hOaj3HJQsxol84YqSw94GhHZVF4PcDBSS', 'student', 1, '2026-01-04 17:31:28', '2026-01-21 14:49:05', NULL, '林二一', '22014081021');
+INSERT INTO `users` VALUES (45, '13800000031', '$2b$12$2Y9Z9OAflHC0nU9XWe4b7.ZLl2ICFIyWL3MO1ryuPEqm4ykpBvK26', 'student', 1, '2026-01-04 17:31:28', '2026-01-21 15:02:25', NULL, '林二二', '22014081022');
 INSERT INTO `users` VALUES (46, '13800000032', '$2b$12$8Qigss2aPjhSocZU2VUTDuMYxenr5ZI35W4iPVChqgtAfImSso.wO', 'student', 1, '2026-01-04 17:31:28', NULL, NULL, '林二三', '22014081023');
 INSERT INTO `users` VALUES (47, '13800000033', '$2b$12$KfpQjv7GzYEpFVfVuD6dKO6PxlFsHSeYnYNF6wtIqCDfFHHdvp26u', 'student', 1, '2026-01-04 17:31:29', NULL, NULL, '林二四', '22014081024');
-INSERT INTO `users` VALUES (48, '13800000034', '$2b$12$s8NZyY78KzBNLxvfCE0VlO2ztDCLH1DHBbJ2HGfp7PQxWkRdDhINe', 'student', 1, '2026-01-04 17:31:29', NULL, NULL, '林二五', '22014081025');
+INSERT INTO `users` VALUES (48, '13800000034', '$2b$12$s8NZyY78KzBNLxvfCE0VlO2ztDCLH1DHBbJ2HGfp7PQxWkRdDhINe', 'student', 1, '2026-01-04 17:31:29', '2026-01-21 15:07:57', NULL, '林二五', '22014081025');
 INSERT INTO `users` VALUES (49, '13800000035', '$2b$12$vjdvfA9DlhHn.S9HiASyIOHp59hFpwCepI1.h6cciJ3C5szrJntZm', 'student', 1, '2026-01-04 17:31:29', NULL, NULL, '林二六', '22014081026');
 INSERT INTO `users` VALUES (50, '13800000036', '$2b$12$CeweWNm7Czy31hdXCC8nzO3tNC2P/t20wE1C/DA.KGtZo6p13yyaC', 'student', 1, '2026-01-04 17:31:29', NULL, NULL, '林二七', '22014081027');
 INSERT INTO `users` VALUES (51, '13800000037', '$2b$12$u0y0lHRvoPOL3jQuvElg/.bbUchvuVipScCJTzCJSp3x2xROqWcKS', 'student', 1, '2026-01-04 17:31:29', NULL, NULL, '林二八', '22014081028');
 INSERT INTO `users` VALUES (52, '13800000038', '$2b$12$JMyPT.nR8dDcVYf7USc3L.Ipe3MwqC1GpReWu90Y5YY9h/gVGVnRi', 'student', 1, '2026-01-04 17:31:30', NULL, NULL, '林二九', '22014081029');
-INSERT INTO `users` VALUES (53, '13800000039', '$2b$12$tsiBrw.e6HxcI7Kqji/tyOLwGrLBwvp4cXpSJJigxJ4jFK8C8y3H2', 'student', 1, '2026-01-04 17:31:30', NULL, NULL, '林三十', '22014081030');
-INSERT INTO `users` VALUES (54, '13800000040', '$2b$12$yYepo.TXgUm6DUElB0wgM.9Yi82wu98csJifWgpJHH9/FjMkW8GjC', 'student', 1, '2026-01-04 17:31:30', NULL, NULL, '林三一', '22014081031');
+INSERT INTO `users` VALUES (53, '13800000039', '$2b$12$tsiBrw.e6HxcI7Kqji/tyOLwGrLBwvp4cXpSJJigxJ4jFK8C8y3H2', 'student', 1, '2026-01-04 17:31:30', '2026-01-21 14:44:38', NULL, '林三十', '22014081030');
+INSERT INTO `users` VALUES (54, '13800000040', '$2b$12$yYepo.TXgUm6DUElB0wgM.9Yi82wu98csJifWgpJHH9/FjMkW8GjC', 'student', 1, '2026-01-04 17:31:30', '2026-01-21 14:26:50', NULL, '林三一', '22014081031');
 INSERT INTO `users` VALUES (55, '18250636888', '$2b$12$GHFiwnbK8ACafBt2pf84RuH7SrnjmT5ljJZTRAPMw7hm/737E7bui', 'teacher', 1, '2026-01-19 09:54:49', '2026-01-19 16:37:26', NULL, '张三三', NULL);
 INSERT INTO `users` VALUES (56, '13656560001', '$2b$12$A7c4GCqd5c5eJ33qPiTB2.2pXp6dc5HF4USJwSzVWeAwV9EZLC6Vm', 'student', 1, '2026-01-19 10:26:28', NULL, NULL, '1', '20250119001');
 INSERT INTO `users` VALUES (57, '13656560002', '$2b$12$5t9mIvskVRNgI.Bg3eK6ce.wdFu0NT8y.fgpapUjmEORySHCA.L8u', 'student', 1, '2026-01-19 10:26:29', NULL, NULL, '2', '20250119002');

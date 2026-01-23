@@ -91,6 +91,8 @@ export interface SubmissionItem {
   score?: number;
   feedback?: string;
   submitted_at?: string;
+  annotated_content?: string;
+  annotations?: { id: string; text: string }[];
 }
 
 export interface GradingData {
@@ -105,7 +107,7 @@ export function getAssignmentSubmissions(assignmentId: number) {
 }
 
 // 提交评分
-export function submitGrade(submissionId: number, data: { score: number; feedback: string }) {
+export function submitGrade(submissionId: number, data: { score: number; feedback: string; annotated_content?: string; annotations?: { id: string; text: string }[] }) {
   return request.post(`/homeworks/submissions/${submissionId}/grade`, data);
 }
 

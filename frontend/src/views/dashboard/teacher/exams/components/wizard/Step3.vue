@@ -149,7 +149,7 @@ onMounted(async () => {
   // 1. 获取班级列表
   try {
     const res = await getMyClasses()
-    classOptions.value = res.data || res
+    classOptions.value = (res as any).data || res
   } catch (error) {
     console.error('获取班级列表失败', error)
   }

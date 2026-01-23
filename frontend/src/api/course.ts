@@ -9,7 +9,7 @@ export interface ClassItem {
   cover_image?: string;
   start_date?: string;
   end_date?: string;
-  bound_course_names: string[]; 
+  bound_course_names: string[];
   bound_course_ids: number[];
   bound_course_public_ids: string[];
   bound_course_covers: string[];
@@ -20,6 +20,10 @@ export interface ClassItem {
   styleColor?: string;
   pending_count: number;
   status: number;
+  // 前端辅助字段
+  displayTitle?: string;
+  isSplit?: boolean;
+  displaySubtitle?: string;
 }
 
 
@@ -56,13 +60,17 @@ export function getDashboardStats() {
 export interface StudentItem {
   id: number;
   username: string;
-  full_name: string;
+  name: string;  // full_name 的别名
+  code: string;  // student_number 的别名
   student_number: string;
   avatar?: string;
+  className: string;  // class_name 的别名
   class_name: string;
   class_id: number;
   joined_at: string;
+  joinDate: string;  // joined_at 的别名
   is_active: boolean;
+  status: string;  // 'active' 或其他的别名
   progress: number;
   // 前端辅助字段 (颜色等)
   classColor?: string;

@@ -1,8 +1,8 @@
 import axios from 'axios';
 
-// 创建 axios 实例
+// 创建 axios 实例 - 使用相对路径，让 Nginx 代理
 const service = axios.create({
-  baseURL: import.meta.env.VITE_API_URL, // 读取 .env 里的地址
+  baseURL: import.meta.env.VITE_API_URL,
   timeout: 120000
 });
 

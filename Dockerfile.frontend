@@ -10,6 +10,9 @@ COPY frontend/package*.json ./
 # 安装依赖
 RUN npm ci
 
+# 复制环境变量文件
+COPY frontend/.env.production ./.env.production
+
 # 复制应用代码
 COPY frontend/ ./
 

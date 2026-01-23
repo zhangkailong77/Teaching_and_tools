@@ -8,7 +8,7 @@ services:
       dockerfile: Dockerfile.frontend
     container_name: teaching-frontend
     ports:
-      - "8080:80"
+      - "2026:80"
     depends_on:
       - backend
     networks:
@@ -47,7 +47,7 @@ services:
     image: mysql:8.0
     container_name: teaching-mysql
     ports:
-      - "3308:3306"
+      - "3306:3306"
     environment:
       - MYSQL_ROOT_PASSWORD=teaching2024
       - MYSQL_DATABASE=teaching_platform
@@ -65,7 +65,7 @@ services:
     image: redis:7-alpine
     container_name: teaching-redis
     ports:
-      - "6379:6379"
+      - "6380:6379"
     volumes:
       - redis-data:/data
     networks:

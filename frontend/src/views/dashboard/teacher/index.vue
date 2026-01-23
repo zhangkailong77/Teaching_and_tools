@@ -391,12 +391,13 @@ import { uploadImage } from '@/api/common';
 import TeacherSidebar from '@/components/TeacherSidebar.vue';
 import { getMyClasses, createClass, getDashboardStats, getTeacherSchedule, updateClassStatus, type ClassItem, type ScheduleItem } from '@/api/course';
 import { getMyCourses, type CourseItem } from '@/api/content';
-import { getImgUrl } from '@/utils/index'; 
+import { getImgUrl } from '@/utils/index';
 import DashboardStats from './components/DashboardStats.vue'
-import { 
+import {
   Warning
 } from '@element-plus/icons-vue'
 import AnnouncementWidget from './components/AnnouncementWidget.vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
 const router = useRouter();
 const userStore = useUserStore();
