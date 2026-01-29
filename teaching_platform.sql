@@ -11,7 +11,7 @@
  Target Server Version : 80042 (8.0.42)
  File Encoding         : 65001
 
- Date: 23/01/2026 15:07:01
+ Date: 29/01/2026 17:38:25
 */
 
 SET NAMES utf8mb4;
@@ -211,7 +211,7 @@ CREATE TABLE `course_chapters`  (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `fk_chapter_course`(`course_id` ASC) USING BTREE,
   CONSTRAINT `fk_chapter_course` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 62 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '课程章节表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 92 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '课程章节表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of course_chapters
@@ -223,13 +223,13 @@ INSERT INTO `course_chapters` VALUES (29, 6, '第04章 订单履约与售后服�
 INSERT INTO `course_chapters` VALUES (52, 1, '第01章 课程简介', 1, '2026-01-19 11:43:38');
 INSERT INTO `course_chapters` VALUES (53, 1, '第02章 ComfyUI基础入门', 2, '2026-01-19 11:43:38');
 INSERT INTO `course_chapters` VALUES (54, 1, '第03章 跨境电商业务场景实战工作流体系', 3, '2026-01-19 11:43:38');
-INSERT INTO `course_chapters` VALUES (55, 7, '第01章 平台入驻与基础建设', 1, '2026-01-22 18:12:08');
-INSERT INTO `course_chapters` VALUES (56, 7, '第02章 商品运营与管理', 2, '2026-01-22 18:12:09');
-INSERT INTO `course_chapters` VALUES (57, 7, '第03章 店铺装修与视觉', 3, '2026-01-22 18:12:09');
-INSERT INTO `course_chapters` VALUES (58, 7, '第04章 营销活动与推广', 4, '2026-01-22 18:12:10');
-INSERT INTO `course_chapters` VALUES (59, 7, '第05章 订单履约与客户服务', 5, '2026-01-22 18:12:11');
-INSERT INTO `course_chapters` VALUES (60, 7, '第06章 数据分析与复盘', 6, '2026-01-22 18:12:12');
-INSERT INTO `course_chapters` VALUES (61, 7, '第07章 直播与达人联盟', 7, '2026-01-22 18:12:13');
+INSERT INTO `course_chapters` VALUES (85, 7, '第01章 平台入驻与基础建设', 1, '2026-01-29 17:31:40');
+INSERT INTO `course_chapters` VALUES (86, 7, '第02章 商品运营与管理', 2, '2026-01-29 17:31:43');
+INSERT INTO `course_chapters` VALUES (87, 7, '第03章 店铺装修与视觉', 3, '2026-01-29 17:31:44');
+INSERT INTO `course_chapters` VALUES (88, 7, '第04章 营销活动与推广', 4, '2026-01-29 17:31:44');
+INSERT INTO `course_chapters` VALUES (89, 7, '第05章 订单履约与客户服务', 5, '2026-01-29 17:31:44');
+INSERT INTO `course_chapters` VALUES (90, 7, '第06章 数据分析与复盘', 6, '2026-01-29 17:31:44');
+INSERT INTO `course_chapters` VALUES (91, 7, '第07章 直播与达人联盟', 7, '2026-01-29 17:31:44');
 
 -- ----------------------------
 -- Table structure for course_lessons
@@ -248,7 +248,7 @@ CREATE TABLE `course_lessons`  (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `fk_lesson_chapter`(`chapter_id` ASC) USING BTREE,
   CONSTRAINT `fk_lesson_chapter` FOREIGN KEY (`chapter_id`) REFERENCES `course_chapters` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 476 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '课时资源表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 616 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '课时资源表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of course_lessons
@@ -314,72 +314,26 @@ INSERT INTO `course_lessons` VALUES (406, 54, '任务09 商品变体工作流（
 INSERT INTO `course_lessons` VALUES (407, 54, '任务10 模特换装（绘制遮罩）', 'pdf', '/static/uploads/materials/course_1/chapter_54/任务10 模特换装（绘制遮罩）.pdf', '15页', 0, 0, '2026-01-19 11:43:38');
 INSERT INTO `course_lessons` VALUES (408, 54, '任务11 模特换装（Qwen全自动指令版）', 'pdf', '/static/uploads/materials/course_1/chapter_54/任务11 模特换装（Qwen全自动指令版）.pdf', '15页', 0, 0, '2026-01-19 11:43:38');
 INSERT INTO `course_lessons` VALUES (409, 54, '任务12 图像编辑', 'pdf', '/static/uploads/materials/course_1/chapter_54/任务12 图像编辑.pdf', '15页', 0, 0, '2026-01-19 11:43:38');
-INSERT INTO `course_lessons` VALUES (410, 55, '任务1 TikTok Shop平台注册及店铺开通', 'pdf', '/static/uploads/materials/course_7/chapter_55/任务1 TikTok Shop平台注册及店铺开通.pdf', '15页', 0, 0, '2026-01-22 18:12:09');
-INSERT INTO `course_lessons` VALUES (411, 55, '任务1 TikTok Shop平台注册及店铺开通', 'ppt', '/static/uploads/materials/course_7/chapter_55/任务1 TikTok Shop平台注册及店铺开通.pptx', '15页', 0, 0, '2026-01-22 18:12:09');
-INSERT INTO `course_lessons` VALUES (412, 55, '任务2 TikTok Shop平台店铺信息设置', 'pdf', '/static/uploads/materials/course_7/chapter_55/任务2 TikTok Shop平台店铺信息设置.pdf', '15页', 0, 0, '2026-01-22 18:12:09');
-INSERT INTO `course_lessons` VALUES (413, 55, '任务2 TikTok Shop平台店铺信息设置', 'ppt', '/static/uploads/materials/course_7/chapter_55/任务2 TikTok Shop平台店铺信息设置.pptx', '15页', 0, 0, '2026-01-22 18:12:09');
-INSERT INTO `course_lessons` VALUES (414, 56, '任务3 如何在TikTok Shop平台上传商品', 'pdf', '/static/uploads/materials/course_7/chapter_56/任务3 如何在TikTok Shop平台上传商品.pdf', '15页', 0, 0, '2026-01-22 18:12:09');
-INSERT INTO `course_lessons` VALUES (415, 56, '任务3 如何在TikTok Shop平台上传商品', 'ppt', '/static/uploads/materials/course_7/chapter_56/任务3 如何在TikTok Shop平台上传商品.pptx', '15页', 0, 0, '2026-01-22 18:12:09');
-INSERT INTO `course_lessons` VALUES (416, 56, '任务4 学会使用TikTok Shop平台商品管理功能', 'pdf', '/static/uploads/materials/course_7/chapter_56/任务4 学会使用TikTok Shop平台商品管理功能.pdf', '15页', 0, 0, '2026-01-22 18:12:09');
-INSERT INTO `course_lessons` VALUES (417, 56, '任务4 学会使用TikTok Shop平台商品管理功能', 'ppt', '/static/uploads/materials/course_7/chapter_56/任务4 学会使用TikTok Shop平台商品管理功能.pptx', '15页', 0, 0, '2026-01-22 18:12:09');
-INSERT INTO `course_lessons` VALUES (418, 56, '任务5 TikTok Shop平台商品优化基础指南', 'pdf', '/static/uploads/materials/course_7/chapter_56/任务5 TikTok Shop平台商品优化基础指南.pdf', '15页', 0, 0, '2026-01-22 18:12:09');
-INSERT INTO `course_lessons` VALUES (419, 56, '任务5 TikTok Shop平台商品优化基础指南', 'ppt', '/static/uploads/materials/course_7/chapter_56/任务5 TikTok Shop平台商品优化基础指南.pptx', '15页', 0, 0, '2026-01-22 18:12:09');
-INSERT INTO `course_lessons` VALUES (420, 56, '任务6 如何使用TikTok的商品媒体中心(Media Center) ', 'pdf', '/static/uploads/materials/course_7/chapter_56/任务6 如何使用TikTok的商品媒体中心(Media Center) .pdf', '15页', 0, 0, '2026-01-22 18:12:09');
-INSERT INTO `course_lessons` VALUES (421, 56, '任务6 如何使用TikTok的商品媒体中心(Media Center) ', 'ppt', '/static/uploads/materials/course_7/chapter_56/任务6 如何使用TikTok的商品媒体中心(Media Center) .pptx', '15页', 0, 0, '2026-01-22 18:12:09');
-INSERT INTO `course_lessons` VALUES (422, 56, '任务7 学会使用TikTok Shop平台商店分类管理功能', 'pdf', '/static/uploads/materials/course_7/chapter_56/任务7 学会使用TikTok Shop平台商店分类管理功能.pdf', '15页', 0, 0, '2026-01-22 18:12:09');
-INSERT INTO `course_lessons` VALUES (423, 56, '任务7 学会使用TikTok Shop平台商店分类管理功能', 'ppt', '/static/uploads/materials/course_7/chapter_56/任务7 学会使用TikTok Shop平台商店分类管理功能.pptx', '15页', 0, 0, '2026-01-22 18:12:09');
-INSERT INTO `course_lessons` VALUES (424, 57, '任务8 如何设计你的TikTok Shop店铺', 'pdf', '/static/uploads/materials/course_7/chapter_57/任务8 如何设计你的TikTok Shop店铺.pdf', '15页', 0, 0, '2026-01-22 18:12:10');
-INSERT INTO `course_lessons` VALUES (425, 57, '任务8 如何设计你的TikTok Shop店铺', 'ppt', '/static/uploads/materials/course_7/chapter_57/任务8 如何设计你的TikTok Shop店铺.pptx', '15页', 0, 0, '2026-01-22 18:12:10');
-INSERT INTO `course_lessons` VALUES (426, 57, '任务9 TikTok Shop平台商店页面(Store Page) 介绍', 'pdf', '/static/uploads/materials/course_7/chapter_57/任务9 TikTok Shop平台商店页面(Store Page) 介绍.pdf', '15页', 0, 0, '2026-01-22 18:12:10');
-INSERT INTO `course_lessons` VALUES (427, 57, '任务9 TikTok Shop平台商店页面(Store Page) 介绍', 'ppt', '/static/uploads/materials/course_7/chapter_57/任务9 TikTok Shop平台商店页面(Store Page) 介绍.pptx', '15页', 0, 0, '2026-01-22 18:12:10');
-INSERT INTO `course_lessons` VALUES (428, 57, '任务10 TikTok Shop平台商店健康管理(Shop Healthl) 与店铺评分', 'pdf', '/static/uploads/materials/course_7/chapter_57/任务10 TikTok Shop平台商店健康管理(Shop Healthl) 与店铺评分.pdf', '15页', 0, 0, '2026-01-22 18:12:10');
-INSERT INTO `course_lessons` VALUES (429, 57, '任务10 TikTok Shop平台商店健康管理(Shop Healthl) 与店铺评分', 'ppt', '/static/uploads/materials/course_7/chapter_57/任务10 TikTok Shop平台商店健康管理(Shop Healthl) 与店铺评分.pptx', '15页', 0, 0, '2026-01-22 18:12:10');
-INSERT INTO `course_lessons` VALUES (430, 58, '任务11 TikTok Shop平台设置产品折扣', 'pdf', '/static/uploads/materials/course_7/chapter_58/任务11 TikTok Shop平台设置产品折扣.pdf', '15页', 0, 0, '2026-01-22 18:12:11');
-INSERT INTO `course_lessons` VALUES (431, 58, '任务11 TikTok Shop平台设置产品折扣', 'ppt', '/static/uploads/materials/course_7/chapter_58/任务11 TikTok Shop平台设置产品折扣.pptx', '15页', 0, 0, '2026-01-22 18:12:11');
-INSERT INTO `course_lessons` VALUES (432, 58, '任务12 TikTok Shop平台如何设置商店闪购(Flash Deal）', 'pdf', '/static/uploads/materials/course_7/chapter_58/任务12 TikTok Shop平台如何设置商店闪购(Flash Deal）.pdf', '15页', 0, 0, '2026-01-22 18:12:11');
-INSERT INTO `course_lessons` VALUES (433, 58, '任务12 TikTok Shop平台如何设置商店闪购(Flash Deal）', 'ppt', '/static/uploads/materials/course_7/chapter_58/任务12 TikTok Shop平台如何设置商店闪购(Flash Deal）.pptx', '15页', 0, 0, '2026-01-22 18:12:11');
-INSERT INTO `course_lessons` VALUES (434, 58, '任务13 如何在TikTok Shop平台设置运费折扣', 'pdf', '/static/uploads/materials/course_7/chapter_58/任务13 如何在TikTok Shop平台设置运费折扣.pdf', '15页', 0, 0, '2026-01-22 18:12:11');
-INSERT INTO `course_lessons` VALUES (435, 58, '任务13 如何在TikTok Shop平台设置运费折扣', 'ppt', '/static/uploads/materials/course_7/chapter_58/任务13 如何在TikTok Shop平台设置运费折扣.pptx', '15页', 0, 0, '2026-01-22 18:12:11');
-INSERT INTO `course_lessons` VALUES (436, 58, '任务14 TikTok Shop平台如何设置优惠券(Voucher）', 'pdf', '/static/uploads/materials/course_7/chapter_58/任务14 TikTok Shop平台如何设置优惠券(Voucher）.pdf', '15页', 0, 0, '2026-01-22 18:12:11');
-INSERT INTO `course_lessons` VALUES (437, 58, '任务14 TikTok Shop平台如何设置优惠券(Voucher）', 'ppt', '/static/uploads/materials/course_7/chapter_58/任务14 TikTok Shop平台如何设置优惠券(Voucher）.pptx', '15页', 0, 0, '2026-01-22 18:12:11');
-INSERT INTO `course_lessons` VALUES (438, 58, '任务15 TikTok Shop平台多件多折设置', 'pdf', '/static/uploads/materials/course_7/chapter_58/任务15 TikTok Shop平台多件多折设置.pdf', '15页', 0, 0, '2026-01-22 18:12:11');
-INSERT INTO `course_lessons` VALUES (439, 58, '任务15 TikTok Shop平台多件多折设置', 'ppt', '/static/uploads/materials/course_7/chapter_58/任务15 TikTok Shop平台多件多折设置.pptx', '15页', 0, 0, '2026-01-22 18:12:11');
-INSERT INTO `course_lessons` VALUES (440, 58, '任务16 TikTok Shop平台广告 (Ads) 投放流程', 'pdf', '/static/uploads/materials/course_7/chapter_58/任务16 TikTok Shop平台广告 (Ads) 投放流程.pdf', '15页', 0, 0, '2026-01-22 18:12:11');
-INSERT INTO `course_lessons` VALUES (441, 58, '任务16 TikTok Shop平台广告 (Ads) 投放流程', 'ppt', '/static/uploads/materials/course_7/chapter_58/任务16 TikTok Shop平台广告 (Ads) 投放流程.pptx', '15页', 0, 0, '2026-01-22 18:12:11');
-INSERT INTO `course_lessons` VALUES (442, 59, '任务17 TikTok Shop平台退货退款处理', 'pdf', '/static/uploads/materials/course_7/chapter_59/任务17 TikTok Shop平台退货退款处理.pdf', '15页', 0, 0, '2026-01-22 18:12:12');
-INSERT INTO `course_lessons` VALUES (443, 59, '任务17 TikTok Shop平台退货退款处理', 'ppt', '/static/uploads/materials/course_7/chapter_59/任务17 TikTok Shop平台退货退款处理.pptx', '15页', 0, 0, '2026-01-22 18:12:12');
-INSERT INTO `course_lessons` VALUES (444, 59, '任务18 TikTok Shop平台订单发货流程', 'pdf', '/static/uploads/materials/course_7/chapter_59/任务18 TikTok Shop平台订单发货流程.pdf', '15页', 0, 0, '2026-01-22 18:12:12');
-INSERT INTO `course_lessons` VALUES (445, 59, '任务18 TikTok Shop平台订单发货流程', 'ppt', '/static/uploads/materials/course_7/chapter_59/任务18 TikTok Shop平台订单发货流程.pptx', '15页', 0, 0, '2026-01-22 18:12:12');
-INSERT INTO `course_lessons` VALUES (446, 59, '任务19 TikTok Shop平台运费计费', 'pdf', '/static/uploads/materials/course_7/chapter_59/任务19 TikTok Shop平台运费计费.pdf', '15页', 0, 0, '2026-01-22 18:12:12');
-INSERT INTO `course_lessons` VALUES (447, 59, '任务19 TikTok Shop平台运费计费', 'ppt', '/static/uploads/materials/course_7/chapter_59/任务19 TikTok Shop平台运费计费.pptx', '15页', 0, 0, '2026-01-22 18:12:12');
-INSERT INTO `course_lessons` VALUES (448, 59, '任务20 TikTok Shop平台聊天界面及其功能', 'pdf', '/static/uploads/materials/course_7/chapter_59/任务20 TikTok Shop平台聊天界面及其功能.pdf', '15页', 0, 0, '2026-01-22 18:12:12');
-INSERT INTO `course_lessons` VALUES (449, 59, '任务20 TikTok Shop平台聊天界面及其功能', 'ppt', '/static/uploads/materials/course_7/chapter_59/任务20 TikTok Shop平台聊天界面及其功能.pptx', '15页', 0, 0, '2026-01-22 18:12:12');
-INSERT INTO `course_lessons` VALUES (450, 59, '任务21 TikTok Shop平台常见问题设置及自动回复', 'pdf', '/static/uploads/materials/course_7/chapter_59/任务21 TikTok Shop平台常见问题设置及自动回复.pdf', '15页', 0, 0, '2026-01-22 18:12:12');
-INSERT INTO `course_lessons` VALUES (451, 59, '任务21 TikTok Shop平台常见问题设置及自动回复', 'ppt', '/static/uploads/materials/course_7/chapter_59/任务21 TikTok Shop平台常见问题设置及自动回复.pptx', '15页', 0, 0, '2026-01-22 18:12:12');
-INSERT INTO `course_lessons` VALUES (452, 60, '任务22 TikTok Shop数据罗盘指南—概览模块', 'pdf', '/static/uploads/materials/course_7/chapter_60/任务22 TikTok Shop数据罗盘指南—概览模块.pdf', '15页', 0, 0, '2026-01-22 18:12:13');
-INSERT INTO `course_lessons` VALUES (453, 60, '任务22 TikTok Shop数据罗盘指南—概览模块', 'ppt', '/static/uploads/materials/course_7/chapter_60/任务22 TikTok Shop数据罗盘指南—概览模块.pptx', '15页', 0, 0, '2026-01-22 18:12:13');
-INSERT INTO `course_lessons` VALUES (454, 60, '任务23 TikTok Shop数据罗盘指南—服务模块', 'pdf', '/static/uploads/materials/course_7/chapter_60/任务23 TikTok Shop数据罗盘指南—服务模块.pdf', '15页', 0, 0, '2026-01-22 18:12:13');
-INSERT INTO `course_lessons` VALUES (455, 60, '任务23 TikTok Shop数据罗盘指南—服务模块', 'ppt', '/static/uploads/materials/course_7/chapter_60/任务23 TikTok Shop数据罗盘指南—服务模块.pptx', '15页', 0, 0, '2026-01-22 18:12:13');
-INSERT INTO `course_lessons` VALUES (456, 60, '任务24 TikTok Shop数据罗盘指南—搜索模块', 'pdf', '/static/uploads/materials/course_7/chapter_60/任务24 TikTok Shop数据罗盘指南—搜索模块.pdf', '15页', 0, 0, '2026-01-22 18:12:13');
-INSERT INTO `course_lessons` VALUES (457, 60, '任务24 TikTok Shop数据罗盘指南—搜索模块', 'ppt', '/static/uploads/materials/course_7/chapter_60/任务24 TikTok Shop数据罗盘指南—搜索模块.pptx', '15页', 0, 0, '2026-01-22 18:12:13');
-INSERT INTO `course_lessons` VALUES (458, 60, '任务25 TikTok Shop数据罗盘指南—营销模块', 'pdf', '/static/uploads/materials/course_7/chapter_60/任务25 TikTok Shop数据罗盘指南—营销模块.pdf', '15页', 0, 0, '2026-01-22 18:12:13');
-INSERT INTO `course_lessons` VALUES (459, 60, '任务25 TikTok Shop数据罗盘指南—营销模块', 'ppt', '/static/uploads/materials/course_7/chapter_60/任务25 TikTok Shop数据罗盘指南—营销模块.pptx', '15页', 0, 0, '2026-01-22 18:12:13');
-INSERT INTO `course_lessons` VALUES (460, 60, '任务26 TikTok Shop 数据罗盘指南—用户模块', 'pdf', '/static/uploads/materials/course_7/chapter_60/任务26 TikTok Shop 数据罗盘指南—用户模块.pdf', '15页', 0, 0, '2026-01-22 18:12:13');
-INSERT INTO `course_lessons` VALUES (461, 60, '任务26 TikTok Shop 数据罗盘指南—用户模块', 'ppt', '/static/uploads/materials/course_7/chapter_60/任务26 TikTok Shop 数据罗盘指南—用户模块.pptx', '15页', 0, 0, '2026-01-22 18:12:13');
-INSERT INTO `course_lessons` VALUES (462, 60, '任务27 TikTok Shop 数据罗盘指南一商品诊断模块', 'pdf', '/static/uploads/materials/course_7/chapter_60/任务27 TikTok Shop 数据罗盘指南一商品诊断模块.pdf', '15页', 0, 0, '2026-01-22 18:12:13');
-INSERT INTO `course_lessons` VALUES (463, 60, '任务27 TikTok Shop 数据罗盘指南一商品诊断模块', 'ppt', '/static/uploads/materials/course_7/chapter_60/任务27 TikTok Shop 数据罗盘指南一商品诊断模块.pptx', '15页', 0, 0, '2026-01-22 18:12:13');
-INSERT INTO `course_lessons` VALUES (464, 60, '任务28 TikTok Shop 数据罗盘指南一直播和视频模块', 'pdf', '/static/uploads/materials/course_7/chapter_60/任务28 TikTok Shop 数据罗盘指南一直播和视频模块.pdf', '15页', 0, 0, '2026-01-22 18:12:13');
-INSERT INTO `course_lessons` VALUES (465, 60, '任务28 TikTok Shop 数据罗盘指南一直播和视频模块', 'ppt', '/static/uploads/materials/course_7/chapter_60/任务28 TikTok Shop 数据罗盘指南一直播和视频模块.pptx', '15页', 0, 0, '2026-01-22 18:12:13');
-INSERT INTO `course_lessons` VALUES (466, 60, '任务29 TikTok Shop 数据罗盘指南一商店选项卡模块', 'pdf', '/static/uploads/materials/course_7/chapter_60/任务29 TikTok Shop 数据罗盘指南一商店选项卡模块.pdf', '15页', 0, 0, '2026-01-22 18:12:13');
-INSERT INTO `course_lessons` VALUES (467, 60, '任务29 TikTok Shop 数据罗盘指南一商店选项卡模块', 'ppt', '/static/uploads/materials/course_7/chapter_60/任务29 TikTok Shop 数据罗盘指南一商店选项卡模块.pptx', '15页', 0, 0, '2026-01-22 18:12:13');
-INSERT INTO `course_lessons` VALUES (468, 61, '任务30 如何在TikTok Shop平台上创建联盟计划', 'pdf', '/static/uploads/materials/course_7/chapter_61/任务30 如何在TikTok Shop平台上创建联盟计划.pdf', '15页', 0, 0, '2026-01-22 18:12:14');
-INSERT INTO `course_lessons` VALUES (469, 61, '任务30 如何在TikTok Shop平台上创建联盟计划', 'ppt', '/static/uploads/materials/course_7/chapter_61/任务30 如何在TikTok Shop平台上创建联盟计划.pptx', '15页', 0, 0, '2026-01-22 18:12:14');
-INSERT INTO `course_lessons` VALUES (470, 61, '任务31  如何在TikTok Shop平台上与达人建联', 'pdf', '/static/uploads/materials/course_7/chapter_61/任务31  如何在TikTok Shop平台上与达人建联.pdf', '15页', 0, 0, '2026-01-22 18:12:14');
-INSERT INTO `course_lessons` VALUES (471, 61, '任务31  如何在TikTok Shop平台上与达人建联', 'ppt', '/static/uploads/materials/course_7/chapter_61/任务31  如何在TikTok Shop平台上与达人建联.pptx', '15页', 0, 0, '2026-01-22 18:12:14');
-INSERT INTO `course_lessons` VALUES (472, 61, '任务32 TikTok主播工作台——使用手册（上）', 'pdf', '/static/uploads/materials/course_7/chapter_61/任务32 TikTok主播工作台——使用手册（上）.pdf', '15页', 0, 0, '2026-01-22 18:12:14');
-INSERT INTO `course_lessons` VALUES (473, 61, '任务32 TikTok主播工作台——使用手册（上）', 'ppt', '/static/uploads/materials/course_7/chapter_61/任务32 TikTok主播工作台——使用手册（上）.pptx', '15页', 0, 0, '2026-01-22 18:12:14');
-INSERT INTO `course_lessons` VALUES (474, 61, '任务33 TikTok主播工作台——使用手册（下）', 'pdf', '/static/uploads/materials/course_7/chapter_61/任务33 TikTok主播工作台——使用手册（下）.pdf', '15页', 0, 0, '2026-01-22 18:12:14');
-INSERT INTO `course_lessons` VALUES (475, 61, '任务33 TikTok主播工作台——使用手册（下）', 'ppt', '/static/uploads/materials/course_7/chapter_61/任务33 TikTok主播工作台——使用手册（下）.pptx', '15页', 0, 0, '2026-01-22 18:12:14');
+INSERT INTO `course_lessons` VALUES (596, 85, '任务1 TikTok Shop平台注册及店铺开通', 'pdf', '/static/uploads/materials/course_7/chapter_85/任务1 TikTok Shop平台注册及店铺开通.pdf', '15页', 0, 0, '2026-01-29 17:31:43');
+INSERT INTO `course_lessons` VALUES (597, 85, '任务1 TikTok Shop平台注册及店铺开通', 'ppt', '/static/uploads/materials/course_7/chapter_85/任务1 TikTok Shop平台注册及店铺开通.pptx', '15页', 0, 0, '2026-01-29 17:31:43');
+INSERT INTO `course_lessons` VALUES (598, 85, '任务2 TikTok Shop平台店铺信息设置', 'pdf', '/static/uploads/materials/course_7/chapter_85/任务2 TikTok Shop平台店铺信息设置.pdf', '15页', 0, 0, '2026-01-29 17:31:43');
+INSERT INTO `course_lessons` VALUES (599, 85, '任务2 TikTok Shop平台店铺信息设置', 'ppt', '/static/uploads/materials/course_7/chapter_85/任务2 TikTok Shop平台店铺信息设置.pptx', '15页', 0, 0, '2026-01-29 17:31:43');
+INSERT INTO `course_lessons` VALUES (600, 86, '任务3 如何在TikTok Shop平台上传商品', 'pdf', '/static/uploads/materials/course_7/chapter_86/任务3 如何在TikTok Shop平台上传商品.pdf', '15页', 0, 0, '2026-01-29 17:31:44');
+INSERT INTO `course_lessons` VALUES (601, 86, '任务3 如何在TikTok Shop平台上传商品', 'ppt', '/static/uploads/materials/course_7/chapter_86/任务3 如何在TikTok Shop平台上传商品.pptx', '15页', 0, 0, '2026-01-29 17:31:44');
+INSERT INTO `course_lessons` VALUES (602, 86, '任务4 学会使用TikTok Shop平台商品管理功能', 'pdf', '/static/uploads/materials/course_7/chapter_86/任务4 学会使用TikTok Shop平台商品管理功能.pdf', '15页', 0, 0, '2026-01-29 17:31:44');
+INSERT INTO `course_lessons` VALUES (603, 86, '任务4 学会使用TikTok Shop平台商品管理功能', 'ppt', '/static/uploads/materials/course_7/chapter_86/任务4 学会使用TikTok Shop平台商品管理功能.pptx', '15页', 0, 0, '2026-01-29 17:31:44');
+INSERT INTO `course_lessons` VALUES (604, 86, '任务5 TikTok Shop平台商品优化基础指南', 'pdf', '/static/uploads/materials/course_7/chapter_86/任务5 TikTok Shop平台商品优化基础指南.pdf', '15页', 0, 0, '2026-01-29 17:31:44');
+INSERT INTO `course_lessons` VALUES (605, 86, '任务5 TikTok Shop平台商品优化基础指南', 'ppt', '/static/uploads/materials/course_7/chapter_86/任务5 TikTok Shop平台商品优化基础指南.pptx', '15页', 0, 0, '2026-01-29 17:31:44');
+INSERT INTO `course_lessons` VALUES (606, 86, '任务6 如何使用TikTok的商品媒体中心(Media Center) ', 'pdf', '/static/uploads/materials/course_7/chapter_86/任务6 如何使用TikTok的商品媒体中心(Media Center) .pdf', '15页', 0, 0, '2026-01-29 17:31:44');
+INSERT INTO `course_lessons` VALUES (607, 86, '任务6 如何使用TikTok的商品媒体中心(Media Center) ', 'ppt', '/static/uploads/materials/course_7/chapter_86/任务6 如何使用TikTok的商品媒体中心(Media Center) .pptx', '15页', 0, 0, '2026-01-29 17:31:44');
+INSERT INTO `course_lessons` VALUES (608, 86, '任务7 学会使用TikTok Shop平台商店分类管理功能', 'pdf', '/static/uploads/materials/course_7/chapter_86/任务7 学会使用TikTok Shop平台商店分类管理功能.pdf', '15页', 0, 0, '2026-01-29 17:31:44');
+INSERT INTO `course_lessons` VALUES (609, 86, '任务7 学会使用TikTok Shop平台商店分类管理功能', 'ppt', '/static/uploads/materials/course_7/chapter_86/任务7 学会使用TikTok Shop平台商店分类管理功能.pptx', '15页', 0, 0, '2026-01-29 17:31:44');
+INSERT INTO `course_lessons` VALUES (610, 87, '任务8 如何设计你的TikTok Shop店铺', 'pdf', '/static/uploads/materials/course_7/chapter_87/任务8 如何设计你的TikTok Shop店铺.pdf', '15页', 0, 0, '2026-01-29 17:31:44');
+INSERT INTO `course_lessons` VALUES (611, 87, '任务8 如何设计你的TikTok Shop店铺', 'ppt', '/static/uploads/materials/course_7/chapter_87/任务8 如何设计你的TikTok Shop店铺.pptx', '15页', 0, 0, '2026-01-29 17:31:44');
+INSERT INTO `course_lessons` VALUES (612, 87, '任务9 TikTok Shop平台商店页面(Store Page) 介绍', 'pdf', '/static/uploads/materials/course_7/chapter_87/任务9 TikTok Shop平台商店页面(Store Page) 介绍.pdf', '15页', 0, 0, '2026-01-29 17:31:44');
+INSERT INTO `course_lessons` VALUES (613, 87, '任务9 TikTok Shop平台商店页面(Store Page) 介绍', 'ppt', '/static/uploads/materials/course_7/chapter_87/任务9 TikTok Shop平台商店页面(Store Page) 介绍.pptx', '15页', 0, 0, '2026-01-29 17:31:44');
+INSERT INTO `course_lessons` VALUES (614, 87, '任务10 TikTok Shop平台商店健康管理(Shop Healthl) 与店铺评分', 'pdf', '/static/uploads/materials/course_7/chapter_87/任务10 TikTok Shop平台商店健康管理(Shop Healthl) 与店铺评分.pdf', '15页', 0, 0, '2026-01-29 17:31:44');
+INSERT INTO `course_lessons` VALUES (615, 87, '任务10 TikTok Shop平台商店健康管理(Shop Healthl) 与店铺评分', 'ppt', '/static/uploads/materials/course_7/chapter_87/任务10 TikTok Shop平台商店健康管理(Shop Healthl) 与店铺评分.pptx', '15页', 0, 0, '2026-01-29 17:31:44');
 
 -- ----------------------------
 -- Table structure for course_tasks
@@ -434,7 +388,7 @@ INSERT INTO `courses` VALUES (3, '【03】AI提示词工程与跨境电商运营
 INSERT INTO `courses` VALUES (4, '【04】跨境AI+短视频运营实战', '/static/uploads/courses/829cd3c3-d1b1-4b0d-8a7e-63c543a9f588.png', '', '2025-12-30 17:11:50', 0, 0, 0, '实训课程');
 INSERT INTO `courses` VALUES (5, '【05】AI+跨境电商数据分析实务', '/static/uploads/courses/0486fddf-3fbc-4907-a7ed-ce9ec8c925c6.png', '', '2025-12-30 17:12:10', 0, 0, 0, '实训课程');
 INSERT INTO `courses` VALUES (6, '【06】Shopee虚拟仿真与实战应用（东盟市场）', '/static/uploads/courses/379724bb-5ef3-47a5-b1b4-84dc219f8f7d.png', 'Shopee电商平台实训课程以典型工作任务驱 ，该课程涵盖卖家开店与经营的完整业务流程。在本课程中，学生将学习如何卖家完成账号注册、业务信息设置、运费模板设置、商品管理、营销活动、广告活动、订单管理等平台任务操作，使学生具备Shopee店铺的开设与营销、客服服务等能力。', '2025-12-30 17:12:33', 20, 510, 50, '实训课程');
-INSERT INTO `courses` VALUES (7, '【07】TikTok课程资源', '/static/uploads/courses/b6051e13-5959-4df2-a9f8-aec3bf727954.png', 'TikTok Shop 电商实训课程以典型工作任务为驱动，该课程涵盖“内容+货架”双域经营的完整业务流程。在本课程中，学生将学习如何完成店铺入驻与定级、商品媒体中心素材制作、短视频挂车推广、联盟营销计划设置、达人建联邀约、广告投流及数据罗盘复盘等平台任务操作，使学生具备 TikTok Shop 内容种草、流量获取及全链路转化等能力。', '2025-12-30 17:12:49', 33, 1200, 60, '实训课程');
+INSERT INTO `courses` VALUES (7, '【07】TikTok课程资源（部分预览）', '/static/uploads/courses/b6051e13-5959-4df2-a9f8-aec3bf727954.png', 'TikTok Shop 电商实训课程以典型工作任务为驱动，该课程涵盖“内容+货架”双域经营的完整业务流程。在本课程中，学生将学习如何完成店铺入驻与定级、商品媒体中心素材制作、短视频挂车推广、联盟营销计划设置、达人建联邀约、广告投流及数据罗盘复盘等平台任务操作，使学生具备 TikTok Shop 内容种草、流量获取及全链路转化等能力。', '2025-12-30 17:12:49', 33, 1200, 60, '实训课程');
 INSERT INTO `courses` VALUES (8, '【08】东盟语种跨境直播实战', '/static/uploads/courses/e7c2c671-aa9b-4e1f-80d4-b0ff47e8c927.png', '', '2025-12-30 17:13:34', 0, 0, 0, '实训课程');
 
 -- ----------------------------
@@ -970,7 +924,7 @@ CREATE TABLE `teacher_course_access`  (
   INDEX `fk_tca_course`(`course_id` ASC) USING BTREE,
   CONSTRAINT `fk_tca_course` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `fk_tca_teacher` FOREIGN KEY (`teacher_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 15 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '教师课程权限表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 20 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '教师课程权限表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of teacher_course_access
@@ -988,6 +942,11 @@ INSERT INTO `teacher_course_access` VALUES (11, 55, 6, '2026-01-19 11:27:58');
 INSERT INTO `teacher_course_access` VALUES (12, 2, 7, '2026-01-19 11:30:54');
 INSERT INTO `teacher_course_access` VALUES (13, 55, 5, '2026-01-19 11:30:54');
 INSERT INTO `teacher_course_access` VALUES (14, 55, 7, '2026-01-19 11:30:54');
+INSERT INTO `teacher_course_access` VALUES (15, 109, 7, '2026-01-29 16:42:03');
+INSERT INTO `teacher_course_access` VALUES (16, 108, 7, '2026-01-29 16:42:03');
+INSERT INTO `teacher_course_access` VALUES (17, 107, 7, '2026-01-29 16:42:03');
+INSERT INTO `teacher_course_access` VALUES (18, 106, 7, '2026-01-29 16:42:03');
+INSERT INTO `teacher_course_access` VALUES (19, 110, 7, '2026-01-29 16:42:03');
 
 -- ----------------------------
 -- Table structure for teacher_profiles
@@ -1037,14 +996,14 @@ CREATE TABLE `users`  (
   UNIQUE INDEX `ix_users_username`(`username` ASC) USING BTREE,
   UNIQUE INDEX `comfyui_port`(`comfyui_port` ASC) USING BTREE,
   INDEX `ix_users_id`(`id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 106 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 111 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of users
 -- ----------------------------
-INSERT INTO `users` VALUES (1, '18250636865', '$2b$12$DM8zYSLV9Dt.jKfG4jykaetq3F4jmwGcSF6hJBaGDJBWQOc3ol9.y', 'student', 1, '2025-12-24 11:26:48', '2026-01-22 17:23:28', 8189, '张十一', '22014082032');
-INSERT INTO `users` VALUES (2, '18250636866', '$2b$12$BbkngZyC3IaWM.cWcZKmauZxsyO3VZTe5P2mRqrbc75CC13xrMqIi', 'teacher', 1, '2025-12-24 11:27:14', '2026-01-23 11:33:12', NULL, NULL, NULL);
-INSERT INTO `users` VALUES (4, '18250636867', '$2b$12$mVae3WIBNklVoxfL7qkLQ.ymZ9vRDq6vbwB2Za0cTStB1FO1DeYoa', 'teacher', 1, '2025-12-24 15:04:05', '2026-01-20 10:04:33', NULL, NULL, NULL);
+INSERT INTO `users` VALUES (1, '18250636865', '$2b$12$DM8zYSLV9Dt.jKfG4jykaetq3F4jmwGcSF6hJBaGDJBWQOc3ol9.y', 'student', 1, '2025-12-24 11:26:48', '2026-01-28 16:55:40', 8189, '张十一', '22014082032');
+INSERT INTO `users` VALUES (2, '18250636866', '$2b$12$BbkngZyC3IaWM.cWcZKmauZxsyO3VZTe5P2mRqrbc75CC13xrMqIi', 'teacher', 1, '2025-12-24 11:27:14', '2026-01-29 17:36:06', NULL, NULL, NULL);
+INSERT INTO `users` VALUES (4, '18250636867', '$2b$12$mVae3WIBNklVoxfL7qkLQ.ymZ9vRDq6vbwB2Za0cTStB1FO1DeYoa', 'teacher', 1, '2025-12-24 15:04:05', '2026-01-29 16:34:17', NULL, NULL, NULL);
 INSERT INTO `users` VALUES (5, '18250636868', '$2b$12$LExgic9UmvpwwLtG5Gufs.08MAc8wx7EfZdv9CjYzn3QiLJnOUZdq', 'student', 1, '2025-12-24 17:26:36', '2026-01-22 13:48:48', 8190, '李四', '22014082034');
 INSERT INTO `users` VALUES (6, '18250636969', '$2b$12$2bR.Xy.PQzAQDApnmWxdSeC.bIEs0C1kklBR751IoX4/tNFuUCyt2', 'student', 1, '2025-12-25 16:30:01', '2025-12-25 16:47:31', 8191, '王五', '22014082035');
 INSERT INTO `users` VALUES (7, '18250636870', '$2b$12$JZUcksLjg6lZfnipDk.rS.Bqwgy4cH.dqmkuUgsvhQCSyw.c0wq9u', 'student', 1, '2025-12-25 16:34:04', '2026-01-22 13:49:10', 8192, '赵六', '22014082036');
@@ -1146,5 +1105,10 @@ INSERT INTO `users` VALUES (102, '13656560047', '$2b$12$nuPtKM5U2GMMQ/2Mg19Ks.6M
 INSERT INTO `users` VALUES (103, '13656560048', '$2b$12$pI3jtMf1AWt9jYu13xBbkO7KdTTuLJykicOmjHO9pDJBvVjwwdJse', 'student', 1, '2026-01-19 10:26:38', NULL, NULL, '48', '20250119048');
 INSERT INTO `users` VALUES (104, '13656560049', '$2b$12$QfpdiWbXzD3CUn4QWtcipOrLoVSYXtDy3heiRiXlj/l9LdFIAj5JG', 'student', 1, '2026-01-19 10:26:39', NULL, NULL, '49', '20250119049');
 INSERT INTO `users` VALUES (105, '13656560050', '$2b$12$3AZcczH2eUQDQQCqETCH1OEfyYOhh7IK1iEPS33oLWbM8SopXp5gi', 'student', 1, '2026-01-19 10:26:39', '2026-01-19 13:56:35', NULL, '50', '20250119050');
+INSERT INTO `users` VALUES (106, '18666745285', '$2b$12$n.Jgi/lrKKrhkPpvOwLWd.mMZeKiPCojbAsSnCCoF.VdSTrCbLjZW', 'teacher', 1, '2026-01-29 16:38:02', '2026-01-29 17:13:46', NULL, '张亚岚', NULL);
+INSERT INTO `users` VALUES (107, '17620921355', '$2b$12$.t3aDY0iFVg/tkQlJHiwBOXavIOdNL4GVHSmdMdHs2AtsipWWMvYG', 'teacher', 1, '2026-01-29 16:38:27', '2026-01-29 16:52:22', NULL, '陈蓓蓓', NULL);
+INSERT INTO `users` VALUES (108, '15920165282', '$2b$12$1fjq8bSYDtxs1zsJIg2lFu4ldMEZ2vAZ9Fi3p4c7MXC9BbEbco4Rq', 'teacher', 1, '2026-01-29 16:38:44', '2026-01-29 17:35:05', NULL, '隆婕', NULL);
+INSERT INTO `users` VALUES (109, '14748286778', '$2b$12$/qpN3qIOOO5RoCxXQOm2yOTI508DCNMjoyyxt71NWNakTluBUu3YS', 'teacher', 1, '2026-01-29 16:38:59', NULL, NULL, '苏小娟', NULL);
+INSERT INTO `users` VALUES (110, '18926277902', '$2b$12$VIDIXbFwcTuV8a3.LEgooescaEJZ4F5KRcYkqWgdO0g/SAS2TAbra', 'teacher', 1, '2026-01-29 16:39:17', '2026-01-29 16:42:09', NULL, '刘东燕', NULL);
 
 SET FOREIGN_KEY_CHECKS = 1;

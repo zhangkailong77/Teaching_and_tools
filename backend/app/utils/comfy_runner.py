@@ -2,16 +2,17 @@
 
 import paramiko
 import time
-import socket # 引入 socket 用于捕获底层网络错误
+import socket
+import os
 
-# ... (配置部分保持不变) ...
-GPU_HOST = "192.168.150.2"
-GPU_PORT = 22
-GPU_USER = "yzcube"
-GPU_PASSWORD = "Yanzhi2025."
-BASE_PATH = "/home/yzcube/cube/comfyui-test/ComfyUI-test"
-CONDA_INIT_SCRIPT = "/home/yzcube/anaconda3/etc/profile.d/conda.sh"
-CONDA_ENV_NAME = "comfyui"
+# 从环境变量读取配置
+GPU_HOST = os.getenv("COMFY_GPU_HOST", "192.168.150.2")
+GPU_PORT = int(os.getenv("COMFY_GPU_SSH_PORT", "22"))
+GPU_USER = os.getenv("COMFY_GPU_USER", "yzcube")
+GPU_PASSWORD = os.getenv("COMFY_GPU_PASSWORD", "Yanzhi2025.")
+BASE_PATH = os.getenv("COMFY_BASE_PATH", "/home/yzcube/cube/comfyui-test/ComfyUI-test")
+CONDA_INIT_SCRIPT = os.getenv("COMFY_CONDA_INIT_SCRIPT", "/home/yzcube/anaconda3/etc/profile.d/conda.sh")
+CONDA_ENV_NAME = os.getenv("COMFY_CONDA_ENV_NAME", "comfyui")
 
 def start_comfyui_remote(username: str, port: int):
     print(f"========== [DEBUG] 开始流程: {username} (端口: {port}) ==========")

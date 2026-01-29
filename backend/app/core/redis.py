@@ -214,6 +214,32 @@ def decr_comfy_processing_count() -> int:
         return 0
 
 
+def try_acquire_slot() -> bool:
+    """
+    原子性地尝试获取一个执行槽位
+    返回 True 表示获取成功，可以执行
+    返回 False 表示槽位已满，需要排队
+    """
+    try:
+        max_concurrent = get_comfy_max_concurrent()
+        # 使用 Lua 脚本原子操作：检查当前值，如果 < max_concurrent 则 incr
+        lua_script = """
+        local current = tonumber(redis.call('GET', KEYS[1]) or '0')
+        local max = tonumber(ARGV[1])
+        if current < max then
+            redis.call('INCR', KEYS[1])
+            return 1
+        else
+            return 0
+        end
+        """
+        result = redis_client.eval(lua_script, 1, "comfy:processing_count", max_concurrent)
+        return result == 1
+    except Exception as e:
+        logger.error(f"[ComfyUI Queue] 获取槽位失败: {e}")
+        return False
+
+
 def get_comfy_max_concurrent() -> int:
     """获取最大并发数（从配置读取）"""
     try:

@@ -125,8 +125,11 @@ const goBack = () => {
 // iframe加载完成
 const onIframeLoad = () => {
   console.log('[ComfyUI Proxy] iframe 加载完成');
-  // 队列脚本应该已经通过后端自动注入
-  // 这里可以做一些额外的验证或设置
+
+  // 尝试注入排队脚本到iframe中
+  injectQueueScriptToIframe();
+
+  // 设置iframe窗口变量
   try {
     if (comfyIframe.value && comfyIframe.value.contentWindow) {
       (comfyIframe.value.contentWindow as any).COMFY_USERNAME = userStore.username;
@@ -135,6 +138,41 @@ const onIframeLoad = () => {
     }
   } catch (e) {
     console.warn('[ComfyUI Proxy] 无法设置iframe变量（跨域）:', e);
+  }
+};
+
+// 注入排队脚本到iframe
+const injectQueueScriptToIframe = () => {
+  try {
+    const iframe = comfyIframe.value;
+    if (!iframe || !iframe.contentDocument) {
+      console.warn('[ComfyUI Proxy] 无法访问iframe文档');
+      return;
+    }
+
+    const doc = iframe.contentDocument;
+
+    // 检查是否已注入
+    if (doc.querySelector('script[src*="comfyui-queue.js"]')) {
+      console.log('[ComfyUI Proxy] 脚本已存在，跳过注入');
+      return;
+    }
+
+    // 创建并注入脚本
+    const script = doc.createElement('script');
+    script.src = '/static/js/comfyui-queue.js';
+    script.async = false;
+    script.onload = () => {
+      console.log('[ComfyUI Proxy] 脚本注入成功');
+    };
+    script.onerror = () => {
+      console.error('[ComfyUI Proxy] 脚本加载失败');
+    };
+
+    doc.head.appendChild(script);
+    console.log('[ComfyUI Proxy] 正在注入排队脚本...');
+  } catch (e) {
+    console.warn('[ComfyUI Proxy] 注入脚本失败:', e);
   }
 };
 

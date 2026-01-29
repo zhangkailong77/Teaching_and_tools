@@ -16,7 +16,7 @@ async def upload_image_endpoint(
     
     # 3. 确定子目录
     # 为了安全，只允许特定的子目录，防止路径遍历攻击
-    allowed_folders = ["avatars", "courses", "common"]
+    allowed_folders = ["avatars", "courses", "common", "materials"]
     folder = type if type in allowed_folders else "common"
     
     # 4. 调用工具类保存 (以后换 OSS 只需要改这里调用的函数)

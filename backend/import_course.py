@@ -121,7 +121,7 @@ def import_course(db: Session, course_id: int):
             src_file = os.path.join(chapter_path, f)
             dst_file = os.path.join(target_dir_abs, f)
             shutil.copy(src_file, dst_file)
-            
+
             file_url = f"/{TARGET_ROOT}/{target_dir_rel}/{f}".replace("\\", "/")
 
             # 创建课时记录

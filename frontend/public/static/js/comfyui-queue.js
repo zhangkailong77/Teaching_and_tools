@@ -29,6 +29,14 @@
     let currentTaskId = null;
     let pollTimer = null;
     let pollCount = 0;
+    let isPageRefreshing = false; // 标记：页面是否刚刚刷新（禁用拦截）
+
+    // ==================== 从URL获取用户名 ====================
+    function getUsernameFromUrl() {
+        // URL格式: /comfyui/{username}/{port}/
+        const match = window.location.pathname.match(/^\/comfyui\/([^\/]+)\/\d+\/?/);
+        return match ? match[1] : null;
+    }
 
     // ==================== URL重写函数 ====================
     function rewriteUrl(url) {
@@ -45,7 +53,11 @@
         }
 
         // 绝对路径重写：/api/xxx -> /api/v1/comfy_proxy/view/{username}/api/xxx
-        const username = CONFIG.PROXY_USERNAME || window.COMFY_USERNAME;
+        // 优先级：CONFIG.PROXY_USERNAME > window.COMFY_USERNAME > URL路径
+        let username = CONFIG.PROXY_USERNAME || window.COMFY_USERNAME;
+        if (!username) {
+            username = getUsernameFromUrl();
+        }
         if (!username) {
             console.warn('[ComfyUI Queue] 未找到用户名，无法重写URL');
             return url;
@@ -67,19 +79,25 @@
     const originalFetch = window.fetch;
 
     window.fetch = function(url, options) {
-        // 重写URL
-        const rewrittenUrl = rewriteUrl(url);
-
-        // 只拦截ComfyUI的 /prompt POST请求
+        // 只拦截 POST /prompt 请求（工作流执行）
         const isPromptRequest =
-            typeof rewrittenUrl === 'string' &&
-            (rewrittenUrl.endsWith('/prompt') || rewrittenUrl === '/prompt') &&
+            typeof url === 'string' &&
+            (url.endsWith('/prompt') || url === '/prompt') &&
             options &&
             options.method === 'POST';
 
-        if (!isPromptRequest) {
-            return originalFetch(rewrittenUrl, options);
+        // 如果是 POST /prompt 请求（用户主动点击），重置刷新标记
+        if (isPromptRequest) {
+            isPageRefreshing = false;
         }
+
+        if (!isPromptRequest) {
+            // 非 /prompt 请求，直接发送原始请求（走 Nginx 代理）
+            return originalFetch(url, options);
+        }
+
+        // 重写URL - 只对 /prompt 请求做处理
+        const rewrittenUrl = rewriteUrl(url);
 
         console.log('[ComfyUI Queue] 拦截到工作流执行请求');
 
@@ -108,20 +126,48 @@
 
             if (data.status === 'queued') {
                 // 进入排队
-                console.log('[ComfyUI Queue] 进入排队:', data);
+                console.log('%c[ComfyUI Queue] ════════════════════════════════', 'color: #f59e0b; font-weight: bold');
+                console.log('%c[ComfyUI Queue] 📋 进入排队队列', 'color: #f59e0b; font-size: 14px');
+                console.log('%c[ComfyUI Queue] ─────────────────────────────────', 'color: #f59e0b');
+                console.log(`%c[ComfyUI Queue] 👤 用户: ${userInfo.username}`, 'color: #3b82f6');
+                console.log(`%c[ComfyUI Queue] 🆔 任务ID: ${data.task_id}`, 'color: #3b82f6');
+                console.log(`%c[ComfyUI Queue] 🔢 排队位置: 前方还有 ${data.position} 人`, 'color: #10b981; font-size: 16px; font-weight: bold');
+                console.log(`%c[ComfyUI Queue] 💻 最大并发: ${data.max_concurrent} 人`, 'color: #6366f1');
+                console.log('%c[ComfyUI Queue] ════════════════════════════════', 'color: #f59e0b; font-weight: bold');
+                console.log('%c[ComfyUI Queue] ⏳ 等待执行中...', 'color: #f59e0b');
+                console.log('');
+
                 showQueueNotification(data);
                 currentTaskId = data.task_id;
                 startPolling(data.task_id);
-                return mockComfyUIResponse(data);
+                // 返回 Response 对象，避免 u.json is not a function 错误
+                return new Response(JSON.stringify({
+                    prompt_id: `queue_${data.task_id}`,
+                    number: Math.floor(Math.random() * 1000000),
+                    queue_info: data
+                }), {
+                    status: 200,
+                    headers: { 'Content-Type': 'application/json' }
+                });
             } else if (data.status === 'completed') {
                 // 直接执行完成
                 console.log('[ComfyUI Queue] 执行完成:', data);
                 showNotification('success', '工作流执行完成！');
                 hideQueueNotification();
-                return data.result || data;
+                // 返回 ComfyUI 格式的 Response 对象
+                return new Response(JSON.stringify({
+                    prompt_id: data.result?.prompt_id || `completed_${Date.now()}`,
+                    number: data.result?.number || 0
+                }), {
+                    status: 200,
+                    headers: { 'Content-Type': 'application/json' }
+                });
             } else {
                 // 其他状态
-                return data;
+                return new Response(JSON.stringify(data), {
+                    status: 200,
+                    headers: { 'Content-Type': 'application/json' }
+                });
             }
         })
         .catch(error => {
@@ -228,6 +274,7 @@
 
         if (pollCount > CONFIG.MAX_POLL_RETRIES) {
             stopPolling();
+            console.log('%c[ComfyUI Queue] ❌ 等待超时', 'color: #ef4444; font-weight: bold');
             showNotification('error', '等待超时，请刷新页面查看结果');
             hideQueueNotification();
             return;
@@ -237,28 +284,67 @@
             const response = await originalFetch(`${CONFIG.API_BASE_URL}/comfy_proxy/status/${taskId}`);
             const data = await response.json();
 
-            console.log('[ComfyUI Queue] 任务状态:', data);
+            console.log('[ComfyUI Queue] 轮询状态:', data.status);
 
-            if (data.status === 'processing') {
+            // 调试：检查状态值
+            if (data.status === 'queued') {
+                console.log('[ComfyUI Queue] 进入 queued 分支');
+                // 仍在排队
+                console.log(`%c[ComfyUI Queue] 🔄 轮询 #${pollCount} - 等待中... 前方还有 ${data.position} 人`, 'color: #6b7280');
+            } else if (data.status === 'processing') {
+                console.log('[ComfyUI Queue] 进入 processing 分支');
                 // 开始处理
+                console.log('');
+                console.log('%c[ComfyUI Queue] ════════════════════════════════', 'color: #10b981; font-weight: bold');
+                console.log('%c[ComfyUI Queue] ✅ 开始执行工作流！', 'color: #10b981; font-size: 14px; font-weight: bold');
+                console.log('%c[ComfyUI Queue] ─────────────────────────────────', 'color: #10b981');
+                console.log(`%c[ComfyUI Queue] ⏱️ 等待时间: ${pollCount * 2} 秒`, 'color: #3b82f6');
+                console.log('%c[ComfyUI Queue] ════════════════════════════════', 'color: #10b981; font-weight: bold');
+                console.log('');
+
                 hideQueueNotification();
                 showProcessingNotification();
             } else if (data.status === 'completed') {
+                console.log('[ComfyUI Queue] 进入 completed 分支');
                 // 完成
                 stopPolling();
-                hideAllNotifications();
+                console.log('');
+                console.log('%c[ComfyUI Queue] ════════════════════════════════', 'color: #10b981; font-weight: bold');
+                console.log('%c[ComfyUI Queue] 🎉 执行完成！', 'color: #10b981; font-size: 16px; font-weight: bold');
+                console.log('%c[ComfyUI Queue] ─────────────────────────────────', 'color: #10b981');
+                console.log(`%c[ComfyUI Queue] 🆔 prompt_id: ${data.result?.prompt_id}`, 'color: #6366f1');
+                console.log(`%c[ComfyUI Queue] 🔢 任务序号: ${data.result?.number}`, 'color: #6366f1');
+                console.log(`%c[ComfyUI Queue] ⏱️ 总耗时: ${pollCount * 2} 秒`, 'color: #3b82f6');
+                console.log('%c[ComfyUI Queue] ════════════════════════════════', 'color: #10b981; font-weight: bold');
+                console.log('');
+
+                // 关闭所有通知
+                console.log('[ComfyUI Queue] 准备关闭通知');
+                console.log('[ComfyUI Queue] 查找 queue-notification:', document.getElementById('comfyui-queue-notification'));
+                console.log('[ComfyUI Queue] 查找 processing-notification:', document.getElementById('comfyui-processing-notification'));
+                hideQueueNotification();
+                hideProcessingNotification();
+                console.log('[ComfyUI Queue] 关闭通知完成');
+                // 显示执行完成通知
                 showNotification('success', '工作流执行完成！');
-                // 延迟刷新页面以获取结果
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1000);
+                // 不刷新页面，让用户自己查看结果
             } else if (data.status === 'failed') {
+                console.log('[ComfyUI Queue] 进入 failed 分支');
                 // 失败
                 stopPolling();
+                console.log('');
+                console.log('%c[ComfyUI Queue] ════════════════════════════════', 'color: #ef4444; font-weight: bold');
+                console.log('%c[ComfyUI Queue] ❌ 执行失败', 'color: #ef4444; font-size: 14px; font-weight: bold');
+                console.log('%c[ComfyUI Queue] ─────────────────────────────────', 'color: #ef4444');
+                console.log(`%c[ComfyUI Queue] 错误: ${data.result?.error || '未知错误'}`, 'color: #ef4444');
+                console.log('%c[ComfyUI Queue] ════════════════════════════════', 'color: #ef4444; font-weight: bold');
+                console.log('');
+
                 hideAllNotifications();
                 showNotification('error', '执行失败: ' + (data.result?.error || '未知错误'));
+            } else {
+                console.log('[ComfyUI Queue] 进入未知分支, status:', data.status);
             }
-            // queued状态继续等待
         } catch (error) {
             console.error('[ComfyUI Queue] 轮询失败:', error);
         }
@@ -289,6 +375,11 @@
      * 显示处理中通知
      */
     function showProcessingNotification() {
+        // 【核心修复】如果已经存在提示框，直接返回，不要再创建新的
+        if (document.getElementById('comfyui-processing-notification')) {
+            return;
+        }
+
         const notification = createElement('div', 'comfyui-processing-notification', {
             innerHTML: `
                 <div class="comfyui-notification-header">🔄 正在执行</div>
@@ -336,8 +427,8 @@
      * 隐藏处理中通知
      */
     function hideProcessingNotification() {
-        const el = document.getElementById('comfyui-processing-notification');
-        if (el) el.remove();
+        const els = document.querySelectorAll('#comfyui-processing-notification');
+        els.forEach(el => el.remove());
     }
 
     /**

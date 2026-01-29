@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 import httpx
 import asyncio
 import logging
+import re
 
 from app.api import deps
 from app.models.user import User
@@ -28,6 +29,7 @@ from app.core.redis import (
     get_comfy_max_concurrent,
     get_comfy_queue_length,
     pop_comfy_queue,
+    try_acquire_slot,
 )
 
 logger = logging.getLogger(__name__)
@@ -65,9 +67,9 @@ async def execute_workflow(
 
     logger.info(f"[ComfyUI Queue] 用户 {username} 请求执行工作流，当前并发: {processing_count}/{max_concurrent}")
 
-    # 检查是否超过并发限制
-    if processing_count >= max_concurrent:
-        # 加入队列
+    # 使用原子操作尝试获取执行槽位
+    if not try_acquire_slot():
+        # 槽位已满，加入队列
         task_id = enqueue_to_comfy_queue(username, prompt_data, port)
         queue_position = get_comfy_queue_position(task_id)
         queue_length = get_comfy_queue_length()
@@ -84,7 +86,7 @@ async def execute_workflow(
             "message": f"系统繁忙，前方还有 {queue_position} 人排队"
         }
 
-    # 执行工作流
+    # 获取槽位成功，执行工作流
     return await execute_workflow_direct(comfy_url, prompt_data, username)
 
 
@@ -95,32 +97,78 @@ async def execute_workflow_direct(
     task_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
-    直接执行ComfyUI工作流
+    直接执行ComfyUI工作流（同步等待完成）
+    注意：processing_count 的 incr/decr 由调用方使用 try_acquire_slot() 原子操作管理
     """
     try:
-        incr_comfy_processing_count()
-        logger.info(f"[ComfyUI Queue] 开始执行工作流: {username}, URL: {comfy_url}")
+        # 提取端口和主机
+        # comfy_url 格式: http://192.168.150.2:8189/prompt
+        # 提取 host:port 部分
+        prompt_result_url = comfy_url.replace("/prompt", "")
+        # 从 URL 中提取主机和端口
+        match = re.match(r"http://([^:]+):(\d+)", prompt_result_url)
+        if not match:
+            raise ValueError(f"无法解析 ComfyUI URL: {comfy_url}")
+        gpu_host = match.group(1)
+        gpu_port = match.group(2)
+
+        logger.info(f"[ComfyUI Queue] 开始执行工作流: {username}, GPU: {gpu_host}:{gpu_port}")
 
         # 设置超时为10分钟（ComfyUI工作流可能执行较长时间）
         timeout = httpx.Timeout(600.0, connect=30.0)
 
         async with httpx.AsyncClient(timeout=timeout) as client:
+            # 1. 提交工作流
             response = await client.post(comfy_url, json=prompt_data)
             response.raise_for_status()
-            result = response.json()
+            prompt_result = response.json()
+            prompt_id = prompt_result.get("prompt_id")
 
-            logger.info(f"[ComfyUI Queue] 工作流执行完成: {username}")
+            logger.info(f"[ComfyUI Queue] 工作流已提交，等待完成: {username}, prompt_id: {prompt_id}")
 
-            # 更新任务状态
+            # 2. 轮询等待工作流完成
+            history_url = f"http://{gpu_host}:{gpu_port}/history/{prompt_id}"
+            poll_interval = 1.0  # 每1秒查询一次
+            max_poll_time = 600.0  # 最多等待10分钟
+            elapsed = 0.0
+
+            while elapsed < max_poll_time:
+                await asyncio.sleep(poll_interval)
+                elapsed += poll_interval
+
+                # 查询历史记录
+                history_response = await client.get(history_url)
+                if history_response.status_code == 200:
+                    history = history_response.json()
+                    if prompt_id in history:
+                        prompt_outputs = history[prompt_id].get("outputs", {})
+                        # 检查是否有输出（表示完成）
+                        has_output = False
+                        for node_id, output in prompt_outputs.items():
+                            if "images" in output and output["images"]:
+                                has_output = True
+                                break
+
+                        if has_output:
+                            logger.info(f"[ComfyUI Queue] 工作流执行完成: {username}, prompt_id: {prompt_id}")
+                            # 更新任务状态
+                            if task_id:
+                                update_comfy_task_status(task_id, "completed", prompt_result)
+
+                            return {
+                                "status": "completed",
+                                "result": prompt_result,
+                                "prompt_id": prompt_id,
+                                "number": prompt_result.get("number"),
+                            }
+
+                # 继续轮询...
+
+            # 超时
+            logger.error(f"[ComfyUI Queue] 工作流执行超时: {username}")
             if task_id:
-                update_comfy_task_status(task_id, "completed", result)
-
-            return {
-                "status": "completed",
-                "result": result,
-                "prompt_id": result.get("prompt_id"),
-                "number": result.get("number"),
-            }
+                update_comfy_task_status(task_id, "failed", {"error": "执行超时"})
+            raise HTTPException(status_code=504, detail="工作流执行超时")
 
     except httpx.TimeoutException:
         logger.error(f"[ComfyUI Queue] 工作流执行超时: {username}")
@@ -151,11 +199,17 @@ async def process_next_task():
     processing_count = get_comfy_processing_count()
 
     if processing_count >= max_concurrent:
-        return  # 还是没有空位
+        return  # 没有空位
+
+    # 尝试获取槽位
+    if not try_acquire_slot():
+        return  # 获取失败，继续等待
 
     # 从队列取出一个任务
     task = pop_comfy_queue()
     if not task:
+        # 没有任务，释放槽位
+        decr_comfy_processing_count()
         return  # 队列为空
 
     task_id = task.get("task_id")
@@ -193,6 +247,11 @@ def get_task_status(task_id: str):
     status = get_comfy_task_status(task_id)
     if not status:
         raise HTTPException(status_code=404, detail="任务不存在或已过期")
+
+    # 如果是排队中，添加 position 字段
+    if status.get("status") == "queued":
+        status["position"] = get_comfy_queue_position(task_id)
+
     return status
 
 
@@ -240,9 +299,9 @@ async def test_execute_workflow(
 
     logger.info(f"[ComfyUI Queue TEST] 用户 {username} 请求执行，当前并发: {processing_count}/{max_concurrent}")
 
-    # 检查是否超过并发限制
-    if processing_count >= max_concurrent:
-        # 加入队列
+    # 使用原子操作尝试获取执行槽位
+    if not try_acquire_slot():
+        # 槽位已满，加入队列
         task_id = enqueue_to_comfy_queue(username, {"test": True}, user.comfyui_port)
         queue_position = get_comfy_queue_position(task_id)
         queue_length = get_comfy_queue_length()
@@ -259,9 +318,7 @@ async def test_execute_workflow(
             "message": f"系统繁忙，前方还有 {queue_position} 人排队"
         }
 
-    # 模拟执行（在后台异步进行）
-    incr_comfy_processing_count()
-
+    # 获取槽位成功，模拟执行（在后台异步进行）
     async def mock_execution():
         try:
             logger.info(f"[ComfyUI Queue TEST] 开始模拟执行，用户: {username}, 延迟: {mock_delay}秒")
