@@ -75,4 +75,51 @@ python create_teacher.py --file teachers.xlsx
 
 ---
 
+### 问题4：PDF断点续读位置不准确
+
+**问题描述：**
+学生点击"继续学习"后，滚动位置恢复不准确。例如退出时记录77%，恢复时却显示81%。
+
+**原因分析：**
+- PDF组件使用懒加载，初始渲染时 `scrollHeight` 只有约2000px
+- 随着滚动，懒加载触发更多页面渲染，`scrollHeight` 增长到12000+px
+- 之前的实现在PDF首次加载后就立即滚动，此时 `scrollHeight` 尚未稳定
+- 导致计算出的滚动位置偏小
+
+**解决方案：**
+采用监控滚动高度稳定的策略：
+1. 不再立即滚动，等待PDF完全懒加载
+2. 使用 `setInterval` 每200ms检测 `scrollHeight` 是否稳定
+3. 连续3次检测值相同（600ms），认为渲染完成
+4. 此时再根据最终 `scrollContentHeight` 计算正确的滚动位置
+
+**关键代码：**
+```typescript
+// 每隔200ms检查scrollHeight是否稳定
+let stableCount = 0;
+const CHECK_INTERVAL = 200;
+const STABLE_THRESHOLD = 3;
+
+const checkAndRestore = () => {
+  const currentScrollHeight = container.scrollHeight;
+
+  if (currentScrollHeight === lastScrollHeight) {
+    stableCount++;
+    if (stableCount >= STABLE_THRESHOLD && scrollContentHeight > 0) {
+      // 此时 scrollHeight 已稳定，可以正确计算滚动位置
+      const targetScrollTop = Math.round((targetPercent / 100) * scrollContentHeight);
+      container.scrollTop = targetScrollTop;
+    }
+  } else {
+    stableCount = 0;
+    lastScrollHeight = currentScrollHeight;
+  }
+};
+```
+
+**涉及文件：**
+- `frontend/src/views/dashboard/student/course-detail.vue`
+
+---
+
 > 记录日期：2026-01-30

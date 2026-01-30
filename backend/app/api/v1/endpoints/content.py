@@ -546,28 +546,48 @@ def update_student_progress(
     if current_user.role != "student":
         raise HTTPException(status_code=403, detail="权限不足")
 
-    # 查找现有记录
-    record = db.query(StudentLearningProgress).filter(
-        StudentLearningProgress.student_id == current_user.id,
-        StudentLearningProgress.lesson_id == progress_in.lesson_id
-    ).first()
+    # 使用 merge 或 on_conflict 处理
+    try:
+        # 查找现有记录
+        record = db.query(StudentLearningProgress).filter(
+            StudentLearningProgress.student_id == current_user.id,
+            StudentLearningProgress.lesson_id == progress_in.lesson_id
+        ).first()
 
-    if not record:
-        # 新增
-        record = StudentLearningProgress(
-            student_id=current_user.id,
-            lesson_id=progress_in.lesson_id,
-            status=progress_in.status,
-            last_position=progress_in.last_position
-        )
-        db.add(record)
-    else:
-        # 更新逻辑：状态只能往前走 (比如已完成不能变回进行中)
-        if progress_in.status > record.status:
-            record.status = progress_in.status
-        
-        # 页码总是更新为最新的
-        record.last_position = progress_in.last_position
+        if not record:
+            # 新增
+            record = StudentLearningProgress(
+                student_id=current_user.id,
+                lesson_id=progress_in.lesson_id,
+                status=progress_in.status,
+                last_position=progress_in.last_position
+            )
+            db.add(record)
+        else:
+            # 更新逻辑：状态只能往前走 (比如已完成不能变回进行中)
+            if progress_in.status > record.status:
+                record.status = progress_in.status
 
-    db.commit()
-    return {"message": "进度已保存"}
+            # 页码总是更新为最新的
+            record.last_position = progress_in.last_position
+
+        db.commit()
+        return {"message": "进度已保存"}
+
+    except Exception as e:
+        db.rollback()
+        # 如果是因为唯一键冲突，先更新再提交
+        if "Duplicate entry" in str(e):
+            record = db.query(StudentLearningProgress).filter(
+                StudentLearningProgress.student_id == current_user.id,
+                StudentLearningProgress.lesson_id == progress_in.lesson_id
+            ).first()
+
+            if record:
+                if progress_in.status > record.status:
+                    record.status = progress_in.status
+                record.last_position = progress_in.last_position
+                db.commit()
+                return {"message": "进度已保存（已处理并发）"}
+
+        raise e

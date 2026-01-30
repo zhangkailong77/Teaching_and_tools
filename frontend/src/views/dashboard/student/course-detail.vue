@@ -389,6 +389,90 @@ const scale = ref(1.0);
 
 const scrollContainer = ref<HTMLElement | null>(null);
 
+// 断点续读：待恢复的滚动位置
+const pendingRestorePosition = ref<number | null>(null);
+let isRestoringPosition = false; // 是否正在恢复位置（恢复期间禁止保存）
+let pdfRenderMonitorTimer: any = null; // PDF渲染监控定时器
+let lastScrollHeight = 0; // 上一次检测的scrollHeight
+
+// PDF 加载完成回调
+const handlePdfLoaded = (doc: any) => {
+  pdfPageCount.value = doc.numPages || 0;
+  console.log(`PDF加载完成，共 ${pdfPageCount.value} 页`);
+
+  if (pendingRestorePosition.value === null) return;
+
+  // 新策略：等待PDF完全渲染后再滚动，而不是立即滚动
+  // 监控scrollHeight变化，当稳定下来（不再增长）时再滚动
+
+  const el = scrollContainer.value;
+  if (!el) return;
+
+  // 重置状态
+  lastScrollHeight = el.scrollHeight;
+  isRestoringPosition = true;
+
+  // 停止之前的监控定时器（如果有）
+  if (pdfRenderMonitorTimer) {
+    clearInterval(pdfRenderMonitorTimer);
+    pdfRenderMonitorTimer = null;
+  }
+
+  // 每隔200ms检查scrollHeight是否稳定
+  // 如果连续3次检查（600ms）scrollHeight不变，认为渲染完成
+  let stableCount = 0;
+  const CHECK_INTERVAL = 200; // 间隔更长的检查周期
+  const STABLE_THRESHOLD = 3; // 连续3次稳定
+
+  const checkAndRestore = () => {
+    const container = scrollContainer.value;
+    if (!container || pendingRestorePosition.value === null) {
+      clearInterval(pdfRenderMonitorTimer);
+      return;
+    }
+
+    const currentScrollHeight = container.scrollHeight;
+    const clientHeight = container.clientHeight;
+    const scrollContentHeight = currentScrollHeight - clientHeight;
+
+    // 只在状态变化时输出日志，避免刷屏
+    if (currentScrollHeight !== lastScrollHeight) {
+      console.log(`PDF渲染中: scrollHeight=${currentScrollHeight}`);
+      stableCount = 0;
+      lastScrollHeight = currentScrollHeight;
+    } else {
+      stableCount++;
+      if (stableCount === 1) {
+        console.log(`PDF渲染基本完成，等待稳定...`);
+      }
+    }
+
+    // 连续稳定3次，且内容高度大于0，可以滚动了
+    if (stableCount >= STABLE_THRESHOLD && scrollContentHeight > 0) {
+      clearInterval(pdfRenderMonitorTimer);
+      pdfRenderMonitorTimer = null;
+
+      const targetPercent = pendingRestorePosition.value;
+      const targetScrollTop = Math.round((targetPercent / 100) * scrollContentHeight);
+
+      container.scrollTop = targetScrollTop;
+      console.log(`✅ 滚动到 ${targetScrollTop}px (${targetPercent}%)`);
+
+      // 5秒后允许用户滚动保存
+      setTimeout(() => {
+        isRestoringPosition = false;
+        pendingRestorePosition.value = null;
+      }, 5000);
+    }
+  };
+
+  // 立即检查一次
+  checkAndRestore();
+
+  // 开始监控
+  pdfRenderMonitorTimer = setInterval(checkAndRestore, CHECK_INTERVAL);
+};
+
 // === PPT 演示模式专用状态 ===
 const showPPTPlayer = ref(false);
 const pptUrl = ref('');
@@ -530,54 +614,101 @@ onMounted(async () => {
 });
 
 
-// ✅ 新增：滚动监听逻辑
-// 修改 handleScroll 函数
+// ✅ 新增：滚动监听逻辑（断点续读版 + 防抖）
+// last_position 存储滚动百分比 (0-100)，0=未开始，1-99=进行中，100=已完成
+
+// 防抖定时器
+let scrollSaveTimer: any = null;
+let lastSavedPercent = 0;
+
 const handleScroll = () => {
   const el = scrollContainer.value;
   if (!el || !currentLesson.value || !isLearningMode.value) return;
 
-  // 1. 判断是否“开始学习了” (只要滚动的距离超过 50px，或者滚动了 1%)
-  // 这里的逻辑是：如果当前是 0 (未开始) 且 滚轮动了，就改成 1 (进行中)
-  if (currentLesson.value.status === 0 && el.scrollTop > 50) {
-    console.log("检测到开始阅读，状态变更为：进行中");
-    
+  // 恢复位置期间禁止保存
+  if (isRestoringPosition) return;
+
+  // 计算滚动百分比
+  const scrollHeight = el.scrollHeight - el.clientHeight;
+  const scrollPercent = scrollHeight > 0
+    ? Math.round((el.scrollTop / scrollHeight) * 100)
+    : 0;
+
+  // 1. 判断是否"开始学习了" (滚动 > 0%)
+  if (currentLesson.value.status === 0 && scrollPercent > 0) {
+
     // 更新本地状态
     currentLesson.value.status = 1;
-    updateLocalListStatus(currentLesson.value.id, 1);
-    
+    updateLocalListStatus(currentLesson.value.id, 1, scrollPercent);
+
     // 发送请求给后端
     updateProgress({
       lesson_id: currentLesson.value.id,
       status: 1,
-      last_position: 1 // 暂时记为第1页
+      last_position: scrollPercent
     });
+
+    lastSavedPercent = scrollPercent;
+    return;
   }
 
-  // 2. 判断是否“看完了” (滚动到底部)
-  // 允许 100px 的误差，防止有的浏览器滚不到最底
-  const isBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 100;
+  // 2. 判断是否"看完了" (滚动 >= 95%)
+  const isBottom = scrollPercent >= 95;
 
   if (isBottom && currentLesson.value.status !== 2) {
-    console.log("已阅读到底部，状态变更为：已完成");
-    
+
+    // 清除防抖定时器，立即保存
+    if (scrollSaveTimer) {
+      clearTimeout(scrollSaveTimer);
+    }
+
     // 更新本地状态
     currentLesson.value.status = 2;
-    updateLocalListStatus(currentLesson.value.id, 2);
-    
+    updateLocalListStatus(currentLesson.value.id, 2, 100);
+
     // 发送请求给后端
     updateProgress({
       lesson_id: currentLesson.value.id,
       status: 2,
-      last_position: pdfPageCount.value // 记为最后一页
+      last_position: 100
     });
+
+    lastSavedPercent = 100;
+    return;
+  }
+
+  // 3. 实时保存进行中的进度（防抖：每1秒最多保存一次）
+  // 只有滚动变化超过 15% 才保存（防止 PDF 懒加载导致的不准确）
+  if (scrollPercent > 0 && scrollPercent < 95 && currentLesson.value.status !== 2) {
+    if (Math.abs(scrollPercent - lastSavedPercent) >= 15) {
+      // 清除之前的定时器
+      if (scrollSaveTimer) {
+        clearTimeout(scrollSaveTimer);
+      }
+
+      // 设置新的防抖定时器，1秒后保存
+      scrollSaveTimer = setTimeout(() => {
+        updateProgress({
+          lesson_id: currentLesson.value.id,
+          status: 1,
+          last_position: scrollPercent
+        });
+        // 更新本地状态
+        updateLocalListStatus(currentLesson.value.id, 1, scrollPercent);
+        lastSavedPercent = scrollPercent;
+      }, 1000);
+    }
   }
 };
 
 // 辅助：更新本地列表状态 (避免刷新页面才变)
-const updateLocalListStatus = (lessonId: number, status: number) => {
+const updateLocalListStatus = (lessonId: number, status: number, lastPosition?: number) => {
   pdfChapterList.value.forEach(ch => {
     const l = ch.lessons.find(x => x.id === lessonId);
-    if (l) l.status = status;
+    if (l) {
+      l.status = status;
+      if (lastPosition !== undefined) l.last_position = lastPosition;
+    }
   });
 };
 
@@ -586,22 +717,80 @@ const updateLocalListStatus = (lessonId: number, status: number) => {
 const toggleChapter = (index: number) => { chapterList.value[index].isOpen = !chapterList.value[index].isOpen; };
 const handleLessonClick = (lesson: any) => {
   if (!lesson.file_url) return alert('该课时暂无文件');
-  
+
+  console.log('点击课时:', {
+    id: lesson.id,
+    title: lesson.title,
+    status: lesson.status,
+    last_position: lesson.last_position
+  });
+
   currentLesson.value = lesson;
   isLearningMode.value = true;
-  pdfPage.value = 1; 
   scale.value = 1.0;
 
-  nextTick(() => {
-    if (lesson.status === 1 && scrollContainer.value) {
+  // 设置待恢复的滚动位置
+  if (lesson.status === 1 && lesson.last_position > 0) {
+    pendingRestorePosition.value = lesson.last_position;
+    console.log(`设置待恢复位置: ${lesson.last_position}%`);
+  } else if (lesson.status === 2) {
+    pendingRestorePosition.value = 100; // 已完成，滚动到底部
+  } else {
+    pendingRestorePosition.value = null;
+  }
 
-    } else if (scrollContainer.value) {
-       scrollContainer.value.scrollTop = 0;
+  nextTick(() => {
+    const el = scrollContainer.value;
+    if (!el) {
+      console.error('scrollContainer 不存在');
+      return;
     }
+
+    if (lesson.status === 2 && pendingRestorePosition.value === 100) {
+      // 已完成，直接滚动到底部（不需要等 PDF 加载）
+      el.scrollTop = el.scrollHeight;
+      console.log('已完成，滚动到底部');
+      pendingRestorePosition.value = null;
+    }
+    // 其他情况：等待 PDF 加载完成后恢复滚动位置
   });
 };
 
 const exitLearningMode = () => {
+  // 停止PDF渲染监控定时器
+  if (pdfRenderMonitorTimer) {
+    clearInterval(pdfRenderMonitorTimer);
+    pdfRenderMonitorTimer = null;
+  }
+
+  // 退出前保存当前进度
+  const el = scrollContainer.value;
+  console.log(`退出学习: isLearningMode=${isLearningMode.value}, currentLesson=${!!currentLesson.value}, el=${!!el}`);
+
+  if (el && currentLesson.value && isLearningMode.value) {
+    const scrollHeight = el.scrollHeight - el.clientHeight;
+    const scrollPercent = scrollHeight > 0
+      ? Math.round((el.scrollTop / scrollHeight) * 100)
+      : 0;
+
+    console.log(`退出前保存进度: scrollTop=${Math.round(el.scrollTop)}, scrollHeight=${el.scrollHeight}, clientHeight=${el.clientHeight}, scrollPercent=${scrollPercent}%`);
+
+    const newStatus = scrollPercent >= 95 ? 2 : (scrollPercent > 0 ? 1 : 0);
+
+    // 保存进度
+    updateProgress({
+      lesson_id: currentLesson.value.id,
+      status: newStatus,
+      last_position: scrollPercent >= 95 ? 100 : scrollPercent
+    });
+
+    console.log(`退出前保存: lesson_id=${currentLesson.value.id}, status=${newStatus}, last_position=${scrollPercent >= 95 ? 100 : scrollPercent}`);
+
+    // 更新本地状态
+    currentLesson.value.status = newStatus;
+    updateLocalListStatus(currentLesson.value.id, newStatus, scrollPercent >= 95 ? 100 : scrollPercent);
+  }
+
   isLearningMode.value = false;
   currentLesson.value = null;
 };
