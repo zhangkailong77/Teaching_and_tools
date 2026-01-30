@@ -1,0 +1,291 @@
+"""
+教师账号创建 + 课程授权 整合脚本
+
+支持两种模式：
+1. 手动输入账号
+2. 读取 Excel 文件
+
+使用方法:
+    python create_teacher.py                          # 交互模式
+    python create_teacher.py --file teachers.xlsx     # Excel 批量导入
+"""
+import sys
+import os
+from datetime import datetime
+from typing import List, Optional
+
+# 确保能找到 app 模块
+sys.path.append(os.getcwd())
+
+import pandas as pd
+from sqlalchemy.orm import Session
+from app.db.session import SessionLocal
+from app.models.user import User
+from app.models.content import Course, TeacherCourseAccess
+from app.core import security
+from app.core.redis import delete_cache_pattern
+
+# Excel 文件模板示例列名
+EXCEL_COLUMNS = ['username', 'password', 'full_name', 'course_ids']
+
+
+def get_db() -> Session:
+    return SessionLocal()
+
+
+def parse_course_ids(course_ids_str: str) -> List[int]:
+    """解析课程ID字符串，返回ID列表"""
+    if not course_ids_str or str(course_ids_str).strip() == '':
+        return []
+    # 支持逗号、空格、分号分隔
+    ids = [int(x.strip()) for x in str(course_ids_str).replace('，', ',').split(',') if x.strip().isdigit()]
+    return ids
+
+
+def create_teacher(db: Session, username: str, password: str, full_name: str, course_ids: List[int] = None):
+    """创建教师账号并授权课程"""
+    course_ids = course_ids or []
+
+    # 1. 检查用户是否存在
+    existing_user = db.query(User).filter(User.username == username).first()
+    if existing_user:
+        print(f"   ⚠️ 账号 {username} 已存在，跳过")
+        return False
+
+    # 2. 创建用户
+    new_user = User(
+        username=username,
+        hashed_password=security.get_password_hash(password),
+        role='teacher',
+        created_at=datetime.now(),
+        is_active=True,
+        full_name=full_name,
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    print(f"   ✅ 创建账号: {username} ({full_name})")
+
+    # 3. 授权课程
+    if course_ids:
+        courses = db.query(Course).filter(Course.id.in_(course_ids)).all()
+        if courses:
+            for course in courses:
+                # 查重
+                exists = db.query(TeacherCourseAccess).filter(
+                    TeacherCourseAccess.teacher_id == new_user.id,
+                    TeacherCourseAccess.course_id == course.id
+                ).first()
+                if not exists:
+                    access = TeacherCourseAccess(
+                        teacher_id=new_user.id,
+                        course_id=course.id
+                    )
+                    db.add(access)
+                    print(f"   ✅ 授权课程: {course.name}")
+            db.commit()
+    else:
+        print(f"   ℹ️ 未指定课程，跳过授权")
+
+    return True
+
+
+def show_excel_template():
+    """显示 Excel 文件模板"""
+    print("\n📋 Excel 文件模板格式：")
+    print("-" * 60)
+    print("  username    | password | full_name | course_ids")
+    print("  ------------|----------|-----------|------------")
+    print("  13800138000 | 123456   | 张老师    | 1,2,3")
+    print("  13800138001 | 123456   | 李老师    | 1,4,5")
+    print("  13800138002 | 123456   | 王老师    |")
+    print("-" * 60)
+    print("  course_ids 列可为空（仅创建账号不授权）")
+    print("  course_ids 支持逗号分隔多个课程ID")
+    print()
+
+
+def show_courses(db: Session):
+    """显示可选课程列表"""
+    print("\n📚 当前可用课程列表：")
+    print("-" * 40)
+    courses = db.query(Course).all()
+    for c in courses:
+        print(f"  [ID: {c.id}] {c.name}")
+    print("-" * 40)
+
+
+def interactive_mode(db: Session):
+    """交互模式：手动输入"""
+    print("\n" + "="*50)
+    print("  👤 手动创建教师账号（输入 q 退出）")
+    print("="*50)
+
+    show_courses(db)
+
+    while True:
+        print("\n" + "-"*50)
+
+        username = input("👉 账号(手机号): ").strip()
+        if username.lower() == 'q':
+            break
+        if not username:
+            print("   ❌ 账号不能为空")
+            continue
+
+        password = input("👉 密码: ").strip()
+        if not password:
+            print("   ❌ 密码不能为空")
+            continue
+
+        full_name = input("👉 姓名: ").strip() or username
+
+        course_input = input("👉 课程ID (可选，多个用逗号分隔): ").strip()
+
+        if course_input:
+            course_ids = parse_course_ids(course_input)
+        else:
+            course_ids = []
+
+        print("\n📋 确认信息：")
+        print(f"   账号: {username}")
+        print(f"   姓名: {full_name}")
+        if course_ids:
+            print(f"   课程: {', '.join(map(str, course_ids))}")
+        else:
+            print("   课程: (不授权)")
+
+        confirm = input("\n👉 确认创建？(y/n): ").strip().lower()
+        if confirm == 'y':
+            create_teacher(db, username, password, full_name, course_ids)
+            print("\n✅ 教师账号创建完成！")
+        else:
+            print("   已取消")
+
+
+def excel_mode(db: Session, file_path: str):
+    """Excel 批量导入模式"""
+    print("\n" + "="*50)
+    print(f"  📄 Excel 批量导入: {file_path}")
+    print("="*50)
+
+    if not os.path.exists(file_path):
+        print(f"❌ 文件不存在: {file_path}")
+        return
+
+    try:
+        df = pd.read_excel(file_path)
+    except Exception as e:
+        print(f"❌ 读取 Excel 失败: {e}")
+        return
+
+    # 验证列名
+    missing_cols = [col for col in EXCEL_COLUMNS[:3] if col not in df.columns]
+    if missing_cols:
+        print(f"❌ Excel 缺少必要列: {', '.join(missing_cols)}")
+        show_excel_template()
+        return
+
+    show_courses(db)
+
+    print(f"\n📋 将创建 {len(df)} 个教师账号：")
+    print("-" * 60)
+
+    for idx, row in df.iterrows():
+        username = str(row['username']).strip()
+        password = str(row['password']).strip() if pd.notna(row['password']) else '123456'
+        full_name = str(row['full_name']).strip() if pd.notna(row['full_name']) else username
+        course_ids_str = str(row.get('course_ids', '')).strip() if pd.notna(row.get('course_ids', '')) else ''
+        course_ids = parse_course_ids(course_ids_str)
+
+        print(f"  {idx+1}. {username} ({full_name}) - 课程: {course_ids if course_ids else '无'}")
+
+    print("-" * 60)
+
+    confirm = input("👉 确认批量创建？(y/n): ").strip().lower()
+    if confirm != 'y':
+        print("   已取消")
+        return
+
+    # 执行批量创建
+    success_count = 0
+    skip_count = 0
+
+    for idx, row in df.iterrows():
+        username = str(row['username']).strip()
+        password = str(row['password']).strip() if pd.notna(row['password']) else '123456'
+        full_name = str(row['full_name']).strip() if pd.notna(row['full_name']) else username
+        course_ids_str = str(row.get('course_ids', '')).strip() if pd.notna(row.get('course_ids', '')) else ''
+        course_ids = parse_course_ids(course_ids_str)
+
+        try:
+            if create_teacher(db, username, password, full_name, course_ids):
+                success_count += 1
+            else:
+                skip_count += 1
+        except Exception as e:
+            print(f"   ❌ 创建失败 {username}: {e}")
+
+    print("\n" + "="*50)
+    print(f"🎉 批量创建完成！")
+    print(f"   成功: {success_count} 个")
+    print(f"   跳过: {skip_count} 个")
+    print("="*50)
+
+
+def download_template():
+    """下载 Excel 模板文件"""
+    df = pd.DataFrame(columns=EXCEL_COLUMNS)
+    # 添加示例数据
+    df.loc[0] = ['13800138000', '123456', '张老师', '1,2,3']
+    df.loc[1] = ['13800138001', '123456', '李老师', '1,4,5']
+    df.loc[2] = ['13800138002', '123456', '王老师', '']
+
+    template_path = 'teachers_template.xlsx'
+    df.to_excel(template_path, index=False)
+    print(f"✅ 模板已下载: {template_path}")
+    print("   请编辑此文件，然后运行:")
+    print(f"   python create_teacher.py --file {template_path}")
+
+
+def main():
+    print("\n" + "="*50)
+    print("  👨‍🏫 教师账号创建 + 课程授权工具")
+    print("="*50)
+
+    # 检查是否需要下载模板
+    if len(sys.argv) > 1 and sys.argv[1] == '--template':
+        download_template()
+        return
+
+    db = get_db()
+    try:
+        # 显示可选模式
+        print("\n📌 使用方式：")
+        print("   1. 交互模式: python create_teacher.py")
+        print("   2. Excel导入: python create_teacher.py --file teachers.xlsx")
+        print("   3. 下载模板: python create_teacher.py --template")
+        print()
+
+        if len(sys.argv) > 1 and sys.argv[1] == '--file':
+            # Excel 模式
+            file_path = sys.argv[2] if len(sys.argv) > 2 else 'teachers.xlsx'
+            excel_mode(db, file_path)
+        elif len(sys.argv) > 1 and sys.argv[1] == '--template':
+            download_template()
+        else:
+            # 默认交互模式
+            interactive_mode(db)
+
+    except KeyboardInterrupt:
+        print("\n\n🚫 用户强制退出")
+    except Exception as e:
+        print(f"\n❌ 发生错误: {e}")
+        import traceback
+        traceback.print_exc()
+    finally:
+        db.close()
+
+
+if __name__ == "__main__":
+    main()
