@@ -390,7 +390,7 @@ import { getMyTeacherProfile, updateMyTeacherProfile, type TeacherProfile } from
 import { uploadImage } from '@/api/common';
 import TeacherSidebar from '@/components/TeacherSidebar.vue';
 import { getMyClasses, createClass, getDashboardStats, getTeacherSchedule, updateClassStatus, type ClassItem, type ScheduleItem } from '@/api/course';
-import { getMyCourses, type CourseItem } from '@/api/content';
+import { getMyCourses, getAvailableCourses, type CourseItem } from '@/api/content';
 import { getImgUrl } from '@/utils/index';
 import DashboardStats from './components/DashboardStats.vue'
 import {
@@ -596,7 +596,7 @@ const handleFileChange = async (event: Event) => {
 // ✅ 【新增】打开新建班级弹窗（先拉取课程包列表）
 const openCreateClassModal = async () => {
   try {
-    const res = await getMyCourses(); // 获取资源库
+    const res = await getAvailableCourses(); // 只获取已授权课程
     courseLibrary.value = res;
   } catch (e) { console.error(e); }
   showClassModal.value = true;

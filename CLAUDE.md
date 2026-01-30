@@ -4,101 +4,91 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is an educational technology platform with a Vue 3 frontend and FastAPI backend. The system supports role-based access for teachers and students with comprehensive homework management, course organization, and content delivery features.
+Educational technology platform with Vue 3 frontend and FastAPI backend. Role-based access (teacher/student) with homework management, course organization, and content delivery.
 
 ## Architecture
 
 ### Backend (FastAPI)
-- **Framework**: FastAPI with async capabilities
+- **Framework**: FastAPI with async SQLAlchemy
 - **Database**: MySQL with SQLAlchemy ORM
-- **Authentication**: JWT-based with role validation (student/teacher)
-- **Security**: BCrypt password hashing, JWT tokens
-- **Structure**:
-  - `app/api/v1/endpoints/` - API route handlers
-  - `app/models/` - SQLAlchemy database models
-  - `app/schemas/` - Pydantic validation schemas
-  - `app/core/` - Configuration and security
-  - `app/db/` - Database session management
+- **Authentication**: JWT with role validation
+- **Caching**: Redis for course chapters and teacher data
+- **Key Directories**:
+  - `app/api/v1/endpoints/` - API routes
+  - `app/models/` - SQLAlchemy models
+  - `app/schemas/` - Pydantic schemas
+  - `app/core/` - Config, security, Redis
 
 ### Frontend (Vue 3)
-- **Framework**: Vue 3 with Composition API and TypeScript
-- **Build Tool**: Vite
-- **UI Library**: Element Plus
-- **State Management**: Pinia
-- **Routing**: Vue Router with role-based routes
-- **Structure**:
-  - `src/views/dashboard/student/` - Student-specific pages
-  - `src/views/dashboard/teacher/` - Teacher-specific pages
+- **Framework**: Vue 3 Composition API + TypeScript
+- **Build**: Vite
+- **UI**: Element Plus
+- **State**: Pinia
+- **Key Directories**:
+  - `src/views/dashboard/student/` - Student pages
+  - `src/views/dashboard/teacher/` - Teacher pages
   - `src/api/` - API service layer
-  - `src/components/` - Reusable Vue components
-  - `src/stores/` - Pinia state management
-
-## Key Features
-
-### Homework Management System
-- Students can submit assignments with rich text content and images
-- Teachers can grade submissions with annotations, scoring, and feedback
-- Supports detailed content review with highlighting and comments
-
-### Course Management
-- Role-based course organization
-- Teacher-student enrollment system
-- Content delivery with various file types (PDF, PPTX)
+  - `src/stores/` - Pinia stores
 
 ## Development Commands
 
-### Backend
+### Backend (Local)
 ```bash
-# Start backend server
 cd backend
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-
-# Install dependencies
-pip install -r requirements.txt
 ```
 
-### Frontend
+### Frontend (Local)
 ```bash
-# Start frontend development server
 cd frontend
 npm install
 npm run dev
+```
 
-# Build for production
-npm run build
+### Docker Deployment
+```bash
+# Build and start all services
+docker-compose up -d --build
+
+# View logs
+docker logs -f teaching-backend
+
+# Restart service
+docker restart teaching-backend
+```
+
+### Admin Scripts (after deployment)
+```bash
+# Create teacher with course access
+docker exec -it teaching-backend python /app/create_teacher.py
+
+# Create student
+docker exec -it teaching-backend python /app/create_user.py
+
+# Re-import course content
+docker exec -it teaching-backend python /app/import_course.py
 ```
 
 ## Environment Configuration
 
 ### Backend (.env)
 - `DATABASE_URL`: MySQL connection string
-- `SECRET_KEY`: JWT secret key
-- `ACCESS_TOKEN_EXPIRE_MINUTES`: Token expiration time
+- `SECRET_KEY`: JWT secret
+- `REDIS_HOST`, `REDIS_PORT`: Redis config
 
 ### Frontend (.env.development)
-- `VITE_API_URL`: Backend API URL (typically http://localhost:8000)
-- `VITE_IMAGE_BASE_URL`: Base URL for image assets
+- `VITE_API_URL`: Backend URL (http://localhost:8000)
 
-## Critical Files
+## Key API Endpoints
 
-### Backend
-- `backend/app/main.py` - Application entry point
-- `backend/app/api/v1/endpoints/homework.py` - Homework management API
-- `backend/app/api/v1/endpoints/auth.py` - Authentication endpoints
-- `backend/app/models/user.py` - User model with role-based access
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/v1/content/courses/me` | All courses + is_locked (for resource library) |
+| `GET /api/v1/content/courses/available` | Only authorized courses (for class creation) |
+| `GET /api/v1/content/courses/{id}/chapters` | Course chapters (cached 5 min) |
 
-### Frontend
-- `frontend/src/App.vue` - Root application component
-- `frontend/src/router/index.ts` - Route configuration
-- `frontend/src/components/HomeworkDrawer.vue` - Homework submission/review component
-- `frontend/src/views/dashboard/teacher/homeworksGrading.vue` - Teacher homework grading interface
-- `frontend/src/api/` - API service definitions
-- `frontend/src/stores/modules/user.ts` - User state management
+## Important Notes
 
-## Recent Development Focus
-
-Recent changes have focused on:
-- Teacher-side homework publishing and grading functionality
-- Student-side homework center with grade display
-- Annotation and commenting features for homework review
-- Enhanced homework drawer component with improved functionality
+- Course chapters use Redis caching (5 min). Run `import_course.py` clears cache automatically.
+- `TeacherCourseAccess` table controls which courses a teacher can access.
+- Use `encode_id()`/`decode_id()` for public-facing course IDs.

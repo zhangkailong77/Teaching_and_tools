@@ -13,14 +13,55 @@ from app.models.content import Course, CourseChapter, CourseLesson, TeacherCours
 router = APIRouter()
 
 # ------------------------------------------------------------------
-# 1. 获取课程资源库（仅当前教师已授权的课程）
+# 1. 获取课程资源库（全部课程 + 锁定状态，用于资源库页面展示）
 # ------------------------------------------------------------------
 @router.get("/courses/me", response_model=List[schemas.CourseOut])
 def read_my_courses(
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user),
 ):
-    # 只查询当前教师已授权的课程
+    # 获取所有课程
+    all_courses = db.query(Course).all()
+
+    # 获取当前用户的授权记录
+    access_records = db.query(TeacherCourseAccess).filter(
+        TeacherCourseAccess.teacher_id == current_user.id
+    ).all()
+
+    # 提取已授权的课程 ID 集合
+    unlocked_course_ids = {record.course_id for record in access_records}
+
+    results = []
+    for course in all_courses:
+        course_data = {
+            "id": course.id,
+            "name": course.name,
+            "cover": course.cover,
+            "intro": course.intro,
+            "task_count": course.task_count,
+            "total_duration": course.total_duration,
+            "lesson_count": course.lesson_count,
+            "course_type": course.course_type,
+            "created_at": course.created_at,
+
+            # 附加字段
+            "public_id": encode_id(course.id),
+            "is_locked": course.id not in unlocked_course_ids  # 添加锁定标记
+        }
+
+        results.append(course_data)
+
+    return results
+
+# ------------------------------------------------------------------
+# 1-2. 获取可选课程列表（仅已授权，用于创建班级下拉选择）
+# ------------------------------------------------------------------
+@router.get("/courses/available", response_model=List[schemas.CourseOut])
+def read_available_courses(
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    """只返回当前教师已授权的课程，用于创建班级时选择"""
     courses = db.query(Course).join(TeacherCourseAccess).filter(
         TeacherCourseAccess.teacher_id == current_user.id
     ).all()

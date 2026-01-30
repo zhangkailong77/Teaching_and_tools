@@ -37,9 +37,14 @@ export interface CourseChapterItem {
   lessons: CourseLessonItem[];
 }
 
-// 1. 获取我的课程资源库
+// 1. 获取我的课程资源库（全部 + 锁定状态，用于资源库页面）
 export function getMyCourses() {
   return request.get<any, CourseItem[]>('/content/courses/me');
+}
+
+// 2. 获取可选课程列表（仅已授权，用于创建班级下拉选择）
+export function getAvailableCourses() {
+  return request.get<any, CourseItem[]>('/content/courses/available');
 }
 
 
