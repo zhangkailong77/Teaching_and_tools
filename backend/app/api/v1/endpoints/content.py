@@ -207,8 +207,8 @@ def read_course_chapters(
             "lessons": lesson_list
         })
 
-    # 存入缓存（30分钟，课程章节是静态内容）
-    set_cache(cache_key, results, expire=1800)
+    # 存入缓存（5分钟，减少数据不一致窗口期）
+    set_cache(cache_key, results, expire=300)
 
     return results
 

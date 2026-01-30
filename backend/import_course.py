@@ -1,3 +1,4 @@
+from app.core.redis import delete_cache_pattern  # 添加导入
 import os
 import shutil
 import re
@@ -9,7 +10,7 @@ from app.models.course import Class, Enrollment
 from app.models.content import Course, CourseChapter, CourseLesson
 
 # 配置：你的本地源文件夹路径
-SOURCE_DIR = r"D:\zkl\work\vue\2025教学系统研发课程资源\tiktok"
+SOURCE_DIR = r"D:\zkl\work\vue\2025教学系统研发课程资源\AI+(跨境)电商视觉营销设计"
 
 # 配置：目标存储路径 (后端静态目录)
 TARGET_ROOT = "static/uploads/materials"
@@ -52,7 +53,9 @@ def import_course(db: Session, course_id: int):
         # 为了保险，这里直接删除章节即可。
         db.query(CourseChapter).filter(CourseChapter.course_id == course.id).delete()
         db.commit()
-        print("✅ 数据库旧记录清理完成")
+        # ✅ 清除课程章节缓存，确保数据立即更新
+        delete_cache_pattern(f"course:{course.id}:chapters")
+        print("✅ 数据库旧记录清理完成，缓存已清除")
     except Exception as e:
         print(f"❌ 数据库清理失败: {e}")
         db.rollback()
