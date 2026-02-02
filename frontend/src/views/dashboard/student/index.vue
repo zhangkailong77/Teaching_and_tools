@@ -28,31 +28,61 @@
         <div class="circle c2"></div>
       </div>
 
-      <!-- 统计小卡片 -->
-      <div class="stats-row">
-        <div class="stat-card">
-          <div class="icon-box green">🔔</div>
-          <div class="info">
-            <div class="num">2/8 已学习</div>
-            <div class="label">风格重绘</div>
+      <!-- 实训入口卡片区域 -->
+      <div class="entrance-cards-row">
+        <!-- Shopee 卡片 -->
+        <div class="entrance-card shopee" @click="handleCardClick('shopee')">
+          <div class="card-icon">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+            </svg>
           </div>
-          <span class="more">⋮</span>
+          <div class="card-content">
+            <span class="platform-name">Shopee</span>
+            <span class="platform-desc">跨境电商实训</span>
+          </div>
+          <span class="coming-soon-badge">敬请期待</span>
+          <div class="card-arrow">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+              <path d="M9 18l6-6-6-6"/>
+            </svg>
+          </div>
         </div>
-        <div class="stat-card">
-          <div class="icon-box blue">💻</div>
-          <div class="info">
-            <div class="num">2/8 已学习</div>
-            <div class="label">产品迁移</div>
+
+        <!-- TikTok 卡片 -->
+        <div class="entrance-card tiktok" @click="handleCardClick('tiktok')">
+          <div class="card-icon">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+              <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
+            </svg>
           </div>
-          <span class="more">⋮</span>
+          <div class="card-content">
+            <span class="platform-name">TikTok</span>
+            <span class="platform-desc">短视频运营实训</span>
+          </div>
+          <span class="coming-soon-badge">敬请期待</span>
+          <div class="card-arrow">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+              <path d="M9 18l6-6-6-6"/>
+            </svg>
+          </div>
         </div>
-        <div class="stat-card">
-          <div class="icon-box purple">🎨</div>
-          <div class="info">
-            <div class="num">2/8 已学习</div>
-            <div class="label">图片扩展</div>
+
+        <!-- AI+智能体编排 卡片 -->
+        <div class="entrance-card ai编排" @click="handleCardClick('ai')">
+          <div class="card-icon card-image">
+            <img src="@/assets/dify-color.png" alt="Dify" />
           </div>
-          <span class="more">⋮</span>
+          <div class="card-content">
+            <span class="platform-name">AI+智能体编排</span>
+            <span class="platform-desc">跨境客服应用</span>
+          </div>
+          <span class="coming-soon-badge">敬请期待</span>
+          <div class="card-arrow">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+              <path d="M9 18l6-6-6-6"/>
+            </svg>
+          </div>
         </div>
       </div>
 
@@ -640,6 +670,22 @@ const openSystemB = async () => {
   router.push('/dashboard/student/comfyui');
 };
 
+// 实训入口卡片点击处理
+const handleCardClick = (platform: string) => {
+  const routes: Record<string, string> = {
+    shopee: '/dashboard/student/shopee',
+    tiktok: '/dashboard/student/tiktok',
+    ai: '/dashboard/student/ai-customer'
+  }
+  const names: Record<string, string> = {
+    shopee: 'Shopee',
+    tiktok: 'TikTok',
+    ai: 'AI+智能体编排'
+  }
+  alert(`${names[platform]} 实训功能开发中，敬请期待！`)
+  // router.push(routes[platform])
+};
+
 // 打开公告详情
 const openNoticeDetail = async (notice: any) => {
   console.log('点击的公告数据:', notice);
@@ -769,23 +815,125 @@ $text-gray: #a4b0be;
     .c2 { width: 100px; height: 100px; right: 100px; bottom: -20px; }
   }
 
-  /* 统计卡片行 */
-  .stats-row {
-    display: flex; gap: 20px;
-    .stat-card {
-      flex: 1; background: white; padding: 15px; border-radius: 15px; display: flex; align-items: center; gap: 15px;
-      .icon-box {
-        width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center;
-        &.green { background: #e3f9f5; color: $primary-color; }
-        &.blue { background: #e3f2fd; color: #2196f3; }
-        &.purple { background: #f3e5f5; color: #9c27b0; }
+  /* 实训入口卡片区域 */
+  .entrance-cards-row {
+    display: flex;
+    gap: 20px;
+  }
+
+  .entrance-card {
+    flex: 1;
+    background: white;
+    border-radius: 15px;
+    padding: 15px 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+
+    // 悬停效果
+    &:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+
+      .card-arrow svg {
+        transform: translateX(3px);
       }
-      .info {
-        flex: 1;
-        .num { font-size: 12px; color: $text-gray; margin-bottom: 4px; }
-        .label { font-weight: bold; font-size: 14px; color: $text-dark; }
+    }
+
+    // 图标容器
+    .card-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      color: white;
+
+      svg {
+        transition: transform 0.3s ease;
       }
-      .more { color: $text-gray; cursor: pointer; }
+
+      // 图片样式
+      &.card-image {
+        background: transparent;
+        overflow: hidden;
+
+        img {
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+        }
+      }
+    }
+
+    // 内容区
+    .card-content {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+
+      .platform-name {
+        font-size: 15px;
+        font-weight: 700;
+        color: $text-dark;
+      }
+
+      .platform-desc {
+        font-size: 12px;
+        color: $text-gray;
+      }
+    }
+
+    // 箭头
+    .card-arrow {
+      color: $text-gray;
+      flex-shrink: 0;
+
+      svg {
+        width: 20px;
+        height: 20px;
+        transition: transform 0.3s ease;
+      }
+    }
+
+    // 敬请期待标签
+    .coming-soon-badge {
+      font-size: 12px;
+      color: $text-gray;
+      font-weight: 600;
+      white-space: nowrap;
+      margin-left: auto;
+      margin-right: 8px;
+    }
+  }
+
+  // Shopee - 橙色渐变
+  .entrance-card.shopee {
+    .card-icon {
+      background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
+    }
+  }
+
+  // TikTok - 青粉渐变
+  .entrance-card.tiktok {
+    .card-icon {
+      background: linear-gradient(135deg, #00F2EA 0%, #1a1a2e 50%, #FF0050 100%);
+    }
+  }
+
+  // AI+智能体编排 - 图片图标
+  .entrance-card.ai编排 {
+    .card-icon {
+      background: transparent;
     }
   }
 
