@@ -1,17 +1,17 @@
 /*
  Navicat Premium Data Transfer
 
- Source Server         : localhost_3308
+ Source Server         : localhost_3306
  Source Server Type    : MySQL
- Source Server Version : 80042 (8.0.42)
- Source Host           : localhost:3308
+ Source Server Version : 80045 (8.0.45)
+ Source Host           : localhost:3306
  Source Schema         : teaching_platform
 
  Target Server Type    : MySQL
- Target Server Version : 80042 (8.0.42)
+ Target Server Version : 80045 (8.0.45)
  File Encoding         : 65001
 
- Date: 02/02/2026 17:55:40
+ Date: 05/02/2026 14:58:03
 */
 
 SET NAMES utf8mb4;
@@ -150,7 +150,7 @@ CREATE TABLE `class_course_bindings`  (
   INDEX `fk_ccb_course`(`course_id` ASC) USING BTREE,
   CONSTRAINT `fk_ccb_class` FOREIGN KEY (`class_id`) REFERENCES `classes` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `fk_ccb_course` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 55 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 53 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of class_course_bindings
@@ -167,9 +167,7 @@ INSERT INTO `class_course_bindings` VALUES (48, 2, 1, '2026-01-16 15:41:44');
 INSERT INTO `class_course_bindings` VALUES (49, 2, 3, '2026-01-16 15:41:44');
 INSERT INTO `class_course_bindings` VALUES (50, 6, 1, '2026-01-19 10:19:29');
 INSERT INTO `class_course_bindings` VALUES (51, 6, 6, '2026-01-19 10:19:29');
-INSERT INTO `class_course_bindings` VALUES (52, 7, 8, '2026-01-30 11:09:47');
-INSERT INTO `class_course_bindings` VALUES (53, 8, 6, '2026-01-30 12:13:55');
-INSERT INTO `class_course_bindings` VALUES (54, 8, 7, '2026-01-30 12:13:55');
+INSERT INTO `class_course_bindings` VALUES (52, 7, 7, '2026-01-30 06:17:32');
 
 -- ----------------------------
 -- Table structure for classes
@@ -189,7 +187,7 @@ CREATE TABLE `classes`  (
   INDEX `teacher_id`(`teacher_id` ASC) USING BTREE,
   INDEX `ix_classes_id`(`id` ASC) USING BTREE,
   CONSTRAINT `classes_ibfk_1` FOREIGN KEY (`teacher_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 9 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 8 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of classes
@@ -200,8 +198,7 @@ INSERT INTO `classes` VALUES (3, '25商务英语1班', '商务英语1班', 2, '2
 INSERT INTO `classes` VALUES (4, '25电子商务2班', '', 4, '2025-12-31 16:09:21', 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=300&auto=format&fit=crop', '2025-12-31 08:08:00', '2026-02-25 16:00:00', 0);
 INSERT INTO `classes` VALUES (5, '25跨境电商2班', '', 4, '2025-12-31 16:10:00', 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=300&auto=format&fit=crop', '2025-12-30 16:00:00', '2026-02-11 16:00:00', 0);
 INSERT INTO `classes` VALUES (6, '2025跨境电商1班', '基础学习', 55, '2026-01-19 10:19:29', 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=300&auto=format&fit=crop', '2026-01-19 02:18:00', '2026-06-29 16:00:00', 0);
-INSERT INTO `classes` VALUES (7, '测试', '', 2, '2026-01-30 11:09:47', 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=300&auto=format&fit=crop', '2026-01-14 16:00:00', '2026-01-20 16:00:00', 0);
-INSERT INTO `classes` VALUES (8, '测试111', '', 111, '2026-01-30 12:13:55', 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=300&auto=format&fit=crop', '2026-01-21 16:00:00', '2026-01-23 16:00:00', 0);
+INSERT INTO `classes` VALUES (7, '2024商英1班', '', 109, '2026-01-30 06:17:32', 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=300&auto=format&fit=crop', '2026-01-30 16:00:00', '2026-07-18 16:00:00', 0);
 
 -- ----------------------------
 -- Table structure for course_chapters
@@ -216,7 +213,7 @@ CREATE TABLE `course_chapters`  (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `fk_chapter_course`(`course_id` ASC) USING BTREE,
   CONSTRAINT `fk_chapter_course` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 98 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '课程章节表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 92 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '课程章节表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of course_chapters
@@ -225,6 +222,9 @@ INSERT INTO `course_chapters` VALUES (26, 6, '第01章 平台入驻与基础建�
 INSERT INTO `course_chapters` VALUES (27, 6, '第02章 商品运营与店铺装修', 2, '2026-01-06 10:24:04');
 INSERT INTO `course_chapters` VALUES (28, 6, '第03章 营销推广与流量获取', 3, '2026-01-06 10:24:04');
 INSERT INTO `course_chapters` VALUES (29, 6, '第04章 订单履约与售后服务', 4, '2026-01-06 10:24:05');
+INSERT INTO `course_chapters` VALUES (52, 1, '第01章 课程简介', 1, '2026-01-19 11:43:38');
+INSERT INTO `course_chapters` VALUES (53, 1, '第02章 ComfyUI基础入门', 2, '2026-01-19 11:43:38');
+INSERT INTO `course_chapters` VALUES (54, 1, '第03章 跨境电商业务场景实战工作流体系', 3, '2026-01-19 11:43:38');
 INSERT INTO `course_chapters` VALUES (85, 7, '第01章 平台入驻与基础建设', 1, '2026-01-29 17:31:40');
 INSERT INTO `course_chapters` VALUES (86, 7, '第02章 商品运营与管理', 2, '2026-01-29 17:31:43');
 INSERT INTO `course_chapters` VALUES (87, 7, '第03章 店铺装修与视觉', 3, '2026-01-29 17:31:44');
@@ -232,9 +232,6 @@ INSERT INTO `course_chapters` VALUES (88, 7, '第04章 营销活动与推广', 4
 INSERT INTO `course_chapters` VALUES (89, 7, '第05章 订单履约与客户服务', 5, '2026-01-29 17:31:44');
 INSERT INTO `course_chapters` VALUES (90, 7, '第06章 数据分析与复盘', 6, '2026-01-29 17:31:44');
 INSERT INTO `course_chapters` VALUES (91, 7, '第07章 直播与达人联盟', 7, '2026-01-29 17:31:44');
-INSERT INTO `course_chapters` VALUES (95, 1, '第01章 课程简介', 1, '2026-01-30 10:49:43');
-INSERT INTO `course_chapters` VALUES (96, 1, '第02章 ComfyUI基础入门', 2, '2026-01-30 10:49:43');
-INSERT INTO `course_chapters` VALUES (97, 1, '第03章 跨境电商业务场景实战工作流体系', 3, '2026-01-30 10:49:43');
 
 -- ----------------------------
 -- Table structure for course_lessons
@@ -253,7 +250,7 @@ CREATE TABLE `course_lessons`  (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `fk_lesson_chapter`(`chapter_id` ASC) USING BTREE,
   CONSTRAINT `fk_lesson_chapter` FOREIGN KEY (`chapter_id`) REFERENCES `course_chapters` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 644 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '课时资源表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 616 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '课时资源表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of course_lessons
@@ -298,6 +295,27 @@ INSERT INTO `course_lessons` VALUES (237, 29, '任务19 关于Shopee平台售前
 INSERT INTO `course_lessons` VALUES (238, 29, '任务19 关于Shopee平台售前、售中、售后咨询服务', 'ppt', '/static/uploads/materials/course_6/chapter_29/任务19 关于Shopee平台售前、售中、售后咨询服务.pptx', '15页', 0, 0, '2026-01-06 10:24:05');
 INSERT INTO `course_lessons` VALUES (239, 29, '任务20 Shopee平台如何使用运费测算工具', 'pdf', '/static/uploads/materials/course_6/chapter_29/任务20 Shopee平台如何使用运费测算工具.pdf', '15页', 0, 0, '2026-01-06 10:24:05');
 INSERT INTO `course_lessons` VALUES (240, 29, '任务20 Shopee平台如何使用运费测算工具', 'ppt', '/static/uploads/materials/course_6/chapter_29/任务20 Shopee平台如何使用运费测算工具.pptx', '15页', 0, 0, '2026-01-06 10:24:05');
+INSERT INTO `course_lessons` VALUES (389, 52, '1.1 课程定位', 'pdf', '/static/uploads/materials/course_1/chapter_52/1.1 课程定位.pdf', '15页', 0, 0, '2026-01-19 11:43:38');
+INSERT INTO `course_lessons` VALUES (390, 52, '1.2 学习目标', 'pdf', '/static/uploads/materials/course_1/chapter_52/1.2 学习目标.pdf', '15页', 0, 0, '2026-01-19 11:43:38');
+INSERT INTO `course_lessons` VALUES (391, 52, '1.3 适用人群', 'pdf', '/static/uploads/materials/course_1/chapter_52/1.3 适用人群.pdf', '15页', 0, 0, '2026-01-19 11:43:38');
+INSERT INTO `course_lessons` VALUES (392, 52, '1.4 ComfyUI 在跨境电商中的价值与前景', 'pdf', '/static/uploads/materials/course_1/chapter_52/1.4 ComfyUI 在跨境电商中的价值与前景.pdf', '15页', 0, 0, '2026-01-19 11:43:38');
+INSERT INTO `course_lessons` VALUES (393, 53, '2.1 认识 ComfyUI', 'pdf', '/static/uploads/materials/course_1/chapter_53/2.1 认识 ComfyUI.pdf', '15页', 0, 0, '2026-01-19 11:43:38');
+INSERT INTO `course_lessons` VALUES (394, 53, '2.2 安装与环境配置', 'pdf', '/static/uploads/materials/course_1/chapter_53/2.2 安装与环境配置.pdf', '15页', 0, 0, '2026-01-19 11:43:38');
+INSERT INTO `course_lessons` VALUES (395, 53, '2.3 界面总览', 'pdf', '/static/uploads/materials/course_1/chapter_53/2.3 界面总览.pdf', '15页', 0, 0, '2026-01-19 11:43:38');
+INSERT INTO `course_lessons` VALUES (396, 53, '2.4 第一张图的生成', 'pdf', '/static/uploads/materials/course_1/chapter_53/2.4 第一张图的生成.pdf', '15页', 0, 0, '2026-01-19 11:43:38');
+INSERT INTO `course_lessons` VALUES (397, 53, '2.5 章节任务', 'pdf', '/static/uploads/materials/course_1/chapter_53/2.5 章节任务.pdf', '15页', 0, 0, '2026-01-19 11:43:38');
+INSERT INTO `course_lessons` VALUES (398, 54, '任务01 局部重绘工作流', 'pdf', '/static/uploads/materials/course_1/chapter_54/任务01 局部重绘工作流.pdf', '15页', 0, 0, '2026-01-19 11:43:38');
+INSERT INTO `course_lessons` VALUES (399, 54, '任务02 图片扩展', 'pdf', '/static/uploads/materials/course_1/chapter_54/任务02 图片扩展.pdf', '15页', 0, 0, '2026-01-19 11:43:38');
+INSERT INTO `course_lessons` VALUES (400, 54, '任务03 产品图场景迁移（指定场景）', 'pdf', '/static/uploads/materials/course_1/chapter_54/任务03 产品图场景迁移（指定场景）.pdf', '15页', 0, 0, '2026-01-19 11:43:38');
+INSERT INTO `course_lessons` VALUES (401, 54, '任务04 风格迁移生成', 'pdf', '/static/uploads/materials/course_1/chapter_54/任务04 风格迁移生成.pdf', '15页', 0, 0, '2026-01-19 11:43:38');
+INSERT INTO `course_lessons` VALUES (402, 54, '任务05 线稿生成器', 'pdf', '/static/uploads/materials/course_1/chapter_54/任务05 线稿生成器.pdf', '15页', 0, 0, '2026-01-19 11:43:38');
+INSERT INTO `course_lessons` VALUES (403, 54, '任务06 小物件迁移（指定场景）', 'pdf', '/static/uploads/materials/course_1/chapter_54/任务06 小物件迁移（指定场景）.pdf', '15页', 0, 0, '2026-01-19 11:43:38');
+INSERT INTO `course_lessons` VALUES (404, 54, '任务07 商品变体工作流（canny篇）', 'pdf', '/static/uploads/materials/course_1/chapter_54/任务07 商品变体工作流（canny篇）.pdf', '15页', 0, 0, '2026-01-19 11:43:38');
+INSERT INTO `course_lessons` VALUES (405, 54, '任务08 商品变体工作流（depth篇）', 'pdf', '/static/uploads/materials/course_1/chapter_54/任务08 商品变体工作流（depth篇）.pdf', '15页', 0, 0, '2026-01-19 11:43:38');
+INSERT INTO `course_lessons` VALUES (406, 54, '任务09 商品变体工作流（openpose篇）', 'pdf', '/static/uploads/materials/course_1/chapter_54/任务09 商品变体工作流（openpose篇）.pdf', '15页', 0, 0, '2026-01-19 11:43:38');
+INSERT INTO `course_lessons` VALUES (407, 54, '任务10 模特换装（绘制遮罩）', 'pdf', '/static/uploads/materials/course_1/chapter_54/任务10 模特换装（绘制遮罩）.pdf', '15页', 0, 0, '2026-01-19 11:43:38');
+INSERT INTO `course_lessons` VALUES (408, 54, '任务11 模特换装（Qwen全自动指令版）', 'pdf', '/static/uploads/materials/course_1/chapter_54/任务11 模特换装（Qwen全自动指令版）.pdf', '15页', 0, 0, '2026-01-19 11:43:38');
+INSERT INTO `course_lessons` VALUES (409, 54, '任务12 图像编辑', 'pdf', '/static/uploads/materials/course_1/chapter_54/任务12 图像编辑.pdf', '15页', 0, 0, '2026-01-19 11:43:38');
 INSERT INTO `course_lessons` VALUES (596, 85, '任务1 TikTok Shop平台注册及店铺开通', 'pdf', '/static/uploads/materials/course_7/chapter_85/任务1 TikTok Shop平台注册及店铺开通.pdf', '15页', 0, 0, '2026-01-29 17:31:43');
 INSERT INTO `course_lessons` VALUES (597, 85, '任务1 TikTok Shop平台注册及店铺开通', 'ppt', '/static/uploads/materials/course_7/chapter_85/任务1 TikTok Shop平台注册及店铺开通.pptx', '15页', 0, 0, '2026-01-29 17:31:43');
 INSERT INTO `course_lessons` VALUES (598, 85, '任务2 TikTok Shop平台店铺信息设置', 'pdf', '/static/uploads/materials/course_7/chapter_85/任务2 TikTok Shop平台店铺信息设置.pdf', '15页', 0, 0, '2026-01-29 17:31:43');
@@ -318,20 +336,6 @@ INSERT INTO `course_lessons` VALUES (612, 87, '任务9 TikTok Shop平台商店�
 INSERT INTO `course_lessons` VALUES (613, 87, '任务9 TikTok Shop平台商店页面(Store Page) 介绍', 'ppt', '/static/uploads/materials/course_7/chapter_87/任务9 TikTok Shop平台商店页面(Store Page) 介绍.pptx', '15页', 0, 0, '2026-01-29 17:31:44');
 INSERT INTO `course_lessons` VALUES (614, 87, '任务10 TikTok Shop平台商店健康管理(Shop Healthl) 与店铺评分', 'pdf', '/static/uploads/materials/course_7/chapter_87/任务10 TikTok Shop平台商店健康管理(Shop Healthl) 与店铺评分.pdf', '15页', 0, 0, '2026-01-29 17:31:44');
 INSERT INTO `course_lessons` VALUES (615, 87, '任务10 TikTok Shop平台商店健康管理(Shop Healthl) 与店铺评分', 'ppt', '/static/uploads/materials/course_7/chapter_87/任务10 TikTok Shop平台商店健康管理(Shop Healthl) 与店铺评分.pptx', '15页', 0, 0, '2026-01-29 17:31:44');
-INSERT INTO `course_lessons` VALUES (630, 95, '1.1 课程定位', 'pdf', '/static/uploads/materials/course_1/chapter_95/1.1 课程定位.pdf', '15页', 0, 0, '2026-01-30 10:49:43');
-INSERT INTO `course_lessons` VALUES (631, 95, '1.2 学习目标', 'pdf', '/static/uploads/materials/course_1/chapter_95/1.2 学习目标.pdf', '15页', 0, 0, '2026-01-30 10:49:43');
-INSERT INTO `course_lessons` VALUES (632, 95, '1.3 适用人群', 'pdf', '/static/uploads/materials/course_1/chapter_95/1.3 适用人群.pdf', '15页', 0, 0, '2026-01-30 10:49:43');
-INSERT INTO `course_lessons` VALUES (633, 95, '1.4 ComfyUI 在跨境电商中的价值与前景', 'pdf', '/static/uploads/materials/course_1/chapter_95/1.4 ComfyUI 在跨境电商中的价值与前景.pdf', '15页', 0, 0, '2026-01-30 10:49:43');
-INSERT INTO `course_lessons` VALUES (634, 96, '2.1 认识 ComfyUI', 'pdf', '/static/uploads/materials/course_1/chapter_96/2.1 认识 ComfyUI.pdf', '15页', 0, 0, '2026-01-30 10:49:43');
-INSERT INTO `course_lessons` VALUES (635, 96, '2.2 安装与环境配置', 'pdf', '/static/uploads/materials/course_1/chapter_96/2.2 安装与环境配置.pdf', '15页', 0, 0, '2026-01-30 10:49:43');
-INSERT INTO `course_lessons` VALUES (636, 96, '2.3 界面总览', 'pdf', '/static/uploads/materials/course_1/chapter_96/2.3 界面总览.pdf', '15页', 0, 0, '2026-01-30 10:49:43');
-INSERT INTO `course_lessons` VALUES (637, 96, '2.4 第一张图的生成', 'pdf', '/static/uploads/materials/course_1/chapter_96/2.4 第一张图的生成.pdf', '15页', 0, 0, '2026-01-30 10:49:43');
-INSERT INTO `course_lessons` VALUES (638, 96, '2.5 章节任务', 'pdf', '/static/uploads/materials/course_1/chapter_96/2.5 章节任务.pdf', '15页', 0, 0, '2026-01-30 10:49:43');
-INSERT INTO `course_lessons` VALUES (639, 97, '任务01 局部重绘工作流', 'pdf', '/static/uploads/materials/course_1/chapter_97/任务01 局部重绘工作流.pdf', '15页', 0, 0, '2026-01-30 10:49:43');
-INSERT INTO `course_lessons` VALUES (640, 97, '任务02 图片扩展', 'pdf', '/static/uploads/materials/course_1/chapter_97/任务02 图片扩展.pdf', '15页', 0, 0, '2026-01-30 10:49:43');
-INSERT INTO `course_lessons` VALUES (641, 97, '任务03 产品图场景迁移（指定场景）', 'pdf', '/static/uploads/materials/course_1/chapter_97/任务03 产品图场景迁移（指定场景）.pdf', '15页', 0, 0, '2026-01-30 10:49:43');
-INSERT INTO `course_lessons` VALUES (642, 97, '任务04 风格迁移生成', 'pdf', '/static/uploads/materials/course_1/chapter_97/任务04 风格迁移生成.pdf', '15页', 0, 0, '2026-01-30 10:49:43');
-INSERT INTO `course_lessons` VALUES (643, 97, '任务05 线稿生成器', 'pdf', '/static/uploads/materials/course_1/chapter_97/任务05 线稿生成器.pdf', '15页', 0, 0, '2026-01-30 10:49:43');
 
 -- ----------------------------
 -- Table structure for course_tasks
@@ -809,28 +813,27 @@ CREATE TABLE `student_learning_progress`  (
   INDEX `fk_slp_lesson`(`lesson_id` ASC) USING BTREE,
   CONSTRAINT `fk_slp_lesson` FOREIGN KEY (`lesson_id`) REFERENCES `course_lessons` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `fk_slp_student` FOREIGN KEY (`student_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 21 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 17 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of student_learning_progress
 -- ----------------------------
-INSERT INTO `student_learning_progress` VALUES (1, 1, 201, 2, 1, '2026-01-06 15:35:11');
+INSERT INTO `student_learning_progress` VALUES (1, 1, 201, 2, 0, '2026-02-04 06:21:22');
 INSERT INTO `student_learning_progress` VALUES (2, 1, 203, 2, 1, '2026-01-06 15:33:14');
 INSERT INTO `student_learning_progress` VALUES (3, 1, 205, 2, 0, '2026-01-06 15:41:31');
 INSERT INTO `student_learning_progress` VALUES (4, 1, 207, 2, 0, '2026-01-06 15:41:41');
 INSERT INTO `student_learning_progress` VALUES (5, 1, 209, 2, 0, '2026-01-06 15:58:10');
-INSERT INTO `student_learning_progress` VALUES (6, 1, 211, 2, 70, '2026-01-30 16:21:41');
+INSERT INTO `student_learning_progress` VALUES (6, 1, 211, 2, 0, '2026-01-30 07:43:39');
 INSERT INTO `student_learning_progress` VALUES (7, 8, 201, 2, 0, '2026-01-06 17:05:33');
 INSERT INTO `student_learning_progress` VALUES (8, 8, 203, 1, 1, '2026-01-06 17:05:38');
 INSERT INTO `student_learning_progress` VALUES (9, 15, 201, 2, 0, '2026-01-09 16:47:53');
 INSERT INTO `student_learning_progress` VALUES (10, 105, 201, 1, 1, '2026-01-19 13:57:01');
 INSERT INTO `student_learning_progress` VALUES (11, 15, 205, 2, 0, '2026-01-19 17:16:14');
 INSERT INTO `student_learning_progress` VALUES (12, 15, 203, 1, 1, '2026-01-19 17:16:51');
+INSERT INTO `student_learning_progress` VALUES (13, 8, 389, 1, 1, '2026-01-20 10:43:48');
 INSERT INTO `student_learning_progress` VALUES (14, 1, 213, 2, 0, '2026-01-21 10:26:16');
-INSERT INTO `student_learning_progress` VALUES (15, 1, 215, 1, 51, '2026-01-30 16:48:00');
-INSERT INTO `student_learning_progress` VALUES (18, 1, 219, 1, 61, '2026-01-30 16:22:20');
-INSERT INTO `student_learning_progress` VALUES (19, 1, 221, 1, 0, '2026-01-30 16:50:35');
-INSERT INTO `student_learning_progress` VALUES (20, 1, 217, 1, 27, '2026-01-30 16:34:15');
+INSERT INTO `student_learning_progress` VALUES (15, 1, 215, 1, 1, '2026-01-30 07:43:53');
+INSERT INTO `student_learning_progress` VALUES (16, 1, 389, 0, 0, '2026-02-04 06:21:34');
 
 -- ----------------------------
 -- Table structure for student_profiles
@@ -855,7 +858,7 @@ CREATE TABLE `student_profiles`  (
 -- ----------------------------
 -- Records of student_profiles
 -- ----------------------------
-INSERT INTO `student_profiles` VALUES (1, 1, '张十一', '22014082032', '男', '18250636865', '/static/uploads/avatars/d2450475-629a-4bc6-aba4-5afe88941ac5.png', '加油加油', '2026-01-04 14:23:33', '2026-01-30 16:55:51');
+INSERT INTO `student_profiles` VALUES (1, 1, '张十一', '22014082032', '男', '18250636865', '/static/uploads/avatars/fa8f70d0-6ce0-4b90-853b-0bdb2919bcbe.png', NULL, '2026-01-04 14:23:33', '2026-01-04 15:39:00');
 INSERT INTO `student_profiles` VALUES (2, 8, '张二', '22014082033', '保密', '18250636871', '/static/uploads/avatars/36c89a39-76e6-4973-8536-4ec4837ba50c.png', NULL, '2026-01-04 15:39:40', '2026-01-04 15:39:56');
 INSERT INTO `student_profiles` VALUES (3, 15, '贾一', '22014083001', '保密', '13800000001', '/static/uploads/avatars/05958dc6-7eea-4f43-bd42-85beb748c40a.png', NULL, '2026-01-04 16:58:48', '2026-01-04 17:18:55');
 INSERT INTO `student_profiles` VALUES (4, 18, '贾四', '22014083004', '保密', NULL, NULL, NULL, '2026-01-04 17:56:55', '2026-01-04 17:56:55');
@@ -948,8 +951,8 @@ INSERT INTO `teacher_course_access` VALUES (16, 108, 7, '2026-01-29 16:42:03');
 INSERT INTO `teacher_course_access` VALUES (17, 107, 7, '2026-01-29 16:42:03');
 INSERT INTO `teacher_course_access` VALUES (18, 106, 7, '2026-01-29 16:42:03');
 INSERT INTO `teacher_course_access` VALUES (19, 110, 7, '2026-01-29 16:42:03');
-INSERT INTO `teacher_course_access` VALUES (20, 111, 6, '2026-01-30 11:50:51');
-INSERT INTO `teacher_course_access` VALUES (21, 111, 7, '2026-01-30 11:50:51');
+INSERT INTO `teacher_course_access` VALUES (20, 112, 6, '2026-01-30 03:48:42');
+INSERT INTO `teacher_course_access` VALUES (21, 112, 7, '2026-01-30 03:48:42');
 
 -- ----------------------------
 -- Table structure for teacher_profiles
@@ -999,13 +1002,13 @@ CREATE TABLE `users`  (
   UNIQUE INDEX `ix_users_username`(`username` ASC) USING BTREE,
   UNIQUE INDEX `comfyui_port`(`comfyui_port` ASC) USING BTREE,
   INDEX `ix_users_id`(`id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 112 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 113 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of users
 -- ----------------------------
-INSERT INTO `users` VALUES (1, '18250636865', '$2b$12$DM8zYSLV9Dt.jKfG4jykaetq3F4jmwGcSF6hJBaGDJBWQOc3ol9.y', 'student', 1, '2025-12-24 11:26:48', '2026-02-02 17:38:48', 8189, '张十一', '22014082032');
-INSERT INTO `users` VALUES (2, '18250636866', '$2b$12$BbkngZyC3IaWM.cWcZKmauZxsyO3VZTe5P2mRqrbc75CC13xrMqIi', 'teacher', 1, '2025-12-24 11:27:14', '2026-01-30 12:14:56', NULL, NULL, NULL);
+INSERT INTO `users` VALUES (1, '18250636865', '$2b$12$DM8zYSLV9Dt.jKfG4jykaetq3F4jmwGcSF6hJBaGDJBWQOc3ol9.y', 'student', 1, '2025-12-24 11:26:48', '2026-02-04 06:16:10', 8189, '张十一', '22014082032');
+INSERT INTO `users` VALUES (2, '18250636866', '$2b$12$BbkngZyC3IaWM.cWcZKmauZxsyO3VZTe5P2mRqrbc75CC13xrMqIi', 'teacher', 1, '2025-12-24 11:27:14', '2026-02-05 03:46:04', NULL, NULL, NULL);
 INSERT INTO `users` VALUES (4, '18250636867', '$2b$12$mVae3WIBNklVoxfL7qkLQ.ymZ9vRDq6vbwB2Za0cTStB1FO1DeYoa', 'teacher', 1, '2025-12-24 15:04:05', '2026-01-29 16:34:17', NULL, NULL, NULL);
 INSERT INTO `users` VALUES (5, '18250636868', '$2b$12$LExgic9UmvpwwLtG5Gufs.08MAc8wx7EfZdv9CjYzn3QiLJnOUZdq', 'student', 1, '2025-12-24 17:26:36', '2026-01-22 13:48:48', 8190, '李四', '22014082034');
 INSERT INTO `users` VALUES (6, '18250636969', '$2b$12$2bR.Xy.PQzAQDApnmWxdSeC.bIEs0C1kklBR751IoX4/tNFuUCyt2', 'student', 1, '2025-12-25 16:30:01', '2025-12-25 16:47:31', 8191, '王五', '22014082035');
@@ -1108,11 +1111,12 @@ INSERT INTO `users` VALUES (102, '13656560047', '$2b$12$nuPtKM5U2GMMQ/2Mg19Ks.6M
 INSERT INTO `users` VALUES (103, '13656560048', '$2b$12$pI3jtMf1AWt9jYu13xBbkO7KdTTuLJykicOmjHO9pDJBvVjwwdJse', 'student', 1, '2026-01-19 10:26:38', NULL, NULL, '48', '20250119048');
 INSERT INTO `users` VALUES (104, '13656560049', '$2b$12$QfpdiWbXzD3CUn4QWtcipOrLoVSYXtDy3heiRiXlj/l9LdFIAj5JG', 'student', 1, '2026-01-19 10:26:39', NULL, NULL, '49', '20250119049');
 INSERT INTO `users` VALUES (105, '13656560050', '$2b$12$3AZcczH2eUQDQQCqETCH1OEfyYOhh7IK1iEPS33oLWbM8SopXp5gi', 'student', 1, '2026-01-19 10:26:39', '2026-01-19 13:56:35', NULL, '50', '20250119050');
-INSERT INTO `users` VALUES (106, '18666745285', '$2b$12$n.Jgi/lrKKrhkPpvOwLWd.mMZeKiPCojbAsSnCCoF.VdSTrCbLjZW', 'teacher', 1, '2026-01-29 16:38:02', '2026-01-30 11:51:35', NULL, '张亚岚', NULL);
-INSERT INTO `users` VALUES (107, '17620921355', '$2b$12$.t3aDY0iFVg/tkQlJHiwBOXavIOdNL4GVHSmdMdHs2AtsipWWMvYG', 'teacher', 1, '2026-01-29 16:38:27', '2026-01-29 16:52:22', NULL, '陈蓓蓓', NULL);
-INSERT INTO `users` VALUES (108, '15920165282', '$2b$12$1fjq8bSYDtxs1zsJIg2lFu4ldMEZ2vAZ9Fi3p4c7MXC9BbEbco4Rq', 'teacher', 1, '2026-01-29 16:38:44', '2026-01-29 17:35:05', NULL, '隆婕', NULL);
-INSERT INTO `users` VALUES (109, '14748286778', '$2b$12$/qpN3qIOOO5RoCxXQOm2yOTI508DCNMjoyyxt71NWNakTluBUu3YS', 'teacher', 1, '2026-01-29 16:38:59', NULL, NULL, '苏小娟', NULL);
+INSERT INTO `users` VALUES (106, '18666745285', '$2b$12$n.Jgi/lrKKrhkPpvOwLWd.mMZeKiPCojbAsSnCCoF.VdSTrCbLjZW', 'teacher', 1, '2026-01-29 16:38:02', '2026-01-30 04:19:36', NULL, '张亚岚', NULL);
+INSERT INTO `users` VALUES (107, '17620921355', '$2b$12$.t3aDY0iFVg/tkQlJHiwBOXavIOdNL4GVHSmdMdHs2AtsipWWMvYG', 'teacher', 1, '2026-01-29 16:38:27', '2026-01-30 03:15:24', NULL, '陈蓓蓓', NULL);
+INSERT INTO `users` VALUES (108, '15920165282', '$2b$12$1fjq8bSYDtxs1zsJIg2lFu4ldMEZ2vAZ9Fi3p4c7MXC9BbEbco4Rq', 'teacher', 1, '2026-01-29 16:38:44', '2026-01-29 09:39:15', NULL, '隆婕', NULL);
+INSERT INTO `users` VALUES (109, '14748286778', '$2b$12$/qpN3qIOOO5RoCxXQOm2yOTI508DCNMjoyyxt71NWNakTluBUu3YS', 'teacher', 1, '2026-01-29 16:38:59', '2026-01-30 06:16:34', NULL, '苏小娟', NULL);
 INSERT INTO `users` VALUES (110, '18926277902', '$2b$12$VIDIXbFwcTuV8a3.LEgooescaEJZ4F5KRcYkqWgdO0g/SAS2TAbra', 'teacher', 1, '2026-01-29 16:39:17', '2026-01-29 16:42:09', NULL, '刘东燕', NULL);
-INSERT INTO `users` VALUES (111, '18250636901', '$2b$12$563dUildpye/Ijr8Z3AwSe5bXT5m4/9jQ.Xul7qOmjPAADgz21Z1y', 'teacher', 1, '2026-01-30 11:50:51', '2026-01-30 12:13:26', NULL, 'a', NULL);
+INSERT INTO `users` VALUES (111, '18250636899', '$2b$12$.zPMlbuRPynA0Kp4es9Gw.BWyvSDqBccrhxhCyJnDToSA2pgyFGQ.', 'teacher', 1, '2026-01-30 03:29:06', '2026-01-30 03:29:22', NULL, '测试', NULL);
+INSERT INTO `users` VALUES (112, '18250636900', '$2b$12$7DyqbR6tyqrYUVz625lxMen22BtkTn0WnARm4rHbkOPOWRQBU5OTa', 'teacher', 1, '2026-01-30 03:48:42', '2026-01-30 03:49:00', NULL, '测试1', NULL);
 
 SET FOREIGN_KEY_CHECKS = 1;

@@ -32,7 +32,7 @@ services:
       - ACCESS_TOKEN_EXPIRE_MINUTES=60
       - COMFY_MAX_CONCURRENT=2
       - COMFY_MAX_CONCURRENT_PROD=2
-      - COMFY_GPU_HOST=120.41.127.61
+      - COMFY_GPU_HOST=124.72.52.139
       # SSH 配置（用于远程启动/停止 ComfyUI）
       - COMFY_GPU_SSH_PORT=22
       - COMFY_GPU_USER=yzcube
@@ -54,7 +54,7 @@ services:
     image: mysql:8.0
     container_name: teaching-mysql
     ports:
-      - "3306:3306"
+      - "13306:3306"
     environment:
       - MYSQL_ROOT_PASSWORD=teaching2024
       - MYSQL_DATABASE=teaching_platform

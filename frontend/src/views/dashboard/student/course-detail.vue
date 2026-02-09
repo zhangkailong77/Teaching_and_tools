@@ -78,6 +78,7 @@
             <span class="tab-item" :class="{ active: activeTab === 'intro' }" @click="activeTab = 'intro'">课程介绍</span>
             <span class="tab-item" :class="{ active: activeTab === 'chapters' }" @click="activeTab = 'chapters'">章节目录</span>
             <span class="tab-item" :class="{ active: activeTab === 'materials' }" @click="activeTab = 'materials'">课件资料</span>
+            <span class="tab-item" :class="{ active: activeTab === 'videos' }" @click="activeTab = 'videos'">课程视频</span>
           </div>
           
           <div class="tab-content">
@@ -170,6 +171,77 @@
                 </div>
               </div>
                <div v-if="materialList.length === 0" class="empty-state">暂无课件资料</div>
+            </div>
+
+            <!-- 3. 课程视频 -->
+            <div v-if="activeTab === 'videos'" class="videos-container">
+              <div class="video-layout">
+                <!-- 左侧：视频播放器 -->
+                <div class="video-player-section">
+                  <div v-if="currentVideo" class="video-wrapper">
+                    <video
+                      ref="videoRef"
+                      :src="getImgUrl(currentVideo.file_url)"
+                      :poster="currentVideo.poster_url ? getImgUrl(currentVideo.poster_url) : ''"
+                      controls
+                      controlsList="nodownload"
+                      class="video-element"
+                      @play="onVideoPlay"
+                      @pause="onVideoPause"
+                      @timeupdate="onVideoTimeUpdate"
+                      @ended="onVideoEnded"
+                    >
+                      您的浏览器不支持视频播放。
+                    </video>
+                    <!-- 自定义倍速控制 -->
+                    <div class="video-controls">
+                      <div class="speed-control">
+                        <span class="speed-label">播放速度：</span>
+                        <div class="speed-buttons">
+                          <button
+                            v-for="speed in [0.5, 1, 1.25, 1.5, 2]"
+                            :key="speed"
+                            :class="{ active: playbackSpeed === speed }"
+                            @click="setPlaybackSpeed(speed)"
+                            class="speed-btn"
+                          >
+                            {{ speed }}x
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div v-else class="video-placeholder">
+                    <div class="placeholder-icon">▶</div>
+                    <p>请从右侧列表选择视频播放</p>
+                  </div>
+                </div>
+
+                <!-- 右侧：视频列表 -->
+                <div class="video-list-section">
+                  <div class="video-list-content">
+                    <div v-for="chapter in videoChapterList" :key="chapter.id" class="video-chapter">
+                      <div class="video-chapter-title">{{ chapter.title }}</div>
+                      <div
+                        v-for="video in chapter.lessons"
+                        :key="video.id"
+                        :class="['video-item', { active: currentVideo?.id === video.id }]"
+                        @click="playVideo(video)"
+                      >
+                        <div class="video-item-left">
+                          <span class="video-icon">▶</span>
+                          <span class="video-title">{{ video.title }}</span>
+                        </div>
+                        <div class="video-item-right">
+                          <span v-if="video.duration" class="video-duration">{{ formatDuration(video.duration) }}</span>
+                          <span v-if="currentVideo?.id === video.id" class="playing-indicator">播放中</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div v-if="videoChapterList.length === 0" class="empty-state">暂无课程视频</div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -528,13 +600,63 @@ const materialList = computed(() => {
       if (lesson.type === 'ppt') {
         list.push({
           ...lesson,
-          chapterTitle: chapter.title 
+          chapterTitle: chapter.title
         });
       }
     });
   });
   return list;
 });
+
+// === 视频播放相关状态 ===
+const currentVideo = ref<any>(null); // 当前播放的视频
+const videoRef = ref<HTMLVideoElement | null>(null);
+const playbackSpeed = ref(1); // 播放速度
+
+// 视频章节列表（过滤 type='video' 的课时）
+const videoChapterList = computed(() => {
+  return chapterList.value
+    .map(chapter => ({
+      ...chapter,
+      lessons: chapter.lessons.filter(l => l.type === 'video')
+    }))
+    .filter(chapter => chapter.lessons.length > 0);
+});
+
+// 播放视频
+const playVideo = (video: any) => {
+  currentVideo.value = video;
+  nextTick(() => {
+    if (videoRef.value) {
+      videoRef.value.play().catch(err => {
+        console.log('自动播放被阻止，需要用户交互:', err);
+      });
+    }
+  });
+};
+
+// 设置播放速度
+const setPlaybackSpeed = (speed: number) => {
+  playbackSpeed.value = speed;
+  if (videoRef.value) {
+    videoRef.value.playbackRate = speed;
+  }
+};
+
+// 视频事件处理
+const onVideoPlay = () => console.log('视频开始播放');
+const onVideoPause = () => console.log('视频暂停');
+const onVideoTimeUpdate = () => {
+  // 可用于记录播放进度（如果需要）
+};
+const onVideoEnded = () => console.log('视频播放结束');
+
+// 格式化时长（秒 -> MM:SS）
+const formatDuration = (seconds: number) => {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+};
 
 const handlePlayPPT = (fileUrl: string, title: string) => {
   if (!fileUrl) return alert('文件路径无效');
@@ -1264,18 +1386,18 @@ $text-gray: #a4b0be;
 /* --- 课件资料列表样式 --- */
 .materials-list {
   display: flex; flex-direction: column; gap: 10px;
-  
+
   .material-item {
     display: flex; justify-content: space-between; align-items: center;
     padding: 15px 20px;
     border: 1px solid #eee; border-radius: 12px; background: #fff;
     transition: all 0.2s;
-    
+
     &:hover { border-color: $primary-color; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
 
     .left {
       display: flex; align-items: center; gap: 15px;
-      .icon-box { 
+      .icon-box {
         width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; font-size: 20px;
         &.ppt { background-color: #ff6b6b; } /* 红色代表PPT */
         &.pdf { background-color: #ff9f43; }
@@ -1297,6 +1419,249 @@ $text-gray: #a4b0be;
         &:hover { color: $text-dark; text-decoration: underline; }
       }
     }
+  }
+}
+
+/* --- 课程视频样式 --- */
+.videos-container {
+  .video-layout {
+    display: flex;
+    gap: 20px;
+    min-height: 500px;
+  }
+
+  /* 左侧视频播放器 */
+  .video-player-section {
+    flex: 1;
+    min-width: 0;
+
+    .video-wrapper {
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+
+      .video-element {
+        width: 100%;
+        aspect-ratio: 16/9;
+        display: block;
+        background: #000;
+      }
+
+      .video-controls {
+        background: #1a1a1a;
+        padding: 12px 16px;
+        border-top: 1px solid #333;
+
+        .speed-control {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+
+          .speed-label {
+            color: #999;
+            font-size: 13px;
+          }
+
+          .speed-buttons {
+            display: flex;
+            gap: 6px;
+
+            .speed-btn {
+              padding: 4px 10px;
+              background: #333;
+              color: #ccc;
+              border: 1px solid #444;
+              border-radius: 4px;
+              font-size: 12px;
+              cursor: pointer;
+              transition: all 0.2s;
+
+              &:hover {
+                background: #444;
+                color: #fff;
+              }
+
+              &.active {
+                background: $primary-color;
+                color: #fff;
+                border-color: $primary-color;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    .video-placeholder {
+      aspect-ratio: 16/9;
+      background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+
+      .placeholder-icon {
+        width: 80px;
+        height: 80px;
+        background: rgba(0, 201, 167, 0.1);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 32px;
+        color: $primary-color;
+      }
+
+      p {
+        color: #666;
+        font-size: 14px;
+        margin: 0;
+      }
+    }
+  }
+
+  /* 右侧视频列表 */
+  .video-list-section {
+    width: 320px;
+    flex-shrink: 0;
+
+    .video-list-content {
+      background: #fff;
+      border-radius: 12px;
+      border: 1px solid #eee;
+      max-height: 500px;
+      overflow-y: auto;
+
+      &::-webkit-scrollbar {
+        width: 6px;
+      }
+      &::-webkit-scrollbar-track {
+        background: #f5f5f5;
+        border-radius: 3px;
+      }
+      &::-webkit-scrollbar-thumb {
+        background: #ddd;
+        border-radius: 3px;
+        &:hover {
+          background: #ccc;
+        }
+      }
+
+      .video-chapter {
+        border-bottom: 1px solid #f0f0f0;
+
+        &:last-child {
+          border-bottom: none;
+        }
+
+        .video-chapter-title {
+          padding: 12px 16px;
+          background: #f8f9fa;
+          font-size: 13px;
+          font-weight: 600;
+          color: #666;
+          position: sticky;
+          top: 0;
+        }
+
+        .video-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 12px 16px;
+          cursor: pointer;
+          transition: all 0.2s;
+          border-bottom: 1px solid #f5f5f5;
+
+          &:last-child {
+            border-bottom: none;
+          }
+
+          &:hover {
+            background: #f8f9fa;
+
+            .video-title {
+              color: $primary-color;
+            }
+          }
+
+          &.active {
+            background: rgba(0, 201, 167, 0.08);
+            border-left: 3px solid $primary-color;
+            padding-left: 13px;
+
+            .video-title {
+              color: $primary-color;
+              font-weight: 500;
+            }
+          }
+
+          .video-item-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+            min-width: 0;
+
+            .video-icon {
+              color: #999;
+              font-size: 12px;
+              flex-shrink: 0;
+            }
+
+            .video-title {
+              font-size: 14px;
+              color: #333;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              transition: color 0.2s;
+            }
+          }
+
+          .video-item-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+
+            .video-duration {
+              font-size: 12px;
+              color: #999;
+            }
+
+            .playing-indicator {
+              font-size: 11px;
+              color: $primary-color;
+              background: rgba(0, 201, 167, 0.1);
+              padding: 2px 6px;
+              border-radius: 4px;
+            }
+          }
+        }
+      }
+
+      .empty-state {
+        padding: 40px 20px;
+        text-align: center;
+        color: #999;
+        font-size: 14px;
+      }
+    }
+  }
+}
+
+/* 响应式：小屏幕时上下排列 */
+@media (max-width: 1024px) {
+  .videos-container .video-layout {
+    flex-direction: column;
+  }
+
+  .video-list-section {
+    width: 100% !important;
   }
 }
 

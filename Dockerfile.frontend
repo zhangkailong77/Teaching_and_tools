@@ -16,6 +16,8 @@ COPY frontend/.env.production ./.env.production
 # 复制应用代码
 COPY frontend/ ./
 
+RUN chmod -R +x node_modules/.bin
+
 # 构建生产版本
 RUN npm run build
 
