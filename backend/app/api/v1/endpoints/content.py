@@ -12,6 +12,12 @@ from app.models.content import Course, CourseChapter, CourseLesson, TeacherCours
 
 router = APIRouter()
 
+# ==================================================================
+#                        预览配置常量
+# ==================================================================
+# 未授权教师可以预览的章节数量
+PREVIEW_CHAPTER_COUNT = 1
+
 # ------------------------------------------------------------------
 # 1. 获取课程资源库（全部课程 + 锁定状态，用于资源库页面展示）
 # ------------------------------------------------------------------
@@ -136,7 +142,7 @@ def delete_course(
 
 
 # ------------------------------------------------------------------
-# 4. 获取单门课程详情
+# 4. 获取单门课程详情（支持预览模式）
 # ------------------------------------------------------------------
 @router.get("/courses/{public_id}", response_model=schemas.CourseOut)
 def read_course_detail(
@@ -155,29 +161,24 @@ def read_course_detail(
     if not course:
         raise HTTPException(status_code=404, detail="课程不存在")
 
-    # 2. 查询是否已授权 (复用之前的逻辑)
-    # 这一步是为了让详情页也能显示"已授权/未开通"的状态
+    # 2. 查询是否已授权
     access = db.query(TeacherCourseAccess).filter(
         TeacherCourseAccess.teacher_id == current_user.id,
         TeacherCourseAccess.course_id == course_id
     ).first()
-    
+
     is_locked = True if not access else False
 
-    if is_locked:
-        # 抛出 403 禁止访问
-        raise HTTPException(status_code=403, detail="该课程未开通，无法查看详情")
-
-    # 3. 构造返回
+    # 3. 构造返回（允许预览，不再抛出403）
     course_data = course.__dict__.copy()
     course_data['public_id'] = public_id
     course_data['is_locked'] = is_locked
-    
+
     return course_data
 
 
 # ------------------------------------------------------------------
-# 5. 获取课程大纲 (章节+课时)
+# 5. 获取课程大纲 (章节+课时，支持预览模式)
 # ------------------------------------------------------------------
 @router.get("/courses/{public_id}/chapters")
 def read_course_chapters(
@@ -187,12 +188,6 @@ def read_course_chapters(
 ):
     course_id = decode_id(public_id)
 
-    # 尝试从缓存获取（课程章节是静态内容）
-    cache_key = f"course:{course_id}:chapters"
-    cached = get_cache(cache_key)
-    if cached:
-        return cached
-
     if not course_id:
         raise HTTPException(status_code=404, detail="课程不存在")
 
@@ -201,18 +196,50 @@ def read_course_chapters(
     if not course:
         raise HTTPException(status_code=404, detail="课程不存在")
 
-    # 2. 查询章节 (按 sort_order 排序)
+    # 2. 检查授权状态
+    access = db.query(TeacherCourseAccess).filter(
+        TeacherCourseAccess.teacher_id == current_user.id,
+        TeacherCourseAccess.course_id == course_id
+    ).first()
+    is_locked = True if not access else False
+
+    # 缓存键需要区分是否已授权
+    cache_key = f"course:{course_id}:chapters:preview_{is_locked}"
+    cached = get_cache(cache_key)
+    if cached:
+        return cached
+
+    # 3. 查询所有章节 (按 sort_order 排序)
     chapters = db.query(CourseChapter).filter(CourseChapter.course_id == course_id).order_by(CourseChapter.sort_order).all()
-    
+
+    # 4. 计算预览章节的课时总数（前N章的所有课时可预览）
+    preview_lesson_count = 0
+    if is_locked:
+        preview_chapters = chapters[:PREVIEW_CHAPTER_COUNT]
+        for ch in preview_chapters:
+            preview_lesson_count += db.query(CourseLesson).filter(CourseLesson.chapter_id == ch.id).count()
+
+    # 5. 遍历所有章节构建返回数据
     results = []
+    current_lesson_index = 0  # 全局课时索引，用于判断是否在预览范围内
+
     for chapter in chapters:
-        # 3. 查询每个章节下的课时
+        # 查询每个章节下的课时
         lessons = db.query(CourseLesson).filter(CourseLesson.chapter_id == chapter.id).order_by(CourseLesson.sort_order).all()
-        
+
         lesson_list = []
         for l in lessons:
+            current_lesson_index += 1
+
+            # 判断该课时是否可预览（未授权时：前N章的课时可预览）
+            is_previewable = not is_locked or current_lesson_index <= preview_lesson_count
+
+            # 预览模式下，不可预览的课时不返回file_url
+            file_url = l.file_url if is_previewable else None
+
+            # 预览模式下不返回作业信息
             task_info = None
-            if l.task:
+            if not is_locked and l.task:
                 task_info = {
                     "id": l.task.id,
                     "title": l.task.title,
@@ -225,7 +252,8 @@ def read_course_chapters(
                 "type": l.resource_type, # pdf / video / ppt
                 "duration": l.duration,
                 "is_free": l.is_free,
-                "file_url": l.file_url,   # ✅ 这个字段很关键，前端预览要用
+                "is_previewable": is_previewable,  # 新增字段：标记是否可预览
+                "file_url": file_url,
                 "task": task_info
             })
 
@@ -236,7 +264,7 @@ def read_course_chapters(
             "lessons": lesson_list
         })
 
-    # 存入缓存（5分钟，减少数据不一致窗口期）
+    # 存入缓存（5分钟）
     set_cache(cache_key, results, expire=300)
 
     return results

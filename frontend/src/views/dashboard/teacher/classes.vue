@@ -294,7 +294,7 @@ import {
   type ClassItem, 
   type StudentItem
 } from '@/api/course';
-import { getMyCourses, type CourseItem } from '@/api/content';
+import { getMyCourses, getAvailableCourses, type CourseItem } from '@/api/content';
 import { uploadImage } from '@/api/common'; // 如果需要上传封面，记得引入这个
 
 // --- 状态定义 ---
@@ -358,8 +358,8 @@ const switchTab = (status: number) => {
 const fetchData = async () => {
   try {
     const [classes, courses] = await Promise.all([
-      getMyClasses({ status: currentTabStatus.value }), 
-      getMyCourses()
+      getMyClasses({ status: currentTabStatus.value }),
+      getAvailableCourses()  // 只获取已授权的课程
     ]);
     classList.value = classes;
     courseLibrary.value = courses;

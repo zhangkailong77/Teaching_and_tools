@@ -7,7 +7,12 @@ export interface CourseItem {
   intro?: string;
   created_at: string;
   is_locked: boolean;
-  public_id: string
+  public_id: string;
+  // 统计字段
+  task_count?: number;
+  total_duration?: number;
+  lesson_count?: number;
+  course_type?: string;
 }
 
 // 定义类型
@@ -17,7 +22,8 @@ export interface CourseLessonItem {
   type: string;
   duration: string;
   is_free: boolean;
-  file_url: string;
+  is_previewable?: boolean;  // 预览模式下标记是否可预览
+  file_url: string | null;
   status: number;       // 0:未开始, 1:进行中, 2:已完成
   last_position: number;
 
