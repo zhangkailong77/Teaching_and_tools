@@ -4,7 +4,7 @@
     <div v-if="loading" class="loading-container">
       <div class="loading-content">
         <div class="spinner"></div>
-        <h2>🚀 正在启动 ComfyUI 环境</h2>
+        <h2>正在启动 ComfyUI 环境</h2>
         <p>系统正在唤醒 GPU 资源，这可能需要 30-60 秒...</p>
         <p class="tip">提示：请勿关闭此窗口</p>
       </div>
@@ -13,7 +13,12 @@
     <!-- 错误状态 -->
     <div v-else-if="error" class="error-container">
       <div class="error-content">
-        <div class="error-icon">❌</div>
+        <div class="error-icon">
+          <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+            <circle cx="24" cy="24" r="20" stroke="#f56c6c" stroke-width="2"/>
+            <path d="M16 16l16 16M32 16l-16 16" stroke="#f56c6c" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
         <h2>启动失败</h2>
         <p>{{ error }}</p>
         <el-button type="primary" @click="retry">重试</el-button>
@@ -23,13 +28,24 @@
 
     <!-- ComfyUI iframe -->
     <div v-else class="comfyui-container">
-      <!-- 排队状态横幅 -->
+      <!-- 排队状态横幅 + 课程资料按钮 -->
       <div v-if="queueInfo" class="queue-banner" :class="getQueueStatus(queueInfo)">
         <div class="queue-content">
           <span class="queue-icon">{{ getQueueIcon(queueInfo) }}</span>
           <span class="queue-text">{{ getQueueText(queueInfo) }}</span>
           <span class="queue-detail">{{ getQueueDetail(queueInfo) }}</span>
         </div>
+        <!-- 课程资料按钮 -->
+        <button class="course-material-btn" @click="openCourseDrawer">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M3 3h7l2 2h3v9H3V3z" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linejoin="round"/>
+            <path d="M8 8v4M8 10h2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+          </svg>
+          <span>课程资料</span>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" class="arrow-icon">
+            <path d="M5 3l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
       </div>
 
       <!-- ComfyUI iframe -->
@@ -40,14 +56,198 @@
         @load="onIframeLoad"
       ></iframe>
     </div>
+
+    <!-- 课程资料抽屉 -->
+    <el-drawer
+      v-model="courseDrawerVisible"
+      direction="rtl"
+      :size="700"
+      :modal="true"
+      :close-on-click-modal="false"
+      :close-on-press-escape="true"
+      class="course-material-drawer"
+      destroy-on-close
+    >
+      <!-- 抽屉内容 -->
+      <div class="drawer-wrapper">
+        <!-- 列表视图 -->
+        <div v-if="!isReadingMode" class="list-view">
+          <!-- 抽屉头部 -->
+          <div class="drawer-header">
+            <div class="header-left">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <path d="M4 4h6l2 2h4v9H4V4z" stroke="#667eea" stroke-width="1.5" fill="none" stroke-linejoin="round"/>
+              </svg>
+              <span class="header-title">课程资料</span>
+            </div>
+            <button class="close-btn" @click="courseDrawerVisible = false">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                <path d="M5 5l8 8M13 5l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+            </button>
+          </div>
+
+          <!-- 内容区 -->
+          <div class="drawer-content">
+            <!-- 加载状态 -->
+            <div v-if="courseLoading" class="course-loading">
+              <el-skeleton :rows="5" animated />
+            </div>
+
+            <!-- 课程标题 -->
+            <div v-else-if="courseInfo" class="course-info-section">
+              <div class="course-title">{{ courseInfo.name }}</div>
+              <div class="course-meta">
+                <span class="meta-item">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <path d="M7 2l5 3-5 3-5-3 5-3z" stroke="currentColor" stroke-width="1.2" fill="none"/>
+                    <path d="M2 9l5 3 5-3" stroke="currentColor" stroke-width="1.2" fill="none"/>
+                  </svg>
+                  {{ pdfChapterCount }} 个 PDF
+                </span>
+              </div>
+            </div>
+
+            <!-- 章节列表 -->
+            <div v-if="!courseLoading && chapterList.length > 0" class="chapters-list">
+              <div
+                v-for="(chapter, index) in chapterList"
+                :key="chapter.id"
+                class="chapter-item"
+                :class="{ 'is-open': chapter.isOpen }"
+              >
+                <div class="chapter-header" @click="toggleChapter(index)">
+                  <div class="left">
+                    <svg class="arrow-icon" :class="{ rotated: chapter.isOpen }" width="12" height="12" viewBox="0 0 12 12" fill="none">
+                      <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span class="title">{{ chapter.title }}</span>
+                  </div>
+                  <div class="right">
+                    <span class="count">{{ chapter.lessons.length }} 个 PDF</span>
+                  </div>
+                </div>
+
+                <div class="lesson-group" v-show="chapter.isOpen">
+                  <div
+                    v-for="lesson in chapter.lessons"
+                    :key="lesson.id"
+                    class="lesson-item"
+                    @click="handleLessonClick(lesson)"
+                  >
+                    <div class="lesson-left">
+                      <svg class="pdf-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M4 2h6l3 3v9a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="#ff6b6b" stroke-width="1.5" fill="none"/>
+                        <path d="M10 2v3h3" stroke="#ff6b6b" stroke-width="1.5" fill="none"/>
+                        <text x="8" y="11" text-anchor="middle" font-size="5" fill="#ff6b6b" font-weight="bold">PDF</text>
+                      </svg>
+                      <span class="lesson-title">{{ lesson.title }}</span>
+                    </div>
+                    <div class="lesson-right">
+                      <button class="read-btn">
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                          <polygon points="3 2 3 10 10 6" fill="currentColor"/>
+                        </svg>
+                        阅读
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 空状态 -->
+            <div v-else-if="!courseLoading && chapterList.length === 0" class="empty-course-state">
+              <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+                <rect x="8" y="8" width="48" height="48" rx="8" stroke="#e5e7eb" stroke-width="2"/>
+                <path d="M20 24h24M20 32h24M20 40h16" stroke="#e5e7eb" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <p>暂无课程资料</p>
+              <span>请先在课程中心解锁课程</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 沉浸式阅读视图 -->
+        <div v-else class="reading-view" :class="{ 'sidebar-hidden': isSidebarCollapsed }">
+          <!-- 目录切换按钮（浮动） -->
+          <button class="sidebar-toggle-btn" @click="isSidebarCollapsed = !isSidebarCollapsed">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+
+          <!-- 左侧目录 -->
+          <div v-show="!isSidebarCollapsed" class="read-sidebar">
+            <div class="rs-header">
+              <button class="back-btn" @click="exitReadingMode">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M10 3l-5 5 5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                返回列表
+              </button>
+              <h3>课程目录</h3>
+            </div>
+
+            <div class="rs-body">
+              <div v-for="chapter in chapterList" :key="chapter.id" class="rs-chapter">
+                <div class="rs-c-title">{{ chapter.title }}</div>
+                <div class="rs-lessons">
+                  <div
+                    v-for="lesson in chapter.lessons"
+                    :key="lesson.id"
+                    class="rs-l-item"
+                    :class="{ active: currentLesson?.id === lesson.id }"
+                    @click="handleLessonClick(lesson)"
+                  >
+                    <span class="lesson-title">{{ lesson.title }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 右侧 PDF 阅读区 -->
+          <div class="read-content">
+            <!-- 顶部工具栏 -->
+            <div class="read-toolbar">
+              <div class="file-info">
+                <span class="badge">PDF</span>
+                <span class="name">{{ currentLesson?.title }}</span>
+              </div>
+              <div class="tools">
+                <div class="zoom-ctrl">
+                  <button @click="scale > 0.5 ? scale -= 0.1 : null">-</button>
+                  <span>{{ Math.round(scale * 100) }}%</span>
+                  <button @click="scale < 2.0 ? scale += 0.1 : null">+</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- PDF 内容区 -->
+            <div class="read-stage" ref="pdfScrollRef">
+              <VuePdfEmbed
+                v-if="currentPdfUrl"
+                :source="currentPdfUrl"
+                :width="600 * scale"
+                class="pdf-canvas"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </el-drawer>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from 'vue';
+import { ref, onMounted, onUnmounted, computed, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/modules/user';
 import request from '@/utils/request';
+import { getStudentCourseChapters, type CourseChapterItem } from '@/api/content';
+import { getImgUrl } from '@/utils/index';
+import VuePdfEmbed from 'vue-pdf-embed';
 
 const router = useRouter();
 const userStore = useUserStore();
@@ -63,6 +263,25 @@ const comfyUrl = ref('');
 const comfyIframe = ref<HTMLIFrameElement | null>(null);
 const queueInfo = ref<any>(null);
 
+// 课程资料抽屉状态
+const courseDrawerVisible = ref(false);
+const courseLoading = ref(false);
+const courseInfo = ref<any>(null);
+const chapterList = ref<CourseChapterItem[]>([]);
+
+// 阅读模式状态
+const isReadingMode = ref(false);
+const isSidebarCollapsed = ref(false);
+const currentLesson = ref<any>(null);
+const currentPdfUrl = ref('');
+const scale = ref(1.0);
+const pdfScrollRef = ref<HTMLElement | null>(null);
+
+// 计算 PDF 章节总数
+const pdfChapterCount = computed(() => {
+  return chapterList.value.reduce((sum, ch) => sum + ch.lessons.length, 0);
+});
+
 let queueCheckTimer: number | null = null;
 
 // 启动 ComfyUI
@@ -70,7 +289,6 @@ const startComfyUI = async () => {
   loading.value = true;
   error.value = '';
 
-  // 确保用户信息已加载
   if (!userStore.userInfo?.username) {
     try {
       await userStore.fetchUserInfo();
@@ -92,15 +310,11 @@ const startComfyUI = async () => {
     });
 
     if (res.port) {
-      // 判断环境：开发环境直接访问 GPU，生产环境使用 Nginx 代理
       const isDev = import.meta.env.DEV;
 
       if (isDev) {
-        // 开发环境：直接访问 GPU 服务器（需要 GPU 服务器开启 CORS）
-        comfyUrl.value = `http://192.168.150.2:${res.port}/`;
+        comfyUrl.value = `http://edu.yanzhiedu.cn:${res.port}/`;
       } else {
-        // 生产环境：使用 Nginx 代理路径
-        // URL格式: /comfyui/{username}/{port}
         comfyUrl.value = `/comfyui/${currentUsername}/${res.port}/`;
       }
       loading.value = false;
@@ -122,61 +336,39 @@ const goBack = () => {
   router.back();
 };
 
-// iframe加载完成
 const onIframeLoad = () => {
   console.log('[ComfyUI Proxy] iframe 加载完成');
-
-  // 尝试注入排队脚本到iframe中
   injectQueueScriptToIframe();
 
-  // 设置iframe窗口变量
   try {
     if (comfyIframe.value && comfyIframe.value.contentWindow) {
       (comfyIframe.value.contentWindow as any).COMFY_USERNAME = userStore.username;
       (comfyIframe.value.contentWindow as any).COMFY_PROXY_BASE_URL = '/api/v1';
-      console.log('[ComfyUI Proxy] 已设置iframe窗口变量');
     }
   } catch (e) {
     console.warn('[ComfyUI Proxy] 无法设置iframe变量（跨域）:', e);
   }
 };
 
-// 注入排队脚本到iframe
 const injectQueueScriptToIframe = () => {
   try {
     const iframe = comfyIframe.value;
-    if (!iframe || !iframe.contentDocument) {
-      console.warn('[ComfyUI Proxy] 无法访问iframe文档');
-      return;
-    }
+    if (!iframe || !iframe.contentDocument) return;
 
     const doc = iframe.contentDocument;
+    if (doc.querySelector('script[src*="comfyui-queue.js"]')) return;
 
-    // 检查是否已注入
-    if (doc.querySelector('script[src*="comfyui-queue.js"]')) {
-      console.log('[ComfyUI Proxy] 脚本已存在，跳过注入');
-      return;
-    }
-
-    // 创建并注入脚本
     const script = doc.createElement('script');
     script.src = '/static/js/comfyui-queue.js';
     script.async = false;
-    script.onload = () => {
-      console.log('[ComfyUI Proxy] 脚本注入成功');
-    };
-    script.onerror = () => {
-      console.error('[ComfyUI Proxy] 脚本加载失败');
-    };
-
+    script.onload = () => console.log('[ComfyUI Proxy] 脚本注入成功');
+    script.onerror = () => console.error('[ComfyUI Proxy] 脚本加载失败');
     doc.head.appendChild(script);
-    console.log('[ComfyUI Proxy] 正在注入排队脚本...');
   } catch (e) {
     console.warn('[ComfyUI Proxy] 注入脚本失败:', e);
   }
 };
 
-// 检查队列状态
 const startQueueCheck = () => {
   queueCheckTimer = window.setInterval(async () => {
     try {
@@ -201,9 +393,10 @@ const getQueueStatus = (info: any) => {
   return 'full';
 };
 
-const getQueueIcon = (status: string) => {
-  const icons = { idle: '✅', busy: '⏳', full: '🔴' };
-  return icons[status as keyof typeof icons] || 'ℹ️';
+const getQueueIcon = (info: any) => {
+  if (info.available_slots > 0) return '✓';
+  if (info.queue_length > 0) return '⏱';
+  return '•';
 };
 
 const getQueueText = (info: any) => {
@@ -221,6 +414,92 @@ const getQueueDetail = (info: any) => {
     return `最多支持 ${info.max_concurrent} 人同时执行`;
   }
   return '';
+};
+
+// 打开课程资料抽屉
+const openCourseDrawer = async () => {
+  courseDrawerVisible.value = true;
+
+  const hasCourseInfo = courseInfo.value !== null;
+  const hasChapterList = chapterList.value && chapterList.value.length > 0;
+  const shouldLoad = !hasCourseInfo && !hasChapterList;
+
+  if (shouldLoad) {
+    await loadCourseData();
+  }
+};
+
+// 加载课程数据
+const loadCourseData = async () => {
+  courseLoading.value = true;
+
+  try {
+    const courses = await request.get<any, any[]>('/content/courses/me');
+
+    // 查找包含 AI 的课程
+    const targetCourse = courses.find((c: any) => {
+      const name = c.name || '';
+      return name.includes('AI') || name.includes('跨境电商') || name.includes('视觉营销');
+    });
+
+    if (targetCourse) {
+      courseInfo.value = targetCourse;
+
+      // 获取课程章节 - 使用 public_id
+      const courseId = targetCourse.public_id || targetCourse.id.toString();
+      const chapters = await getStudentCourseChapters(courseId);
+
+      // 只显示 PDF 类型的课时
+      const pdfChapters = chapters
+        .map((chapter: any) => ({
+          ...chapter,
+          lessons: chapter.lessons.filter((l: any) => l.type === 'pdf'),
+          isOpen: false
+        }))
+        .filter((chapter: any) => chapter.lessons.length > 0);
+
+      // 默认展开第一个章节
+      if (pdfChapters.length > 0) {
+        pdfChapters[0].isOpen = true;
+      }
+
+      chapterList.value = pdfChapters;
+    } else {
+      courseInfo.value = null;
+    }
+  } catch (e: any) {
+    console.error('[课程资料] 加载课程数据失败:', e);
+  } finally {
+    courseLoading.value = false;
+  }
+};
+
+// 切换章节展开/收起
+const toggleChapter = (index: number) => {
+  chapterList.value[index].isOpen = !chapterList.value[index].isOpen;
+};
+
+// 处理课时点击 - 进入阅读模式
+const handleLessonClick = (lesson: any) => {
+  if (!lesson.file_url) return;
+
+  currentLesson.value = lesson;
+  currentPdfUrl.value = getImgUrl(lesson.file_url);
+  scale.value = 1.0;
+  isReadingMode.value = true;
+
+  nextTick(() => {
+    if (pdfScrollRef.value) {
+      pdfScrollRef.value.scrollTop = 0;
+    }
+  });
+};
+
+// 退出阅读模式
+const exitReadingMode = () => {
+  isReadingMode.value = false;
+  currentLesson.value = null;
+  currentPdfUrl.value = '';
 };
 
 onMounted(() => {
@@ -293,8 +572,8 @@ onUnmounted(() => {
 }
 
 .error-icon {
-  font-size: 48px;
   margin-bottom: 16px;
+  color: #f56c6c;
 }
 
 .comfyui-container {
@@ -345,10 +624,571 @@ onUnmounted(() => {
   opacity: 0.8;
 }
 
+.course-material-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(4px);
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: translateX(-2px);
+
+    .arrow-icon {
+      transform: translateX(2px);
+    }
+  }
+
+  .arrow-icon {
+    transition: transform 0.2s ease;
+  }
+}
+
 .comfyui-iframe {
   flex: 1;
   width: 100%;
   border: none;
   background: white;
+}
+
+// 抽屉样式
+:deep(.course-material-drawer) {
+  .el-drawer__header {
+    padding: 0;
+    margin-bottom: 0;
+  }
+
+  .el-drawer__body {
+    padding: 0;
+  }
+
+  .el-drawer__close {
+    display: none;
+  }
+}
+
+.drawer-wrapper {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+// ===== 列表视图 =====
+.list-view {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #fafafa;
+  flex-shrink: 0;
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    .header-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #1a1a1a;
+    }
+  }
+
+  .close-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    color: #999;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: #f5f5f5;
+      color: #666;
+    }
+  }
+}
+
+.drawer-content {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.course-loading {
+  padding: 20px;
+}
+
+.course-info-section {
+  padding: 20px;
+  border-bottom: 1px solid #e5e7eb;
+
+  .course-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin-bottom: 12px;
+    line-height: 1.4;
+  }
+
+  .course-meta {
+    display: flex;
+    gap: 16px;
+
+    .meta-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 13px;
+      color: #666;
+    }
+  }
+}
+
+// 章节列表
+.chapters-list {
+  padding: 16px;
+
+  .chapter-item {
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    background: white;
+    margin-bottom: 12px;
+
+    &.is-open {
+      border-color: #667eea;
+      box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+
+      .chapter-header .arrow-icon {
+        transform: rotate(0deg);
+      }
+    }
+
+    .chapter-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 18px;
+      background-color: #fafafa;
+      cursor: pointer;
+      user-select: none;
+      transition: background-color 0.2s ease;
+
+      &:hover {
+        background-color: #f5f5f5;
+      }
+
+      .left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+
+        .arrow-icon {
+          color: #999;
+          transition: transform 0.3s ease;
+          transform: rotate(-90deg);
+          flex-shrink: 0;
+
+          &.rotated {
+            transform: rotate(0deg);
+          }
+        }
+
+        .title {
+          font-size: 15px;
+          font-weight: 600;
+          color: #333;
+        }
+      }
+
+      .right {
+        .count {
+          font-size: 12px;
+          color: #999;
+          background: #f5f5f5;
+          padding: 3px 10px;
+          border-radius: 10px;
+        }
+      }
+    }
+
+    .lesson-group {
+      border-top: 1px solid #e5e7eb;
+      background: white;
+
+      .lesson-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 18px 12px 44px;
+        border-bottom: 1px solid #f9f9f9;
+        cursor: pointer;
+        transition: all 0.2s ease;
+
+        &:last-child {
+          border-bottom: none;
+        }
+
+        &:hover {
+          background-color: #fafafa;
+
+          .lesson-title {
+            color: #667eea;
+          }
+
+          .read-btn {
+            background: #667eea;
+            color: white;
+          }
+        }
+
+        .lesson-left {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          flex: 1;
+          min-width: 0;
+
+          .pdf-icon {
+            flex-shrink: 0;
+          }
+
+          .lesson-title {
+            font-size: 14px;
+            color: #555;
+            transition: color 0.2s ease;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+        }
+
+        .lesson-right {
+          flex-shrink: 0;
+        }
+      }
+    }
+  }
+}
+
+.read-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: rgba(102, 126, 234, 0.1);
+  color: #667eea;
+  border: 1px solid transparent;
+
+  &:hover {
+    background: #667eea;
+    color: white;
+  }
+}
+
+.empty-course-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  color: #999;
+
+  p {
+    margin: 16px 0 8px 0;
+    font-size: 16px;
+    font-weight: 500;
+  }
+
+  span {
+    font-size: 14px;
+    color: #bbb;
+  }
+}
+
+// ===== 沉浸式阅读视图 =====
+.reading-view {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+  position: relative;
+
+  // 目录切换按钮（浮动）
+  .sidebar-toggle-btn {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+    transition: left 0.3s ease;
+    width: 32px;
+    height: 60px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-left: none;
+    border-radius: 0 8px 8px 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #666;
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+
+    svg {
+      transition: transform 0.2s ease;
+      transform: rotate(180deg);  // 修改：默认旋转180度
+    }
+
+    &:hover {
+      background: #667eea;
+      color: white;
+      width: 36px;
+    }
+  }
+
+  // 当侧边栏隐藏时，按钮移到左边缘
+  &.sidebar-hidden .sidebar-toggle-btn {
+    left: 0;
+
+    svg {
+      transform: rotate(0deg);  // 修改：旋转回0度
+    }
+  }
+
+  // 左侧目录
+  .read-sidebar {
+    width: 260px;
+    background: #fafafa;
+    border-right: 1px solid #e5e7eb;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+
+    .rs-header {
+      padding: 16px;
+      border-bottom: 1px solid #e5e7eb;
+
+      .back-btn {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 13px;
+        color: #666;
+        background: none;
+        border: none;
+        padding: 0;
+        cursor: pointer;
+        margin-bottom: 12px;
+        transition: color 0.2s ease;
+
+        &:hover {
+          color: #667eea;
+        }
+      }
+
+      h3 {
+        font-size: 15px;
+        color: #333;
+        margin: 0;
+      }
+    }
+
+    .rs-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+
+      .rs-chapter {
+        margin-bottom: 16px;
+
+        .rs-c-title {
+          font-size: 12px;
+          font-weight: 600;
+          color: #999;
+          padding: 4px 8px;
+          margin-bottom: 4px;
+        }
+
+        .rs-lessons {
+          .rs-l-item {
+            padding: 10px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            color: #333;
+            transition: all 0.2s ease;
+            margin-bottom: 2px;
+
+            .lesson-title {
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+            }
+
+            &:hover {
+              background: rgba(0, 0, 0, 0.04);
+            }
+
+            &.active {
+              background: rgba(102, 126, 234, 0.1);
+              color: #667eea;
+              font-weight: 500;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // 右侧阅读区
+  .read-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: #f0f2f3;
+
+    // 顶部工具栏
+    .read-toolbar {
+      height: 56px;
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 20px;
+      flex-shrink: 0;
+
+      .file-info {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+
+        .badge {
+          background: #1a1a1a;
+          color: white;
+          padding: 3px 8px;
+          border-radius: 4px;
+          font-size: 11px;
+          font-weight: 600;
+        }
+
+        .name {
+          font-size: 14px;
+          font-weight: 600;
+          color: #333;
+          max-width: 300px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+      }
+
+      .tools {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+
+        .zoom-ctrl {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+
+          button {
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            color: #555;
+            transition: all 0.2s ease;
+
+            &:hover:not(:disabled) {
+              border-color: #667eea;
+              color: #667eea;
+            }
+
+            &:disabled {
+              opacity: 0.4;
+              cursor: not-allowed;
+            }
+          }
+
+          span {
+            font-size: 13px;
+            font-weight: 600;
+            color: #555;
+            min-width: 40px;
+            text-align: center;
+          }
+        }
+      }
+    }
+
+    // PDF 内容区
+    .read-stage {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+
+      .pdf-canvas {
+        display: block;
+
+        :deep(.vue-pdf-embed) {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 0;
+        }
+
+        :deep(.vue-pdf-embed__page) {
+          margin-bottom: 20px;
+          box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+          background: white;
+        }
+      }
+    }
+  }
 }
 </style>

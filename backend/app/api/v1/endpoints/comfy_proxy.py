@@ -102,7 +102,7 @@ async def execute_workflow_direct(
     """
     try:
         # 提取端口和主机
-        # comfy_url 格式: http://192.168.150.2:8189/prompt
+        # comfy_url 格式: http://edu.yanzhiedu.cn:8189/prompt (使用DDNS域名)
         # 提取 host:port 部分
         prompt_result_url = comfy_url.replace("/prompt", "")
         # 从 URL 中提取主机和端口
@@ -365,7 +365,7 @@ async def comfy_proxy(
 
     使用场景：
     - 前端通过 /api/v1/comfy_proxy/proxy/{username}/prompt 访问ComfyUI API
-    - 教学系统会转发请求到 http://192.168.150.2:{port}/{path}
+    - 教学系统会转发请求到 http://edu.yanzhiedu.cn:{port}/{path} (使用DDNS域名)
 
     注意：这解决了跨域问题，让队列脚本可以正常工作
     """

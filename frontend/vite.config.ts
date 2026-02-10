@@ -37,9 +37,9 @@ export default defineConfig({
         }
       },
       // ComfyUI 代理 - 开发环境使用
-      // 格式: /comfyui/username/port/* -> http://192.168.150.2:port/*
+      // 格式: /comfyui/username/port/* -> http://edu.yanzhiedu.cn:port/* (使用DDNS域名)
       '/comfyui': {
-        target: 'http://192.168.150.2',
+        target: 'http://edu.yanzhiedu.cn',
         changeOrigin: true,
         secure: false,
         ws: true,

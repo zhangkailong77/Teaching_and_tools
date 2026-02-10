@@ -6,7 +6,7 @@ import socket
 import os
 
 # 从环境变量读取配置
-GPU_HOST = os.getenv("COMFY_GPU_HOST", "192.168.150.2")
+GPU_HOST = os.getenv("COMFY_GPU_HOST", "edu.yanzhiedu.cn")  # 使用DDNS域名
 GPU_PORT = int(os.getenv("COMFY_GPU_SSH_PORT", "22"))
 GPU_USER = os.getenv("COMFY_GPU_USER", "yzcube")
 GPU_PASSWORD = os.getenv("COMFY_GPU_PASSWORD", "Yanzhi2025.")

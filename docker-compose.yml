@@ -32,7 +32,7 @@ services:
       - ACCESS_TOKEN_EXPIRE_MINUTES=60
       - COMFY_MAX_CONCURRENT=2
       - COMFY_MAX_CONCURRENT_PROD=2
-      - COMFY_GPU_HOST=124.72.52.139
+      - COMFY_GPU_HOST=edu.yanzhiedu.cn
       # SSH 配置（用于远程启动/停止 ComfyUI）
       - COMFY_GPU_SSH_PORT=22
       - COMFY_GPU_USER=yzcube

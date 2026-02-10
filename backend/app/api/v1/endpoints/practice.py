@@ -46,7 +46,7 @@ def start_practice(
         return {
             "status": "success",
             "url": f"/comfyui-direct/{port}/",  # Vite代理路径
-            "direct_url": f"http://192.168.150.2:{port}",  # 直接访问（备用）
+            "direct_url": f"http://edu.yanzhiedu.cn:{port}",  # 直接访问（备用，使用DDNS域名）
             "port": port,
             "message": "实训环境启动成功"
         }

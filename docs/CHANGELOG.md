@@ -4,6 +4,66 @@
 
 ---
 
+## 2026-02-10 - ComfyUI GPU 服务器使用 DDNS 域名
+
+### 📝 功能概述
+将 GPU 服务器的硬编码公网 IP 地址替换为 DDNS 动态域名，解决公网 IP 变化时需要手动更新配置的问题。
+
+### ✨ 改进内容
+- 所有 ComfyUI 请求使用 DDNS 域名 `edu.yanzhiedu.cn` 代替固定 IP
+- 添加 DNS 解析器配置，支持动态 DNS 解析
+- 无需手动更新配置，DDNS 自动跟随 IP 变化
+
+### 🔧 技术实现
+
+#### 后端配置
+- 环境变量 `COMFY_GPU_HOST` 改为 `edu.yanzhiedu.cn`
+- `config.py` 默认值更新为域名
+- `comfy_runner.py` SSH 连接使用域名
+
+#### Nginx 配置
+- 添加 DNS resolver 指令：`resolver 8.8.8.8 8.8.4.4 valid=60s`
+- 所有 `proxy_pass` 指令使用域名
+- 支持动态 DNS 解析，自动刷新
+
+#### 前端配置
+- 开发环境 Vite 代理 target 改为域名
+- ComfyUI 直接访问 URL 使用域名
+
+### 📦 修改的文件
+| 文件 | 修改内容 |
+|------|----------|
+| `docker-compose.yml` | `COMFY_GPU_HOST=edu.yanzhiedu.cn` |
+| `nginx/nginx.conf` | 添加 DNS resolver，更新 proxy_pass |
+| `nginx/comfyui_proxy.conf` | 更新所有 proxy_pass 为域名 |
+| `backend/app/core/config.py` | 默认值改为域名 |
+| `backend/app/utils/comfy_runner.py` | 默认值改为域名 |
+| `backend/app/api/v1/endpoints/practice.py` | direct_url 改为域名 |
+| `backend/app/api/v1/endpoints/comfy_proxy.py` | 更新注释 |
+| `frontend/src/views/dashboard/student/comfyui/index.vue` | 开发环境 URL 改为域名 |
+| `frontend/vite.config.ts` | ComfyUI 代理 target 改为域名 |
+| `backend/.env.example` | 更新配置说明 |
+| `backend/.env` | 更新为域名 |
+| `backend/.env.local` | 更新为域名 |
+| `backend/.env.temp` | 更新为域名，保留旧配置为注释 |
+
+### 🎯 影响范围
+- ✅ SSH 连接（启动/停止 ComfyUI）
+- ✅ HTTP 请求（工作流提交、状态查询）
+- ✅ Nginx 反向代理（前端访问）
+- ✅ 排队机制（无影响，使用 Redis）
+
+### 🧪 测试验证
+- Docker 日志显示请求正确使用域名：`http://edu.yanzhiedu.cn:8189`
+- 工作流提交和执行正常
+- 排队机制工作正常
+
+### 📝 注意事项
+- 教学平台服务器 IP（192.168.150.27）保持不变
+- 部署后需要重启 Docker 服务
+
+---
+
 ## 2026-02-10 - 教师端课程预览功能优化
 
 ### 📝 功能概述

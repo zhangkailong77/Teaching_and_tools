@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     redis_password: Optional[str] = None
 
     # ComfyUI队列配置
-    comfy_gpu_host: str = "192.168.150.2"
+    comfy_gpu_host: str = "edu.yanzhiedu.cn"  # 使用DDNS域名，自动解析到动态IP
     comfy_max_concurrent: int = 1  # 测试环境最大并发
     comfy_max_concurrent_prod: int = 1  # 生产环境最大并发
 
