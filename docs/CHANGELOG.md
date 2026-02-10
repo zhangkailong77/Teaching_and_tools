@@ -4,6 +4,92 @@
 
 ---
 
+## 2026-02-10 - ComfyUI 课程资料抽屉交互优化
+
+### 📝 功能概述
+优化 ComfyUI 界面右侧课程资料抽屉的交互体验，实现抽屉打开时仍可操作 ComfyUI 节点，并新增 PDF 拖拽阅读功能。
+
+### ✨ 新增功能
+- 抽屉打开时不会阻止底层 ComfyUI 的操作（移除遮罩层拦截）
+- PDF 支持鼠标拖拽移动，方便阅读放大后的内容
+- 阅读模式工具栏右上角添加关闭按钮（X）
+
+### 🐛 修复问题
+- 修复 PDF 放大时工具栏被推到右边的问题
+- 修复 PDF 放大后左边区域被截断无法拖拽的问题
+- 修复默认 100% 时 PDF 不居中显示的问题
+
+### 🔧 技术实现
+
+#### 抽屉容器 pointer-events 设置
+```typescript
+// 打开抽屉时强制设置遮罩层不拦截点击事件
+const modal = document.querySelector('.el-modal-drawer, .course-drawer-modal');
+if (modal) {
+  (modal as HTMLElement).style.pointerEvents = 'none';
+}
+```
+
+#### PDF 拖拽功能
+```typescript
+// 拖拽状态管理
+const isDragging = ref(false);
+const dragStartX = ref(0);
+const dragStartY = ref(0);
+const scrollLeft = ref(0);
+const scrollTop = ref(0);
+
+// 拖拽事件处理
+const onPdfMouseDown = (e: MouseEvent) => {
+  isDragging.value = true;
+  dragStartX.value = e.clientX - pdfScrollRef.value.offsetLeft;
+  dragStartY.value = e.clientY - pdfScrollRef.value.offsetTop;
+  // ...
+};
+```
+
+#### CSS 样式优化
+```scss
+// 抽屉遮罩层不拦截点击
+.el-modal-drawer,
+.course-drawer-modal {
+  pointer-events: none !important;
+}
+
+// PDF 容器优化布局
+.read-content {
+  min-width: 0;          // 防止 flex 子元素溢出
+  overflow: hidden;      // 防止内容溢出影响工具栏
+
+  .read-toolbar {
+    min-width: 100%;     // 确保工具栏不被压缩
+  }
+}
+
+// PDF 默认居中，放大后可正常滚动
+.read-stage {
+  align-items: flex-start;  // 左对齐避免左边被截断
+
+  .pdf-canvas {
+    margin: 0 auto;         // 默认水平居中
+  }
+}
+```
+
+### 📦 修改的文件
+| 文件 | 修改内容 |
+|------|----------|
+| `frontend/src/views/dashboard/student/comfyui/index.vue` | 抽屉交互优化、PDF 拖拽功能、样式修复 |
+
+### 🎯 改进效果
+- ✅ 抽屉打开时可边看课程资料边操作 ComfyUI 节点
+- ✅ PDF 放大后可通过拖拽查看任意区域
+- ✅ 工具栏始终保持在可点击位置
+- ✅ PDF 默认居中显示，放大后左右均可正常滚动
+- ✅ 阅读模式可直接关闭抽屉
+
+---
+
 ## 2026-02-10 - ComfyUI GPU 服务器使用 DDNS 域名
 
 ### 📝 功能概述

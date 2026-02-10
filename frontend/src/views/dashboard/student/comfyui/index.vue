@@ -62,10 +62,12 @@
       v-model="courseDrawerVisible"
       direction="rtl"
       :size="700"
-      :modal="true"
+      :modal="false"
       :close-on-click-modal="false"
       :close-on-press-escape="true"
+      :z-index="100"
       class="course-material-drawer"
+      modal-class="course-drawer-modal"
       destroy-on-close
     >
       <!-- 抽屉内容 -->
@@ -221,11 +223,25 @@
                   <span>{{ Math.round(scale * 100) }}%</span>
                   <button @click="scale < 2.0 ? scale += 0.1 : null">+</button>
                 </div>
+                <!-- 关闭抽屉按钮 -->
+                <button class="close-drawer-btn" @click="courseDrawerVisible = false" title="关闭">
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                    <path d="M5 5l8 8M13 5l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                  </svg>
+                </button>
               </div>
             </div>
 
             <!-- PDF 内容区 -->
-            <div class="read-stage" ref="pdfScrollRef">
+            <div
+              class="read-stage"
+              ref="pdfScrollRef"
+              @mousedown="onPdfMouseDown"
+              @mousemove="onPdfMouseMove"
+              @mouseup="onPdfMouseUp"
+              @mouseleave="onPdfMouseUp"
+              :class="{ 'dragging': isDragging }"
+            >
               <VuePdfEmbed
                 v-if="currentPdfUrl"
                 :source="currentPdfUrl"
@@ -276,6 +292,38 @@ const currentLesson = ref<any>(null);
 const currentPdfUrl = ref('');
 const scale = ref(1.0);
 const pdfScrollRef = ref<HTMLElement | null>(null);
+
+// PDF 拖拽状态
+const isDragging = ref(false);
+const dragStartX = ref(0);
+const dragStartY = ref(0);
+const scrollLeft = ref(0);
+const scrollTop = ref(0);
+
+// PDF 拖拽事件处理
+const onPdfMouseDown = (e: MouseEvent) => {
+  if (!pdfScrollRef.value) return;
+  isDragging.value = true;
+  dragStartX.value = e.clientX - pdfScrollRef.value.offsetLeft;
+  dragStartY.value = e.clientY - pdfScrollRef.value.offsetTop;
+  scrollLeft.value = pdfScrollRef.value.scrollLeft;
+  scrollTop.value = pdfScrollRef.value.scrollTop;
+};
+
+const onPdfMouseMove = (e: MouseEvent) => {
+  if (!isDragging.value || !pdfScrollRef.value) return;
+  e.preventDefault();
+  const x = e.clientX - pdfScrollRef.value.offsetLeft;
+  const y = e.clientY - pdfScrollRef.value.offsetTop;
+  const walkX = (x - dragStartX.value) * 1.5; // 拖拽速度
+  const walkY = (y - dragStartY.value) * 1.5;
+  pdfScrollRef.value.scrollLeft = scrollLeft.value - walkX;
+  pdfScrollRef.value.scrollTop = scrollTop.value - walkY;
+};
+
+const onPdfMouseUp = () => {
+  isDragging.value = false;
+};
 
 // 计算 PDF 章节总数
 const pdfChapterCount = computed(() => {
@@ -419,6 +467,23 @@ const getQueueDetail = (info: any) => {
 // 打开课程资料抽屉
 const openCourseDrawer = async () => {
   courseDrawerVisible.value = true;
+
+  // 等待 DOM 更新后，强制设置抽屉容器的 pointer-events
+  nextTick(() => {
+    // 关键修复：设置遮罩层 pointer-events: none，让它不阻止底层交互
+    const modal = document.querySelector('.el-modal-drawer, .course-drawer-modal');
+    if (modal) {
+      (modal as HTMLElement).style.pointerEvents = 'none';
+      console.log('[抽屉] 已设置遮罩层 pointer-events: none');
+    }
+
+    // 确保抽屉本身可交互
+    const drawer = document.querySelector('.course-material-drawer');
+    if (drawer) {
+      (drawer as HTMLElement).style.pointerEvents = 'auto';
+      console.log('[抽屉] 已设置抽屉 pointer-events: auto');
+    }
+  });
 
   const hasCourseInfo = courseInfo.value !== null;
   const hasChapterList = chapterList.value && chapterList.value.length > 0;
@@ -661,8 +726,15 @@ onUnmounted(() => {
   background: white;
 }
 
-// 抽屉样式
+// 抽屉样式 - 允许底层交互
+// 让抽屉容器不阻止底层点击，但抽屉本身可交互
+:deep(.el-drawer__container) {
+  pointer-events: none;
+}
+
 :deep(.course-material-drawer) {
+  pointer-events: auto;
+
   .el-drawer__header {
     padding: 0;
     margin-bottom: 0;
@@ -1077,10 +1149,13 @@ onUnmounted(() => {
     display: flex;
     flex-direction: column;
     background: #f0f2f3;
+    min-width: 0; // 防止 flex 子元素溢出
+    overflow: hidden; // 防止内容溢出
 
     // 顶部工具栏
     .read-toolbar {
       height: 56px;
+      min-width: 100%; // 确保工具栏不会被压缩
       background: rgba(255, 255, 255, 0.9);
       backdrop-filter: blur(10px);
       border-bottom: 1px solid #e5e7eb;
@@ -1159,6 +1234,27 @@ onUnmounted(() => {
             text-align: center;
           }
         }
+
+        // 关闭抽屉按钮
+        .close-drawer-btn {
+          width: 32px;
+          height: 32px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: white;
+          border: 1px solid #e5e7eb;
+          border-radius: 6px;
+          cursor: pointer;
+          color: #666;
+          transition: all 0.2s ease;
+
+          &:hover {
+            background: #f56c6c;
+            border-color: #f56c6c;
+            color: white;
+          }
+        }
       }
     }
 
@@ -1166,14 +1262,22 @@ onUnmounted(() => {
     .read-stage {
       flex: 1;
       overflow-y: auto;
-      overflow-x: hidden;
+      overflow-x: auto;
       padding: 24px;
       display: flex;
       flex-direction: column;
-      align-items: center;
+      align-items: flex-start; // 改为左对齐，避免放大时左边被截断
+      cursor: grab;
+
+      &.dragging {
+        cursor: grabbing;
+        user-select: none; // 防止拖拽时选中文本
+      }
 
       .pdf-canvas {
         display: block;
+        margin: 0 auto; // 默认水平居中
+        pointer-events: none; // 防止 PDF 内容本身干扰拖拽
 
         :deep(.vue-pdf-embed) {
           display: flex;
@@ -1190,5 +1294,24 @@ onUnmounted(() => {
       }
     }
   }
+}
+</style>
+
+<!-- 全局样式：解决抽屉阻止底层交互问题 -->
+<style>
+/* 抽屉遮罩层 - 设置为不拦截点击事件 */
+.el-modal-drawer,
+.course-drawer-modal {
+  pointer-events: none !important;
+}
+
+/* 抽屉本身恢复点击交互能力 */
+.el-drawer.course-material-drawer {
+  pointer-events: auto !important;
+}
+
+/* 确保抽屉的所有子元素都可以交互 */
+.el-drawer.course-material-drawer * {
+  pointer-events: auto !important;
 }
 </style>
