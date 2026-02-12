@@ -108,10 +108,16 @@ const routes: RouteRecordRaw[] = [
         meta: { requiresAuth: true, role: 'teacher', activeMenu: '/dashboard/teacher/homeworks' }
       },
       {
-        path: 'teacher/exams', 
+        path: 'teacher/exams',
         name: 'TeacherExamCenter',
-        component: () => import('@/views/dashboard/teacher/exams/index.vue'), 
+        component: () => import('@/views/dashboard/teacher/exams/index.vue'),
         meta: { requiresAuth: true, role: 'teacher' }
+      },
+      {
+        path: 'teacher/comfyui',
+        name: 'TeacherComfyUI',
+        component: () => import('@/views/dashboard/teacher/comfyui/index.vue'),
+        meta: { requiresAuth: true, role: 'teacher', hideSidebar: true }
       },
     ]
   }

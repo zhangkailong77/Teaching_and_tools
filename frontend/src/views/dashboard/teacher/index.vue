@@ -20,6 +20,9 @@
       <!-- 数据概览卡片 -->
       <DashboardStats :data="stats" />
 
+      <!-- 实训平台入口 -->
+      <TrainingPlatforms />
+
       <!-- 执教课程列表 -->
       <div class="section-title">
         <h3>我管理的班级与课程</h3>
@@ -393,6 +396,7 @@ import { getMyClasses, createClass, getDashboardStats, getTeacherSchedule, updat
 import { getMyCourses, getAvailableCourses, type CourseItem } from '@/api/content';
 import { getImgUrl } from '@/utils/index';
 import DashboardStats from './components/DashboardStats.vue'
+import TrainingPlatforms from './components/TrainingPlatforms.vue'
 import {
   Warning
 } from '@element-plus/icons-vue'

@@ -11,7 +11,7 @@
  Target Server Version : 80042 (8.0.42)
  File Encoding         : 65001
 
- Date: 09/02/2026 20:30:08
+ Date: 12/02/2026 14:20:05
 */
 
 SET NAMES utf8mb4;
@@ -810,12 +810,12 @@ CREATE TABLE `student_learning_progress`  (
   INDEX `fk_slp_lesson`(`lesson_id` ASC) USING BTREE,
   CONSTRAINT `fk_slp_lesson` FOREIGN KEY (`lesson_id`) REFERENCES `course_lessons` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `fk_slp_student` FOREIGN KEY (`student_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 21 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 22 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of student_learning_progress
 -- ----------------------------
-INSERT INTO `student_learning_progress` VALUES (1, 1, 201, 2, 0, '2026-02-09 14:16:02');
+INSERT INTO `student_learning_progress` VALUES (1, 1, 201, 2, 2, '2026-02-10 17:41:41');
 INSERT INTO `student_learning_progress` VALUES (2, 1, 203, 2, 1, '2026-01-06 15:33:14');
 INSERT INTO `student_learning_progress` VALUES (3, 1, 205, 2, 0, '2026-01-06 15:41:31');
 INSERT INTO `student_learning_progress` VALUES (4, 1, 207, 2, 0, '2026-01-06 15:41:41');
@@ -832,6 +832,7 @@ INSERT INTO `student_learning_progress` VALUES (15, 1, 215, 1, 51, '2026-01-30 1
 INSERT INTO `student_learning_progress` VALUES (18, 1, 219, 1, 61, '2026-01-30 16:22:20');
 INSERT INTO `student_learning_progress` VALUES (19, 1, 221, 1, 0, '2026-01-30 16:50:35');
 INSERT INTO `student_learning_progress` VALUES (20, 1, 217, 1, 27, '2026-01-30 16:34:15');
+INSERT INTO `student_learning_progress` VALUES (21, 1, 644, 2, 100, '2026-02-10 17:41:50');
 
 -- ----------------------------
 -- Table structure for student_profiles
@@ -1005,9 +1006,9 @@ CREATE TABLE `users`  (
 -- ----------------------------
 -- Records of users
 -- ----------------------------
-INSERT INTO `users` VALUES (1, '18250636865', '$2b$12$DM8zYSLV9Dt.jKfG4jykaetq3F4jmwGcSF6hJBaGDJBWQOc3ol9.y', 'student', 1, '2025-12-24 11:26:48', '2026-02-09 16:17:31', 8189, '张十一', '22014082032');
-INSERT INTO `users` VALUES (2, '18250636866', '$2b$12$BbkngZyC3IaWM.cWcZKmauZxsyO3VZTe5P2mRqrbc75CC13xrMqIi', 'teacher', 1, '2025-12-24 11:27:14', '2026-02-04 09:02:02', NULL, NULL, NULL);
-INSERT INTO `users` VALUES (4, '18250636867', '$2b$12$mVae3WIBNklVoxfL7qkLQ.ymZ9vRDq6vbwB2Za0cTStB1FO1DeYoa', 'teacher', 1, '2025-12-24 15:04:05', '2026-01-29 16:34:17', NULL, NULL, NULL);
+INSERT INTO `users` VALUES (1, '18250636865', '$2b$12$DM8zYSLV9Dt.jKfG4jykaetq3F4jmwGcSF6hJBaGDJBWQOc3ol9.y', 'student', 1, '2025-12-24 11:26:48', '2026-02-11 10:01:48', 8189, '张十一', '22014082032');
+INSERT INTO `users` VALUES (2, '18250636866', '$2b$12$BbkngZyC3IaWM.cWcZKmauZxsyO3VZTe5P2mRqrbc75CC13xrMqIi', 'teacher', 1, '2025-12-24 11:27:14', '2026-02-12 14:15:54', 8194, NULL, NULL);
+INSERT INTO `users` VALUES (4, '18250636867', '$2b$12$mVae3WIBNklVoxfL7qkLQ.ymZ9vRDq6vbwB2Za0cTStB1FO1DeYoa', 'teacher', 1, '2025-12-24 15:04:05', '2026-02-10 16:03:10', NULL, NULL, NULL);
 INSERT INTO `users` VALUES (5, '18250636868', '$2b$12$LExgic9UmvpwwLtG5Gufs.08MAc8wx7EfZdv9CjYzn3QiLJnOUZdq', 'student', 1, '2025-12-24 17:26:36', '2026-01-22 13:48:48', 8190, '李四', '22014082034');
 INSERT INTO `users` VALUES (6, '18250636969', '$2b$12$2bR.Xy.PQzAQDApnmWxdSeC.bIEs0C1kklBR751IoX4/tNFuUCyt2', 'student', 1, '2025-12-25 16:30:01', '2025-12-25 16:47:31', 8191, '王五', '22014082035');
 INSERT INTO `users` VALUES (7, '18250636870', '$2b$12$JZUcksLjg6lZfnipDk.rS.Bqwgy4cH.dqmkuUgsvhQCSyw.c0wq9u', 'student', 1, '2025-12-25 16:34:04', '2026-01-22 13:49:10', 8192, '赵六', '22014082036');

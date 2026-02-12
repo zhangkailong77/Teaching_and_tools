@@ -4,6 +4,46 @@
 
 ---
 
+## 2026-02-11 - 教师端实训平台入口功能
+
+### 📝 功能概述
+在教师工作台新增实训平台入口，与学生对齐，支持4个实训平台访问。
+
+### ✨ 新增功能
+- **实训平台配置**: 创建 `frontend/src/config/training-platforms.ts` 统一管理实训平台配置
+- **实训入口组件**: 新增 `TrainingPlatforms.vue` 组件，显示4个实训平台卡片
+  - ComfyUI - AI+跨境电商视觉营销设计（已实现，可点击跳转）
+  - Shopee - 跨境电商实训（敬请期待）
+  - TikTok - 短视频运营实训（敬请期待）
+  - AI+智能体编排 - 跨境客服应用（敬请期待）
+- **教师端 ComfyUI 页面**: 创建独立的教师端 ComfyUI 访问页面
+- **路由配置**: 添加教师端 ComfyUI 路由 (`/dashboard/teacher/comfyui`)
+
+### 🐛 修复问题
+- 修复教师端 ComfyUI 课程资料加载问题（使用正确的 API 接口 `getCourseChapters`）
+- 统一课程资料抽屉主题色为青绿色 `#00c9a7`
+
+### 🎨 UI 设计
+- 实训平台卡片横向4列布局
+- 已实现平台：可点击跳转，悬停效果
+- 敬请期待平台：灰色禁用状态，显示"敬请期待"标签
+- ComfyUI logo 使用 `comfyui.png` 图片，填充图标区域带圆角
+- 紫色渐变背景 (#667eea → #764ba2)
+
+### 📦 修改的文件
+| 文件 | 修改内容 |
+|------|----------|
+| `frontend/src/config/training-platforms.ts` | 新建：4个实训平台配置 |
+| `frontend/src/views/dashboard/teacher/components/TrainingPlatforms.vue` | 新建：实训入口组件 |
+| `frontend/src/views/dashboard/teacher/comfyui/index.vue` | 新建：教师端 ComfyUI 页面 |
+| `frontend/src/views/dashboard/teacher/index.vue` | 集成 TrainingPlatforms 组件 |
+| `frontend/src/router/index.ts` | 添加教师 ComfyUI 路由 |
+
+### 🔗 相关文档
+- [实训平台实现计划](./plans/2025-02-10-teacher-training-platforms.md)
+
+---
+
 ## 2026-02-10 - ComfyUI 课程资料抽屉交互优化
 
 ### 📝 功能概述
