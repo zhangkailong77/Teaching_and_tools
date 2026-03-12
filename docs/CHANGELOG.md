@@ -4,6 +4,100 @@
 
 ---
 
+## 2026-03-12 - MinIO 上传分流扩展与配置加载修复
+
+### 📝 功能概述
+将图片/附件上传从“仅教师头像试点”扩展到学生端头像、学生作业截图、课程详情作业截图、教师自定义作业附件；并修复本地调试时 `.env` 读取路径受启动目录影响的问题。
+
+### ✨ 新增与调整
+- **MinIO 分流扩展**:
+  - `avatars`：教师端/学生端头像上传
+  - `common`：学生作业抽屉、课程详情作业截图
+  - `homework`：教师发布自定义作业附件（图片/PDF）
+- **上传类型兼容**:
+  - `homework/materials` 允许上传 PDF（保留图片支持）
+  - 其余上传类型保持图片校验
+- **配置项扩展**:
+  - 新增 `MINIO_COMMON_ENABLED / MINIO_COMMON_PREFIX`
+  - 新增 `MINIO_HOMEWORK_ENABLED / MINIO_HOMEWORK_PREFIX`
+- **配置加载修复**:
+  - `Settings` 改为固定读取 `backend/.env`，避免因运行目录不同导致分流开关不生效
+
+### 🐛 问题修复
+- 修复 `type=homework` 上传返回本地路径 `/static/uploads/...` 的问题
+  - 根因：后端进程未稳定读取到 `backend/.env` 中的 MinIO 开关
+  - 修复后：`type=homework` 返回 MinIO 域名 URL（`.../teaching/homework/...`）
+
+### 📦 修改的文件
+| 文件 | 修改内容 |
+|------|----------|
+| `backend/app/api/v1/endpoints/upload.py` | 扩展分流逻辑（avatars/common/homework）、新增 PDF 兼容校验 |
+| `backend/app/core/config.py` | 新增 common/homework MinIO 配置项；固定 `.env` 绝对路径读取 |
+| `backend/app/main.py` | 增加本地回退目录 `static/uploads/homework` |
+| `backend/app/utils/uploader.py` | 保留 MinIO 上传实现（对象路径与 URL 组装） |
+| `backend/.env` | 启用 `MINIO_COMMON_ENABLED=true`、`MINIO_HOMEWORK_ENABLED=true` |
+| `backend/.env.example` | 补充 MinIO 新配置示例 |
+| `Dockerfile.backend` | 安装 `minio` 依赖并补充静态上传目录创建 |
+
+### 🧪 测试验证
+- 教师端头像上传：✅ MinIO
+- 学生端头像上传：✅ MinIO
+- 学生作业图片上传（2 个入口）：✅ MinIO（`common` 前缀）
+- 教师自定义作业附件上传：✅ MinIO（`homework` 前缀）
+
+---
+
+## 2026-03-12 - 联邦SSO与多学校接入基线
+
+### 📝 功能概述
+围绕“教学系统本地部署 + 统一云端任务大厅”方案，完成联邦 SSO 核心能力、学校配置自动同步机制，以及独立任务大厅项目设计基线文档更新。
+
+### ✨ 新增功能
+- **学校配置表初始化与同步**:
+  - 新增 `school_config` 模型与初始化逻辑
+  - 后端启动时自动将 `.env` 中 `SCHOOL_ID/SCHOOL_NAME` 同步到数据库（空表创建、差异更新）
+- **联邦 SSO 能力（教学系统侧）**:
+  - 新增 `POST /api/v1/federation/sso/token`（登录用户出票）
+  - 新增 `POST /api/v1/federation/sso/consume`（一次性消费票据）
+  - 引入票据 `jti` 一次性消费防重放机制（Redis）
+- **任务大厅独立项目设计基线**:
+  - 明确任务大厅改为独立新仓（`YZCube SkillMarket`）
+  - 补全项目背景、前提条件、联邦契约、阶段实施与风险应对
+
+### 🔧 技术实现
+- SSO ticket 载荷包含 `typ/jti/uid/sub/role/school_id/exp`
+- Redis 增加一次性键能力：`set_once_key` / `consume_once_key`
+- 新增配置项：
+  - `FEDERATION_SSO_TTL_SECONDS`
+  - `FEDERATION_CONSUMER_SECRET`
+
+### 🧪 测试验证
+- 新增并通过 `backend/tests/test_federation_sso.py`
+- 更新并通过 `backend/tests/test_school_config_bootstrap.py`
+- 回归通过 `backend/tests/test_interactive_manifest_helpers.py`
+- `python3 -m compileall app` 通过
+
+### 📦 修改的文件
+| 文件 | 修改内容 |
+|------|----------|
+| `backend/app/models/school_config.py` | 新建：学校配置模型 |
+| `backend/app/core/school_config.py` | 新建：学校配置初始化/同步逻辑 |
+| `backend/app/main.py` | 启动时执行学校配置同步 |
+| `backend/app/core/federation_sso.py` | 新建：SSO出票/消费核心逻辑 |
+| `backend/app/api/v1/endpoints/federation.py` | 新建：联邦 SSO API |
+| `backend/app/api/v1/api.py` | 挂载 federation 路由 |
+| `backend/app/core/redis.py` | 新增一次性 key 原子消费能力 |
+| `backend/app/core/config.py` | 新增 federation 配置项 |
+| `backend/app/schemas/federation.py` | 新建：联邦接口 Schema |
+| `backend/tests/test_federation_sso.py` | 新建：联邦 SSO 单测 |
+| `backend/tests/test_school_config_bootstrap.py` | 更新：支持 env 变更自动同步断言 |
+| `backend/.env.example` | 新增 school/federation 配置示例 |
+| `backend/.env.local` | 更新本地 school/federation 配置 |
+| `docker-compose.yml` | 新增 school/federation 环境变量 |
+| `docs/plans/2026-03-11-task-hall-design.md` | 重写为独立新项目设计基线 |
+
+---
+
 ## 2026-02-11 - 教师端实训平台入口功能
 
 ### 📝 功能概述

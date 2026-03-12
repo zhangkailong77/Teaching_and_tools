@@ -65,6 +65,34 @@ def delete_cache_pattern(pattern: str) -> int:
         return 0
 
 
+def set_once_key(key: str, expire: int) -> bool:
+    """设置一次性key（不存在时才设置）"""
+    try:
+        result = redis_client.set(key, "1", nx=True, ex=expire)
+        return bool(result)
+    except Exception as e:
+        logger.warning(f"Redis设置一次性key失败: {e}")
+        return False
+
+
+def consume_once_key(key: str) -> bool:
+    """原子消费一次性key，成功消费返回True，重复消费返回False"""
+    try:
+        lua_script = """
+        if redis.call('EXISTS', KEYS[1]) == 1 then
+            redis.call('DEL', KEYS[1])
+            return 1
+        else
+            return 0
+        end
+        """
+        result = redis_client.eval(lua_script, 1, key)
+        return result == 1
+    except Exception as e:
+        logger.warning(f"Redis消费一次性key失败: {e}")
+        return False
+
+
 # ==================== 考试暂存专用函数 ====================
 
 def EXAM_PROGRESS_KEY(exam_id: int, student_id: int) -> str:

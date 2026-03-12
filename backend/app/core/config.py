@@ -1,5 +1,10 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional
+from pathlib import Path
+
+
+BACKEND_ROOT = Path(__file__).resolve().parents[2]
+ENV_PATH = BACKEND_ROOT / ".env"
 
 class Settings(BaseSettings):
     # 定义字段（使用小写，符合 Python 规范）
@@ -9,6 +14,10 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 60
     database_url: str
     base_url: str = "http://127.0.0.1:8000"
+    school_id: str = "default-school"
+    school_name: str = "Default School"
+    federation_sso_ttl_seconds: int = 60
+    federation_consumer_secret: Optional[str] = None
 
     # Redis配置
     redis_host: str = "localhost"
@@ -30,10 +39,14 @@ class Settings(BaseSettings):
     minio_access_secret: Optional[str] = None
     minio_use_ssl: bool = False
     minio_avatar_prefix: str = "avatars"
+    minio_common_enabled: bool = False
+    minio_common_prefix: str = "common"
+    minio_homework_enabled: bool = False
+    minio_homework_prefix: str = "homework"
 
     # Pydantic V2 配置
     model_config = SettingsConfigDict(
-        env_file=".env",       # 指定读取的文件
+        env_file=str(ENV_PATH),  # 固定读取 backend/.env，避免受启动目录影响
         case_sensitive=False,  # 【关键】设为 False，这样 PROJECT_NAME 就能自动填入 project_name
         extra="ignore"         # 【关键】忽略 .env 中多余的未知字段，防止报错
     )

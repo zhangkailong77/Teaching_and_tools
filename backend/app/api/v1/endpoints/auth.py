@@ -45,7 +45,12 @@ def login_access_token(
     # 生成 Token
     access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
     access_token = security.create_access_token(
-        subject={"sub": user.username, "role": user.role, "id": user.id},
+        subject={
+            "sub": user.username,
+            "role": user.role,
+            "id": user.id,
+            "school_id": settings.school_id,
+        },
         expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer"}

@@ -32,9 +32,10 @@ def get_current_user(
         # 解码 JWT Token
         payload = jwt.decode(token, settings.secret_key, algorithms=[security.ALGORITHM])
         username: str = payload.get("sub")
+        school_id: str = payload.get("school_id") or settings.school_id
         if username is None:
             raise credentials_exception
-        token_data = TokenPayload(sub=username, role=payload.get("role"))
+        token_data = TokenPayload(sub=username, role=payload.get("role"), school_id=school_id)
     except JWTError:
         raise credentials_exception
 
@@ -44,7 +45,7 @@ def get_current_user(
         raise credentials_exception
 
     # 存入缓存（只存基本字段，1小时过期）
-    cache_key = f"user:{username}"
+    cache_key = f"user:{token_data.school_id}:{username}"
     user_dict = {
         "id": user.id,
         "username": user.username,
@@ -99,6 +100,7 @@ def get_current_user_optional(
     try:
         payload = jwt.decode(auth_token, settings.secret_key, algorithms=[security.ALGORITHM])
         username: str = payload.get("sub")
+        _school_id: str = payload.get("school_id") or settings.school_id
         if username is None:
             return None
 

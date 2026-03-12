@@ -4,15 +4,30 @@ from fastapi.staticfiles import StaticFiles
 import os
 import logging
 from app.core.config import settings
+from app.core.school_config import ensure_school_config
 from app.api.v1.api import api_router
 from app.db.base_class import Base
-from app.db.session import engine
-from app.models import user, course, profile, content
+from app.db.session import SessionLocal, engine
+from app.models import content, course, profile, school_config, user
 
 # 1. 自动创建数据库表
 # 当你运行项目时，SQLAlchemy 会检查 models 定义，并在 MySQL 中创建缺失的表 (如 users 表)
 # 注意：在生产环境中通常使用 Alembic 进行迁移，但在开发初期这样最方便
 Base.metadata.create_all(bind=engine)
+
+# 1.1 初始化单校配置（首次启动空表时自动回填）
+db = SessionLocal()
+try:
+    action = ensure_school_config(db, settings.school_id, settings.school_name)
+    if action in ("created", "updated"):
+        logging.getLogger(__name__).info(
+            "school_config %s from env: school_id=%s, school_name=%s",
+            action,
+            settings.school_id,
+            settings.school_name,
+        )
+finally:
+    db.close()
 
 # 2. 初始化 FastAPI 应用
 app = FastAPI(
@@ -44,6 +59,7 @@ upload_dirs = [
     "static/uploads/avatars", # 存头像
     "static/uploads/courses", # 存课程封面
     "static/uploads/common",   # 存通用图片
+    "static/uploads/homework",
     "static/uploads/materials",
     "static/interactive"
 ]

@@ -20,12 +20,13 @@ COPY backend/requirements.txt /app/requirements.txt
 # --- 核心修改 2: 使用阿里云 Pip 镜像源 (解决 pip install 慢的问题) ---
 RUN pip install --no-cache-dir -r /app/requirements.txt \
     -i https://mirrors.aliyun.com/pypi/simple/
+RUN pip install --no-cache-dir minio -i https://mirrors.aliyun.com/pypi/simple/
 
 # 复制应用代码
 COPY backend/ /app/
 
 # 创建静态目录
-RUN mkdir -p /app/static/uploads/{avatars,courses,common}
+RUN mkdir -p /app/static/uploads/{avatars,courses,common,homework,materials}
 
 # 暴露端口
 EXPOSE 8000

@@ -30,6 +30,10 @@ services:
       - REDIS_DB=0
       - SECRET_KEY=your-secret-key-change-in-production
       - ACCESS_TOKEN_EXPIRE_MINUTES=60
+      - SCHOOL_ID=yzcube-school
+      - SCHOOL_NAME=颜值立方大学
+      - FEDERATION_SSO_TTL_SECONDS=60
+      - FEDERATION_CONSUMER_SECRET=change-me-for-federation
       - COMFY_MAX_CONCURRENT=2
       - COMFY_MAX_CONCURRENT_PROD=2
       - COMFY_GPU_HOST=edu.yanzhiedu.cn
