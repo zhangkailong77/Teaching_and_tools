@@ -1,8 +1,15 @@
 import os
 import uuid
 import shutil
+import io
+from urllib.parse import urlparse
 from fastapi import UploadFile
 from app.core.config import settings
+
+try:
+    from minio import Minio
+except ImportError:
+    Minio = None
 
 # 配置本地存储根路径
 UPLOAD_DIR = "static/uploads"
@@ -37,8 +44,61 @@ async def save_file_locally(file: UploadFile, folder: str = "common") -> str:
     
     return url_path
 
-# --- 预留接口：未来切换 OSS 时，只需解开注释并实现这个函数 ---
-# async def save_file_to_oss(file: UploadFile, folder: str) -> str:
-#     # 调用阿里云 SDK 上传
-#     # return "https://oss.aliyun.com/..."
-#     pass
+def _normalize_minio_endpoint(endpoint: str) -> str:
+    parsed = urlparse(endpoint)
+    if parsed.scheme and parsed.netloc:
+        return parsed.netloc
+    return endpoint.replace("http://", "").replace("https://", "")
+
+
+def _build_public_url(domain: str, object_name: str) -> str:
+    base = (domain or "").rstrip("/")
+    if not base:
+        return object_name
+    return f"{base}/{object_name}"
+
+
+async def save_file_to_minio(file: UploadFile, folder: str = "common") -> str:
+    """
+    MinIO 文件上传函数
+    :param file: 上传的文件对象
+    :param folder: 子目录（用于对象名前缀）
+    :return: 可访问 URL
+    """
+    if Minio is None:
+        raise RuntimeError("MinIO SDK 未安装，请先安装 minio 包")
+
+    required = {
+        "minio_endpoint": settings.minio_endpoint,
+        "minio_bucket": settings.minio_bucket,
+        "minio_access_key": settings.minio_access_key,
+        "minio_access_secret": settings.minio_access_secret,
+        "minio_domain": settings.minio_domain,
+    }
+    missing = [k for k, v in required.items() if not v]
+    if missing:
+        raise RuntimeError(f"MinIO 配置缺失: {', '.join(missing)}")
+
+    file_ext = file.filename.split(".")[-1].lower()
+    unique_filename = f"{uuid.uuid4()}.{file_ext}"
+    object_name = f"{folder.strip('/')}/{unique_filename}"
+
+    endpoint = _normalize_minio_endpoint(settings.minio_endpoint)
+    client = Minio(
+        endpoint=endpoint,
+        access_key=settings.minio_access_key,
+        secret_key=settings.minio_access_secret,
+        secure=settings.minio_use_ssl,
+    )
+
+    data = await file.read()
+    file.file.seek(0)
+    client.put_object(
+        bucket_name=settings.minio_bucket,
+        object_name=object_name,
+        data=io.BytesIO(data),
+        length=len(data),
+        content_type=file.content_type or "application/octet-stream",
+    )
+
+    return _build_public_url(settings.minio_domain, object_name)

@@ -1,0 +1,15 @@
+{
+  "courses": {
+    "1": {
+      "ppt-test": {
+        "version": "v1.0.0",
+        "lessons": {
+          "640": {
+            "version": "v1.0.0",
+            "entry": "interactive/1/ppt-test/lesson_640/v1.0.0/index.html"
+          }
+        }
+      }
+    }
+  }
+}

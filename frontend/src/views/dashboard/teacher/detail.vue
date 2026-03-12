@@ -150,6 +150,13 @@
             >
               课程视频
             </span>
+            <span
+              class="tab-item"
+              :class="{ active: activeTab === 'ppt-test' }"
+              @click="activeTab = 'ppt-test'"
+            >
+              交互式PPT测试
+            </span>
           </div>
           
           <div class="tab-content">
@@ -290,28 +297,86 @@
                 <div class="video-list-section">
                   <div class="video-list-content">
                     <div v-for="chapter in videoChapterList" :key="chapter.id" class="video-chapter">
-                      <div class="video-chapter-title">{{ chapter.title }}</div>
-                      <div
-                        v-for="video in chapter.lessons"
-                        :key="video.id"
-                        :class="['video-item', { active: currentVideo?.id === video.id, 'preview-locked': courseInfo.is_locked && video.is_previewable === false }]"
-                        @click="(!courseInfo.is_locked || video.is_previewable) && playVideo(video)"
-                      >
-                        <div class="video-item-left">
-                          <span class="video-icon">▶</span>
-                          <span class="video-title">{{ video.title }}</span>
-                        </div>
-                        <div class="video-item-right">
-                          <span v-if="video.duration" class="video-duration">{{ formatDuration(video.duration) }}</span>
-                          <span v-if="currentVideo?.id === video.id" class="playing-indicator">播放中</span>
-                        </div>
+                      <div class="video-chapter-title" @click="toggleVideoChapter(chapter.id)">
+                        <span>{{ chapter.title }}</span>
+                        <span class="chapter-arrow" :class="{ collapsed: isVideoChapterCollapsed(chapter.id) }">▼</span>
                       </div>
+                      <template v-if="!isVideoChapterCollapsed(chapter.id)">
+                        <div
+                          v-for="video in chapter.lessons"
+                          :key="video.id"
+                          :class="['video-item', { active: currentVideo?.id === video.id, 'preview-locked': courseInfo.is_locked && video.is_previewable === false }]"
+                          @click="(!courseInfo.is_locked || video.is_previewable) && playVideo(video)"
+                        >
+                          <div class="video-item-left">
+                            <span class="video-icon">▶</span>
+                            <span class="video-title">{{ video.title }}</span>
+                          </div>
+                          <div class="video-item-right">
+                            <span class="video-duration">{{ getVideoDurationText(video) }}</span>
+                            <span v-if="currentVideo?.id === video.id" class="playing-indicator">播放中</span>
+                          </div>
+                        </div>
+                      </template>
                     </div>
                     <div v-if="videoChapterList.length === 0" class="empty-state">暂无课程视频</div>
                     <!-- 预览模式提示 -->
                     <div v-if="courseInfo.is_locked && videoChapterList.length > 0" class="preview-tip-inline">
                       <span class="tip-text">预览模式下第1章的视频可播放，其他视频开通后解锁</span>
                     </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div v-if="activeTab === 'ppt-test'" class="videos-container">
+              <div class="video-layout">
+                <div class="video-player-section">
+                  <div class="ppt-test-player" ref="pptTestPlayerRef">
+                    <div class="ppt-test-toolbar">
+                      <span class="ppt-test-title">{{ currentPptTestLesson?.title || '交互式PPT测试' }}</span>
+                      <button class="btn-fullscreen-ppt" @click="togglePptTestFullscreen">
+                        {{ isPptTestFullscreen ? '退出全屏' : '⛶ 全屏' }}
+                      </button>
+                    </div>
+                    <div class="ppt-test-wrapper">
+                      <div v-if="!currentPptTestLesson" class="ppt-test-empty-state">请先从右侧选择课时</div>
+                      <div v-else-if="isPptTestLoading" class="ppt-test-empty-state">交互内容加载中...</div>
+                      <div v-else-if="!pptTestIframeUrl" class="ppt-test-empty-state">当前课时未配置交互式PPT</div>
+                      <iframe
+                        v-else
+                        class="ppt-test-iframe"
+                        :src="pptTestIframeUrl"
+                        title="交互式PPT测试"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div class="video-list-section">
+                  <div class="video-list-content">
+                    <div v-for="chapter in pptTestChapterList" :key="`ppt-${chapter.id}`" class="video-chapter">
+                      <div class="video-chapter-title" @click="toggleVideoChapter(chapter.id)">
+                        <span>{{ chapter.title }}</span>
+                        <span class="chapter-arrow" :class="{ collapsed: isVideoChapterCollapsed(chapter.id) }">▼</span>
+                      </div>
+                      <template v-if="!isVideoChapterCollapsed(chapter.id)">
+                        <div
+                          v-for="video in chapter.lessons"
+                          :key="`ppt-${video.id}`"
+                          :class="['video-item', { active: currentPptTestLesson?.id === video.id, 'preview-locked': courseInfo.is_locked && video.is_previewable === false }]"
+                          @click="(!courseInfo.is_locked || video.is_previewable) && selectPptTestLesson(video)"
+                        >
+                          <div class="video-item-left">
+                            <span class="video-icon">▶</span>
+                            <span class="video-title">{{ video.title }}</span>
+                          </div>
+                          <div class="video-item-right">
+                            <span class="video-duration">{{ getVideoDurationText(video) }}</span>
+                          </div>
+                        </div>
+                      </template>
+                    </div>
+                    <div v-if="pptTestChapterList.length === 0" class="empty-state">暂无可测试内容</div>
                   </div>
                 </div>
               </div>
@@ -546,8 +611,8 @@
 import { ref, onMounted, reactive, computed, watch, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import TeacherSidebar from '@/components/TeacherSidebar.vue';
-import { getCourseDetail, getCourseChapters, getCourseTasks, getTaskPublishStatus, publishTaskToClasses, type CourseItem, type CourseChapterItem, type CourseTaskItem, type ClassTaskStatus } from '@/api/content';
-import { getImgUrl } from '@/utils/index';
+import { getCourseDetail, getCourseChapters, getCourseTasks, getTaskPublishStatus, publishTaskToClasses, getCourseInteractiveApp, type CourseItem, type CourseChapterItem, type CourseTaskItem, type ClassTaskStatus } from '@/api/content';
+import { getImgUrl, formatLessonDuration } from '@/utils/index';
 import VuePdfEmbed from 'vue-pdf-embed';
 
 const activeTab = ref('intro'); 
@@ -694,6 +759,17 @@ const materialList = computed(() => {
 const currentVideo = ref<any>(null); // 当前播放的视频
 const videoRef = ref<HTMLVideoElement | null>(null);
 const playbackSpeed = ref(1); // 播放速度
+const currentPptTestLesson = ref<any>(null);
+const pptTestLessonEntryMap = ref<Record<string, string>>({});
+const missingPptLessonIds = ref<Set<string>>(new Set());
+const availablePptTestLessonIds = ref<Set<string>>(new Set());
+const isPptTestLoading = ref(false);
+const pptTestCacheBust = ref(Date.now());
+const pptTestPlayerRef = ref<HTMLElement | null>(null);
+const isPptTestFullscreen = ref(false);
+const runtimeVideoDurationMap = ref<Record<string, string>>({});
+const probingVideoIds = new Set<string>();
+const collapsedVideoChapterIds = ref<Set<string>>(new Set());
 
 // 视频章节列表（过滤 type='video' 的课时）
 const videoChapterList = computed(() => {
@@ -704,6 +780,179 @@ const videoChapterList = computed(() => {
     }))
     .filter(chapter => chapter.lessons.length > 0);
 });
+
+const pptTestChapterList = computed(() => {
+  const availableIds = availablePptTestLessonIds.value;
+  return videoChapterList.value
+    .map(chapter => ({
+      ...chapter,
+      lessons: chapter.lessons.filter(lesson => availableIds.has(String(lesson.id)))
+    }))
+    .filter(chapter => chapter.lessons.length > 0);
+});
+
+const getVideoDurationText = (video: any) => {
+  const key = String(video?.id ?? '');
+  if (key && runtimeVideoDurationMap.value[key]) {
+    return runtimeVideoDurationMap.value[key];
+  }
+  return formatLessonDuration(video?.duration);
+};
+
+const pptTestIframeUrl = computed(() => {
+  if (!currentPptTestLesson.value) return '';
+  const lessonKey = String(currentPptTestLesson.value.id ?? '');
+  const lessonBaseUrl = pptTestLessonEntryMap.value[lessonKey];
+  if (!lessonBaseUrl || missingPptLessonIds.value.has(lessonKey)) {
+    return '';
+  }
+  const params = new URLSearchParams({
+    lessonId: String(currentPptTestLesson.value.id ?? ''),
+    title: String(currentPptTestLesson.value.title ?? '')
+  });
+  if (currentPptTestLesson.value.file_url) {
+    params.set('file', getImgUrl(currentPptTestLesson.value.file_url));
+  }
+  params.set('_v', String(pptTestCacheBust.value));
+  return `${lessonBaseUrl}?${params.toString()}`;
+});
+
+const fetchLessonInteractiveEntry = async (lessonId: number) => {
+  const key = String(lessonId);
+  if (pptTestLessonEntryMap.value[key] || missingPptLessonIds.value.has(key)) return;
+  const coursePublicId = route.params.id as string;
+  if (!coursePublicId) return;
+  isPptTestLoading.value = true;
+  try {
+    const res = await getCourseInteractiveApp(coursePublicId, 'ppt-test', lessonId);
+    if (res?.entry_url) {
+      pptTestLessonEntryMap.value = {
+        ...pptTestLessonEntryMap.value,
+        [key]: res.entry_url
+      };
+      const nextMissing = new Set(missingPptLessonIds.value);
+      nextMissing.delete(key);
+      missingPptLessonIds.value = nextMissing;
+    }
+  } catch (error) {
+    const nextMissing = new Set(missingPptLessonIds.value);
+    nextMissing.add(key);
+    missingPptLessonIds.value = nextMissing;
+    console.warn(`课时 ${lessonId} 未配置交互入口`, error);
+  } finally {
+    isPptTestLoading.value = false;
+  }
+};
+
+const selectPptTestLesson = (lesson: any) => {
+  currentPptTestLesson.value = lesson;
+  pptTestCacheBust.value = Date.now();
+  if (lesson?.id) {
+    fetchLessonInteractiveEntry(lesson.id);
+  }
+};
+
+const fetchAvailablePptTestLessons = async (coursePublicId: string) => {
+  try {
+    const res = await getCourseInteractiveApp(coursePublicId, 'ppt-test');
+    const availableIds = Array.isArray(res?.available_lesson_ids) ? res.available_lesson_ids : [];
+    availablePptTestLessonIds.value = new Set(availableIds.map(id => String(id)));
+  } catch (error) {
+    availablePptTestLessonIds.value = new Set();
+    console.warn('课程未配置交互式PPT资源', error);
+  }
+};
+
+const togglePptTestFullscreen = async () => {
+  if (!pptTestPlayerRef.value) return;
+  try {
+    if (document.fullscreenElement === pptTestPlayerRef.value) {
+      await document.exitFullscreen();
+    } else {
+      await pptTestPlayerRef.value.requestFullscreen();
+    }
+  } catch (error) {
+    console.error('交互式PPT全屏切换失败', error);
+  }
+};
+
+const isVideoChapterCollapsed = (chapterId: string | number) => {
+  return collapsedVideoChapterIds.value.has(String(chapterId));
+};
+
+const toggleVideoChapter = (chapterId: string | number) => {
+  const key = String(chapterId);
+  const next = new Set(collapsedVideoChapterIds.value);
+  if (next.has(key)) {
+    next.delete(key);
+  } else {
+    next.add(key);
+  }
+  collapsedVideoChapterIds.value = next;
+};
+
+const probeVideoDuration = (video: any) => {
+  const videoId = String(video?.id ?? '');
+  if (!videoId || probingVideoIds.has(videoId) || runtimeVideoDurationMap.value[videoId]) return;
+  if (!video?.file_url) return;
+
+  probingVideoIds.add(videoId);
+  const el = document.createElement('video');
+  el.preload = 'metadata';
+  el.src = getImgUrl(video.file_url);
+
+  const cleanup = () => {
+    el.removeAttribute('src');
+    el.load();
+  };
+
+  const finalize = () => {
+    probingVideoIds.delete(videoId);
+    cleanup();
+  };
+
+  el.onloadedmetadata = () => {
+    if (Number.isFinite(el.duration) && el.duration > 0) {
+      runtimeVideoDurationMap.value[videoId] = formatLessonDuration(el.duration);
+    }
+    finalize();
+  };
+
+  el.onerror = finalize;
+};
+
+watch(
+  videoChapterList,
+  (chapters) => {
+    const validIds = new Set(chapters.map(chapter => String(chapter.id)));
+    const nextCollapsed = new Set(
+      Array.from(collapsedVideoChapterIds.value).filter(id => validIds.has(id))
+    );
+    if (nextCollapsed.size !== collapsedVideoChapterIds.value.size) {
+      collapsedVideoChapterIds.value = nextCollapsed;
+    }
+
+    chapters.forEach(chapter => {
+      chapter.lessons.forEach(probeVideoDuration);
+    });
+
+  },
+  { immediate: true, deep: true }
+);
+
+watch(
+  pptTestChapterList,
+  (chapters) => {
+    const lessonIds = new Set(
+      chapters.flatMap(chapter => chapter.lessons.map(lesson => String(lesson.id)))
+    );
+    const currentId = currentPptTestLesson.value ? String(currentPptTestLesson.value.id) : '';
+    if (currentId && !lessonIds.has(currentId)) {
+      currentPptTestLesson.value = null;
+    }
+  },
+  { immediate: true, deep: true }
+);
 
 // 播放视频
 const playVideo = (video: any) => {
@@ -732,13 +981,6 @@ const onVideoTimeUpdate = () => {
   // 可用于记录播放进度（如果需要）
 };
 const onVideoEnded = () => console.log('视频播放结束');
-
-// 格式化时长（秒 -> MM:SS）
-const formatDuration = (seconds: number) => {
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60);
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
-};
 
 const handlePlayPPT = (fileUrl: string, title: string) => {
   if (!fileUrl) return alert('文件路径无效');
@@ -842,7 +1084,8 @@ const toggleFullscreen = () => {
 
 // 监听全屏变化（防止用户按 Esc 退出时状态没更新）
 document.addEventListener('fullscreenchange', () => {
-  isFullscreen.value = !!document.fullscreenElement;
+  isFullscreen.value = document.fullscreenElement === pdfContainerRef.value || document.fullscreenElement === pptContainerRef.value;
+  isPptTestFullscreen.value = document.fullscreenElement === pptTestPlayerRef.value;
 });
 
 // PDF 加载完成回调
@@ -870,6 +1113,7 @@ onMounted(async () => {
   if (id) {
     await fetchDetail(id);
     await fetchChapters(id);
+    await fetchAvailablePptTestLessons(id);
     await fetchTasks(id);
   }
 });
@@ -1081,6 +1325,7 @@ $text-gray: #a4b0be;
         white-space: pre-wrap; 
       }
     }
+
   }
 }
 
@@ -1389,6 +1634,7 @@ $text-gray: #a4b0be;
     display: flex;
     gap: 20px;
     min-height: 500px;
+    height: clamp(620px, calc(100vh - 260px), 900px);
   }
 
   /* 左侧视频播放器 */
@@ -1482,6 +1728,99 @@ $text-gray: #a4b0be;
         margin: 0;
       }
     }
+
+    .ppt-test-wrapper {
+      width: 100%;
+      height: 100%;
+      min-height: 620px;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid #e8ecef;
+      background: #fff;
+
+      .ppt-test-iframe {
+        width: 100%;
+        height: 100%;
+        min-height: 620px;
+        border: none;
+        display: block;
+      }
+
+      .ppt-test-empty-state {
+        width: 100%;
+        height: 100%;
+        min-height: 620px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #6b7280;
+        font-size: 14px;
+        background: #f8fafc;
+      }
+    }
+
+    .ppt-test-player {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+
+      .ppt-test-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid #e8ecef;
+        background: #fff;
+
+        .ppt-test-title {
+          font-size: 14px;
+          font-weight: 600;
+          color: #2d3436;
+        }
+
+        .btn-fullscreen-ppt {
+          border: 1px solid #d6dde3;
+          border-radius: 8px;
+          padding: 6px 12px;
+          background: #fff;
+          color: #4b5563;
+          font-size: 13px;
+          cursor: pointer;
+
+          &:hover {
+            border-color: $primary-color;
+            color: $primary-color;
+          }
+        }
+      }
+
+      &:fullscreen {
+        background: #111827;
+        padding: 12px;
+      }
+
+      &:fullscreen .ppt-test-toolbar {
+        border-color: rgba(255, 255, 255, 0.2);
+        background: rgba(17, 24, 39, 0.7);
+
+        .ppt-test-title {
+          color: #f9fafb;
+        }
+
+        .btn-fullscreen-ppt {
+          background: rgba(255, 255, 255, 0.08);
+          border-color: rgba(255, 255, 255, 0.25);
+          color: #f9fafb;
+        }
+      }
+
+      &:fullscreen .ppt-test-wrapper {
+        flex: 1;
+        min-height: 0;
+      }
+    }
   }
 
   /* 右侧视频列表 */
@@ -1493,7 +1832,8 @@ $text-gray: #a4b0be;
       background: #fff;
       border-radius: 12px;
       border: 1px solid #eee;
-      max-height: 500px;
+      height: 100%;
+      max-height: 100%;
       overflow-y: auto;
 
       &::-webkit-scrollbar {
@@ -1526,6 +1866,20 @@ $text-gray: #a4b0be;
           color: #666;
           position: sticky;
           top: 0;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          cursor: pointer;
+
+          .chapter-arrow {
+            font-size: 11px;
+            color: #999;
+            transition: transform 0.2s ease;
+
+            &.collapsed {
+              transform: rotate(-90deg);
+            }
+          }
         }
 
         .video-item {

@@ -44,7 +44,8 @@ upload_dirs = [
     "static/uploads/avatars", # 存头像
     "static/uploads/courses", # 存课程封面
     "static/uploads/common",   # 存通用图片
-    "static/uploads/materials"
+    "static/uploads/materials",
+    "static/interactive"
 ]
 
 for dir_path in upload_dirs:

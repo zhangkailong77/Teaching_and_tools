@@ -1,5 +1,6 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
-from app.utils.uploader import save_file_locally
+from app.core.config import settings
+from app.utils.uploader import save_file_locally, save_file_to_minio
 
 router = APIRouter()
 
@@ -21,7 +22,10 @@ async def upload_image_endpoint(
     
     # 4. 调用工具类保存 (以后换 OSS 只需要改这里调用的函数)
     try:
-        file_url = await save_file_locally(file, folder=folder)
+        if folder == "avatars" and settings.minio_avatar_enabled:
+            file_url = await save_file_to_minio(file, folder=settings.minio_avatar_prefix or "avatars")
+        else:
+            file_url = await save_file_locally(file, folder=folder)
         return {"url": file_url}
-    except Exception:
-        raise HTTPException(status_code=500, detail="文件上传失败")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"文件上传失败: {str(e)}")

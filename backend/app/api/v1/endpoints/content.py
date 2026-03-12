@@ -1,5 +1,7 @@
-from typing import Any, List
-from fastapi import APIRouter, Depends, HTTPException
+import json
+from pathlib import Path
+from typing import Any, List, Optional, Tuple
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 from app.utils.hash import encode_id, decode_id
 
@@ -17,6 +19,138 @@ router = APIRouter()
 # ==================================================================
 # 未授权教师可以预览的章节数量
 PREVIEW_CHAPTER_COUNT = 1
+INTERACTIVE_MANIFEST_PATH = Path("static/interactive/manifest.json")
+
+
+def _load_interactive_manifest() -> dict:
+    if not INTERACTIVE_MANIFEST_PATH.exists():
+        return {"courses": {}}
+    try:
+        with INTERACTIVE_MANIFEST_PATH.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+            if isinstance(data, dict):
+                return data
+    except Exception:
+        pass
+    return {"courses": {}}
+
+
+def _parse_manifest_entry(value) -> Tuple[Optional[str], Optional[str]]:
+    version = None
+    entry = None
+    if isinstance(value, str):
+        entry = value
+    elif isinstance(value, dict):
+        entry = value.get("entry") or value.get("entry_url") or value.get("path")
+        version = value.get("version")
+    if not entry:
+        return None, None
+    return str(entry), version
+
+
+def _extract_entry_from_manifest(
+    course_id: int,
+    app_type: str,
+    lesson_id: Optional[int] = None
+) -> Tuple[Optional[str], Optional[str]]:
+    """
+    支持以下 manifest 结构：
+    1) {"courses":{"1":{"ppt-test":{"entry":"interactive/1/ppt-test/v1/index.html","version":"v1"}}}}
+    2) {"courses":{"1":{"ppt-test":{"entry_url":"/static/interactive/1/ppt-test/v1/index.html"}}}}
+    3) {"courses":{"1":{"ppt-test":"/static/interactive/1/ppt-test/v1/index.html"}}}
+    """
+    manifest = _load_interactive_manifest()
+    courses = manifest.get("courses", manifest if isinstance(manifest, dict) else {})
+    course_data = courses.get(str(course_id)) if isinstance(courses, dict) else None
+    if not course_data:
+        return None, None
+
+    app_data = course_data.get(app_type) if isinstance(course_data, dict) else None
+    if not app_data:
+        return None, None
+
+    # 课时级严格匹配：传入 lesson_id 时，只返回该课时绑定
+    if lesson_id is not None and isinstance(app_data, dict):
+        lessons = app_data.get("lessons", {})
+        if isinstance(lessons, dict):
+            lesson_entry = lessons.get(str(lesson_id))
+            entry, version = _parse_manifest_entry(lesson_entry)
+            if entry:
+                return entry, version
+        return None, None
+
+    # 回退课程级入口
+    entry, version = _parse_manifest_entry(app_data)
+    if entry:
+        return entry, version
+
+    # 课程级未配置时，再回退到 lessons 里的第一个可用入口
+    if isinstance(app_data, dict):
+        lessons = app_data.get("lessons", {})
+        if isinstance(lessons, dict):
+            for _, lesson_val in lessons.items():
+                fallback_entry, fallback_version = _parse_manifest_entry(lesson_val)
+                if fallback_entry:
+                    return fallback_entry, fallback_version
+
+    return None, None
+
+
+def _extract_available_lesson_ids_from_app_data(app_data: Any) -> List[int]:
+    if not isinstance(app_data, dict):
+        return []
+
+    lessons = app_data.get("lessons", {})
+    if not isinstance(lessons, dict):
+        return []
+
+    lesson_ids: List[int] = []
+    for lesson_key, lesson_val in lessons.items():
+        entry, _ = _parse_manifest_entry(lesson_val)
+        if not entry:
+            continue
+        try:
+            lesson_ids.append(int(str(lesson_key)))
+        except (TypeError, ValueError):
+            continue
+
+    return sorted(set(lesson_ids))
+
+
+def _extract_available_lesson_ids_from_manifest(course_id: int, app_type: str) -> List[int]:
+    manifest = _load_interactive_manifest()
+    courses = manifest.get("courses", manifest if isinstance(manifest, dict) else {})
+    course_data = courses.get(str(course_id)) if isinstance(courses, dict) else None
+    if not isinstance(course_data, dict):
+        return []
+
+    app_data = course_data.get(app_type)
+    return _extract_available_lesson_ids_from_app_data(app_data)
+
+
+def _build_interactive_urls(request: Request, entry: str) -> Tuple[str, str]:
+    """返回 (relative_url, absolute_url)。"""
+    if entry.startswith("http://") or entry.startswith("https://"):
+        return entry, entry
+
+    normalized = entry.strip()
+    if normalized.startswith("/static/"):
+        static_path = normalized[len("/static/"):]
+        relative_url = normalized
+    elif normalized.startswith("static/"):
+        static_path = normalized[len("static/"):]
+        relative_url = f"/static/{static_path}"
+    elif normalized.startswith("/"):
+        # 非 /static 路径，按原样返回
+        relative_url = normalized
+        absolute_url = str(request.base_url).rstrip("/") + normalized
+        return relative_url, absolute_url
+    else:
+        static_path = normalized
+        relative_url = f"/static/{static_path}"
+
+    absolute_url = str(request.url_for("static", path=static_path))
+    return relative_url, absolute_url
 
 # ------------------------------------------------------------------
 # 1. 获取课程资源库（全部课程 + 锁定状态，用于资源库页面展示）
@@ -268,6 +402,40 @@ def read_course_chapters(
     set_cache(cache_key, results, expire=300)
 
     return results
+
+
+@router.get("/courses/{public_id}/interactive-app", response_model=schemas.InteractiveAppOut)
+def read_course_interactive_app(
+    public_id: str,
+    request: Request,
+    app_type: str = Query("ppt-test"),
+    lesson_id: Optional[int] = Query(None),
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    course_id = decode_id(public_id)
+    if not course_id:
+        raise HTTPException(status_code=404, detail="课程不存在")
+
+    course = db.query(Course).filter(Course.id == course_id).first()
+    if not course:
+        raise HTTPException(status_code=404, detail="课程不存在")
+
+    available_lesson_ids = _extract_available_lesson_ids_from_manifest(course_id, app_type)
+    entry, version = _extract_entry_from_manifest(course_id, app_type, lesson_id=lesson_id)
+    if not entry:
+        raise HTTPException(status_code=404, detail="未配置交互式资源入口")
+
+    relative_url, absolute_url = _build_interactive_urls(request, entry)
+    return {
+        "app_type": app_type,
+        "entry_url": absolute_url,
+        "relative_url": relative_url,
+        "version": version,
+        "lesson_id": lesson_id,
+        "available_lesson_ids": available_lesson_ids,
+        "source": "manifest",
+    }
 
 
 
@@ -560,6 +728,41 @@ def read_student_course_chapters(
         })
         
     return results
+
+
+@router.get("/student/courses/{public_id}/interactive-app", response_model=schemas.InteractiveAppOut)
+def read_student_course_interactive_app(
+    public_id: str,
+    request: Request,
+    app_type: str = Query("ppt-test"),
+    lesson_id: Optional[int] = Query(None),
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    course_id = decode_id(public_id)
+    if not course_id:
+        raise HTTPException(status_code=404, detail="课程不存在")
+
+    if current_user.role != "student":
+        raise HTTPException(status_code=403, detail="仅限学生访问")
+
+    check_student_permission(db, current_user.id, course_id)
+
+    available_lesson_ids = _extract_available_lesson_ids_from_manifest(course_id, app_type)
+    entry, version = _extract_entry_from_manifest(course_id, app_type, lesson_id=lesson_id)
+    if not entry:
+        raise HTTPException(status_code=404, detail="未配置交互式资源入口")
+
+    relative_url, absolute_url = _build_interactive_urls(request, entry)
+    return {
+        "app_type": app_type,
+        "entry_url": absolute_url,
+        "relative_url": relative_url,
+        "version": version,
+        "lesson_id": lesson_id,
+        "available_lesson_ids": available_lesson_ids,
+        "source": "manifest",
+    }
 
 
 # ------------------------------------------------------------------

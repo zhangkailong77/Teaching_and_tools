@@ -21,6 +21,16 @@ class Settings(BaseSettings):
     comfy_max_concurrent: int = 1  # 测试环境最大并发
     comfy_max_concurrent_prod: int = 1  # 生产环境最大并发
 
+    # MinIO 头像上传试点配置
+    minio_avatar_enabled: bool = False
+    minio_endpoint: Optional[str] = None
+    minio_domain: Optional[str] = None
+    minio_bucket: Optional[str] = None
+    minio_access_key: Optional[str] = None
+    minio_access_secret: Optional[str] = None
+    minio_use_ssl: bool = False
+    minio_avatar_prefix: str = "avatars"
+
     # Pydantic V2 配置
     model_config = SettingsConfigDict(
         env_file=".env",       # 指定读取的文件

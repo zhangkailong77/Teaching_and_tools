@@ -45,6 +45,7 @@ services:
       - redis
     volumes:
       - ./backend/static:/app/static
+      - /root/teaching-course:/course-data
     networks:
       - teaching-network
     restart: unless-stopped

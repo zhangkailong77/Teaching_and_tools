@@ -43,6 +43,15 @@ export interface CourseChapterItem {
   lessons: CourseLessonItem[];
 }
 
+export interface InteractiveAppItem {
+  app_type: string;
+  entry_url: string;
+  relative_url: string;
+  version?: string;
+  available_lesson_ids?: number[];
+  source: string;
+}
+
 // 1. 获取我的课程资源库（全部 + 锁定状态，用于资源库页面）
 export function getMyCourses() {
   return request.get<any, CourseItem[]>('/content/courses/me');
@@ -79,6 +88,12 @@ export function getCourseTasks(id: string) {
   return request.get<any, CourseTaskItem[]>(`/content/courses/${id}/tasks`);
 }
 
+export function getCourseInteractiveApp(id: string, appType = 'ppt-test', lessonId?: number) {
+  return request.get<any, InteractiveAppItem>(`/content/courses/${id}/interactive-app`, {
+    params: { app_type: appType, lesson_id: lessonId }
+  });
+}
+
 export interface ClassTaskStatus {
   class_id: number;
   class_name: string;
@@ -108,6 +123,12 @@ export function getStudentCourseDetail(id: string) {
 // ✅ 新增：[学生端] 获取章节目录
 export function getStudentCourseChapters(id: string) {
   return request.get<any, CourseChapterItem[]>(`/content/student/courses/${id}/chapters`);
+}
+
+export function getStudentCourseInteractiveApp(id: string, appType = 'ppt-test', lessonId?: number) {
+  return request.get<any, InteractiveAppItem>(`/content/student/courses/${id}/interactive-app`, {
+    params: { app_type: appType, lesson_id: lessonId }
+  });
 }
 
 // ✅ 新增：[学生端] 更新学习进度

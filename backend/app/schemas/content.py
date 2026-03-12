@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime
 from app.utils.hash import encode_id
@@ -86,3 +86,16 @@ class TaskPublishConfig(BaseModel):
 # 3. 批量提交请求体
 class TaskPublishRequest(BaseModel):
     configs: List[TaskPublishConfig]
+
+
+# =======================
+# 交互式资源入口 (manifest)
+# =======================
+class InteractiveAppOut(BaseModel):
+    app_type: str
+    entry_url: str
+    relative_url: str
+    version: Optional[str] = None
+    lesson_id: Optional[int] = None
+    available_lesson_ids: List[int] = Field(default_factory=list)
+    source: str = "manifest"

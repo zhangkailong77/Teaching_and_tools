@@ -79,6 +79,8 @@ cd /app
 
 # 运行导入脚本（需确保源路径存在）
 python import_course.py
+
+# 服务器上的文件路径改为   /course-data/AI+(跨境)电商视觉营销设计
 ```
 
 **注意：** 导入前请先修改 `import_course.py` 中的 `SOURCE_DIR` 为本地源路径。
